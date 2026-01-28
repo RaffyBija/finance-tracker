@@ -1,0 +1,370 @@
+/* ============================================
+   CARDS SYSTEM
+   Sistema completo di card riutilizzabili
+   ============================================ */
+
+@layer components {
+  /* ============================
+     BASE CARD
+     ============================ */
+  .card {
+    @apply bg-white rounded-lg shadow-card;
+    @apply transition-shadow duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover;
+  }
+
+  .card-interactive {
+    @apply card-hover cursor-pointer;
+    @apply hover:scale-[1.01] transition-transform duration-200;
+  }
+
+  /* ============================
+     CARD PADDING VARIANTS
+     ============================ */
+  .card-sm {
+    @apply p-3;
+  }
+
+  .card-md {
+    @apply p-4;
+  }
+
+  .card-lg {
+    @apply p-6;
+  }
+
+  .card-xl {
+    @apply p-8;
+  }
+
+  /* ============================
+     CARD HEADER
+     ============================ */
+  .card-header {
+    @apply px-6 py-4 border-b border-neutral-200;
+    @apply bg-neutral-50;
+  }
+
+  .card-header-title {
+    @apply text-xl font-semibold text-neutral-900;
+  }
+
+  .card-header-subtitle {
+    @apply text-sm text-neutral-500 mt-1;
+  }
+
+  /* ============================
+     CARD BODY
+     ============================ */
+  .card-body {
+    @apply p-6;
+  }
+
+  .card-body-sm {
+    @apply p-4;
+  }
+
+  .card-body-lg {
+    @apply p-8;
+  }
+
+  /* ============================
+     CARD FOOTER
+     ============================ */
+  .card-footer {
+    @apply px-6 py-4 border-t border-neutral-200;
+    @apply bg-neutral-50;
+  }
+
+  /* ============================
+     CARD WITH DIVIDERS
+     ============================ */
+  .card-divided {
+    @apply card divide-y divide-neutral-200;
+  }
+
+  .card-divided > * {
+    @apply p-4;
+  }
+
+  /* ============================
+     CARD WITH BORDER ACCENT
+     ============================ */
+  .card-border-left {
+    @apply card border-l-4;
+  }
+
+  .card-border-left-primary {
+    @apply card-border-left border-l-primary-600;
+  }
+
+  .card-border-left-success {
+    @apply card-border-left border-l-success-600;
+  }
+
+  .card-border-left-danger {
+    @apply card-border-left border-l-danger-600;
+  }
+
+  .card-border-left-warning {
+    @apply card-border-left border-l-warning-600;
+  }
+
+  /* ============================
+     CARD COLORS/VARIANTS
+     ============================ */
+  .card-primary {
+    @apply card bg-primary-50 border border-primary-200;
+  }
+
+  .card-success {
+    @apply card bg-success-50 border border-success-200;
+  }
+
+  .card-danger {
+    @apply card bg-danger-50 border border-danger-200;
+  }
+
+  .card-warning {
+    @apply card bg-warning-50 border border-warning-200;
+  }
+
+  /* ============================
+     STAT CARD
+     ============================ */
+  .stat-card {
+    @apply card p-6;
+  }
+
+  .stat-card-label {
+    @apply text-sm text-neutral-600 mb-1;
+  }
+
+  .stat-card-value {
+    @apply text-2xl font-bold text-neutral-900;
+  }
+
+  .stat-card-change {
+    @apply text-xs font-medium mt-1;
+  }
+
+  .stat-card-change-positive {
+    @apply stat-card-change text-success-600;
+  }
+
+  .stat-card-change-negative {
+    @apply stat-card-change text-danger-600;
+  }
+
+  /* ============================
+     LIST CARD (for transactions, etc)
+     ============================ */
+  .list-card {
+    @apply card divide-y divide-neutral-200;
+  }
+
+  .list-card-item {
+    @apply p-4;
+    @apply transition-colors duration-150;
+    @apply hover:bg-neutral-50;
+  }
+
+  .list-card-item-active {
+    @apply bg-primary-50;
+  }
+
+  /* ============================
+     CATEGORY CARD (existing style improved)
+     ============================ */
+  .category-card {
+    @apply card p-6;
+    @apply hover:shadow-card-hover;
+    @apply transition-all duration-200;
+  }
+
+  .category-card-main {
+    @apply flex items-start justify-between mb-4;
+  }
+
+  .category-card-content {
+    @apply flex items-center gap-3;
+  }
+
+  .category-card-icon {
+    @apply w-12 h-12 rounded-full;
+    @apply flex items-center justify-center;
+    @apply text-2xl;
+  }
+
+  .category-card-title {
+    @apply font-semibold text-lg;
+  }
+
+  .category-card-actions {
+    @apply flex gap-2;
+  }
+
+  .category-card-footer {
+    @apply text-sm text-neutral-500;
+  }
+
+  /* ============================
+     BUDGET CARD
+     ============================ */
+  .budget-card {
+    @apply card p-6;
+  }
+
+  .budget-card-header {
+    @apply flex justify-between items-start mb-4;
+  }
+
+  .budget-card-title {
+    @apply text-xl font-semibold text-neutral-900;
+  }
+
+  .budget-card-subtitle {
+    @apply text-sm text-neutral-500;
+  }
+
+  .budget-card-progress {
+    @apply mb-4;
+  }
+
+  .budget-card-progress-bar {
+    @apply w-full bg-neutral-200 rounded-full h-3;
+  }
+
+  .budget-card-progress-fill {
+    @apply h-3 rounded-full transition-all duration-300;
+  }
+
+  .budget-card-stats {
+    @apply flex justify-between items-center pt-4 border-t border-neutral-200;
+  }
+
+  /* ============================
+     TRANSACTION CARD
+     ============================ */
+  .transaction-card {
+    @apply flex items-center justify-between;
+    @apply p-4 hover:bg-neutral-50;
+    @apply transition-colors duration-150;
+  }
+
+  .transaction-card-left {
+    @apply flex items-center gap-4;
+  }
+
+  .transaction-card-icon {
+    @apply w-10 h-10 rounded-full;
+    @apply flex items-center justify-center;
+  }
+
+  .transaction-card-icon-income {
+    @apply transaction-card-icon bg-success-100;
+  }
+
+  .transaction-card-icon-expense {
+    @apply transaction-card-icon bg-danger-100;
+  }
+
+  .transaction-card-info {
+    @apply flex flex-col;
+  }
+
+  .transaction-card-title {
+    @apply font-medium text-neutral-900;
+  }
+
+  .transaction-card-subtitle {
+    @apply text-sm text-neutral-500;
+  }
+
+  .transaction-card-right {
+    @apply flex items-center gap-4;
+  }
+
+  .transaction-card-amount {
+    @apply text-lg font-semibold;
+  }
+
+  .transaction-card-amount-income {
+    @apply transaction-card-amount text-success-600;
+  }
+
+  .transaction-card-amount-expense {
+    @apply transaction-card-amount text-danger-600;
+  }
+
+  /* ============================
+     EMPTY STATE CARD
+     ============================ */
+  .empty-state-card {
+    @apply card p-12;
+    @apply text-center;
+  }
+
+  .empty-state-icon {
+    @apply w-16 h-16 mx-auto mb-4;
+    @apply text-neutral-400;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-neutral-900 mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-neutral-500 mb-6;
+  }
+
+  /* ============================
+     GRADIENT CARDS
+     ============================ */
+  .card-gradient-primary {
+    @apply card;
+    @apply bg-gradient-to-br from-primary-50 to-primary-100;
+    @apply border border-primary-200;
+  }
+
+  .card-gradient-success {
+    @apply card;
+    @apply bg-gradient-to-br from-success-50 to-success-100;
+    @apply border border-success-200;
+  }
+
+  .card-gradient-purple {
+    @apply card;
+    @apply bg-gradient-to-br from-purple-50 to-blue-50;
+    @apply border border-purple-100;
+  }
+
+  /* ============================
+     RESPONSIVE UTILITIES
+     ============================ */
+  @media (max-width: 640px) {
+    .card-sm-full {
+      @apply rounded-none;
+    }
+
+    .card-sm-compact {
+      @apply p-4;
+    }
+  }
+}
+
+/* ============================================
+   CARD ANIMATIONS
+   ============================================ */
+@layer utilities {
+  .card-appear {
+    @apply animate-scale-in;
+  }
+
+  .card-slide-up {
+    @apply animate-slide-in-up;
+  }
+}

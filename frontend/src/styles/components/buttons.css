@@ -1,0 +1,282 @@
+/* ============================================
+   BUTTONS SYSTEM
+   Sistema completo di bottoni riutilizzabili
+   ============================================ */
+
+@layer components {
+  /* ============================
+     BASE BUTTON
+     ============================ */
+  .btn {
+    @apply inline-flex items-center justify-center;
+    @apply font-medium transition-all duration-200;
+    @apply rounded-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
+  }
+
+  /* ============================
+     SIZES
+     ============================ */
+  .btn-xs {
+    @apply px-2 py-1 text-xs gap-1;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm gap-1.5;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-base gap-2;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg gap-2.5;
+  }
+
+  .btn-xl {
+    @apply px-8 py-4 text-xl gap-3;
+  }
+
+  /* ============================
+     VARIANTS - PRIMARY
+     ============================ */
+  .btn-primary {
+    @apply bg-primary-600 text-white shadow-button;
+    @apply hover:bg-primary-700 hover:shadow-button-hover;
+    @apply active:bg-primary-800;
+    @apply focus:ring-primary-500;
+  }
+
+  /* ============================
+     VARIANTS - SECONDARY
+     ============================ */
+  .btn-secondary {
+    @apply bg-neutral-100 text-neutral-700 shadow-button;
+    @apply hover:bg-neutral-200 hover:shadow-button-hover;
+    @apply active:bg-neutral-300;
+    @apply focus:ring-neutral-400;
+  }
+
+  /* ============================
+     VARIANTS - SUCCESS
+     ============================ */
+  .btn-success {
+    @apply bg-success-600 text-white shadow-button;
+    @apply hover:bg-success-700 hover:shadow-button-hover;
+    @apply active:bg-success-800;
+    @apply focus:ring-success-500;
+  }
+
+  /* ============================
+     VARIANTS - DANGER
+     ============================ */
+  .btn-danger {
+    @apply bg-danger-600 text-white shadow-button;
+    @apply hover:bg-danger-700 hover:shadow-button-hover;
+    @apply active:bg-danger-800;
+    @apply focus:ring-danger-500;
+  }
+
+  /* ============================
+     VARIANTS - WARNING
+     ============================ */
+  .btn-warning {
+    @apply bg-warning-600 text-white shadow-button;
+    @apply hover:bg-warning-700 hover:shadow-button-hover;
+    @apply active:bg-warning-800;
+    @apply focus:ring-warning-500;
+  }
+
+  /* ============================
+     VARIANTS - OUTLINE
+     ============================ */
+  .btn-outline {
+    @apply bg-white border-2 border-neutral-300 text-neutral-700;
+    @apply hover:bg-neutral-50 hover:border-neutral-400;
+    @apply active:bg-neutral-100;
+    @apply focus:ring-neutral-400;
+  }
+
+  .btn-outline-primary {
+    @apply bg-white border-2 border-primary-600 text-primary-600;
+    @apply hover:bg-primary-50 hover:border-primary-700;
+    @apply active:bg-primary-100;
+    @apply focus:ring-primary-500;
+  }
+
+  /* ============================
+     VARIANTS - GHOST
+     ============================ */
+  .btn-ghost {
+    @apply bg-transparent text-neutral-700;
+    @apply hover:bg-neutral-100;
+    @apply active:bg-neutral-200;
+    @apply focus:ring-neutral-400;
+  }
+
+  .btn-ghost-primary {
+    @apply bg-transparent text-primary-600;
+    @apply hover:bg-primary-50;
+    @apply active:bg-primary-100;
+    @apply focus:ring-primary-500;
+  }
+
+  .btn-ghost-success {
+    @apply bg-transparent text-success-600;
+    @apply hover:bg-success-50;
+    @apply active:bg-success-100;
+    @apply focus:ring-success-500;
+  }
+
+  .btn-ghost-danger {
+    @apply bg-transparent text-danger-600;
+    @apply hover:bg-danger-50;
+    @apply active:bg-danger-100;
+    @apply focus:ring-danger-500;
+  }
+
+  /* ============================
+     ICON BUTTONS
+     ============================ */
+  .btn-icon {
+    @apply p-2 rounded-lg;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-icon-primary {
+    @apply btn-icon text-primary-600;
+    @apply hover:bg-primary-50;
+    @apply focus:ring-primary-500;
+  }
+
+  .btn-icon-success {
+    @apply btn-icon text-success-600;
+    @apply hover:bg-success-50;
+    @apply focus:ring-success-500;
+  }
+
+  .btn-icon-danger {
+    @apply btn-icon text-danger-600;
+    @apply hover:bg-danger-50;
+    @apply focus:ring-danger-500;
+  }
+
+  .btn-icon-neutral {
+    @apply btn-icon text-neutral-600;
+    @apply hover:bg-neutral-100;
+    @apply focus:ring-neutral-400;
+  }
+
+  /* ============================
+     TOGGLE BUTTONS
+     ============================ */
+  .btn-toggle {
+    @apply px-4 py-2 rounded-lg shadow;
+    @apply transition-all duration-200;
+    @apply font-medium;
+  }
+
+  .btn-toggle-active {
+    @apply bg-primary-600 text-white;
+  }
+
+  .btn-toggle-inactive {
+    @apply bg-neutral-100 text-neutral-700;
+    @apply hover:bg-neutral-200;
+  }
+
+  /* Income/Expense specific toggles */
+  .btn-toggle-income-active {
+    @apply bg-success-600 text-white;
+  }
+
+  .btn-toggle-expense-active {
+    @apply bg-danger-600 text-white;
+  }
+
+  /* ============================
+     FILTER BUTTONS
+     ============================ */
+  .btn-filter {
+    @apply px-4 py-2 rounded-lg shadow transition-all duration-200;
+    @apply font-medium;
+  }
+
+  .btn-filter-all-active {
+    @apply bg-primary-600 text-white;
+  }
+
+  .btn-filter-income-active {
+    @apply bg-success-600 text-white;
+  }
+
+  .btn-filter-expense-active {
+    @apply bg-danger-600 text-white;
+  }
+
+  .btn-filter-inactive {
+    @apply bg-neutral-100 text-neutral-700;
+    @apply hover:bg-neutral-200;
+  }
+
+  /* ============================
+     LOADING STATE
+     ============================ */
+  .btn-loading {
+    @apply relative text-transparent pointer-events-none;
+  }
+
+  .btn-loading::after {
+    content: '';
+    @apply absolute inset-0 m-auto;
+    @apply w-5 h-5 border-2 border-white border-t-transparent;
+    @apply rounded-full animate-spin;
+  }
+
+  /* ============================
+     FULL WIDTH
+     ============================ */
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* ============================
+     GROUP/JOINED BUTTONS
+     ============================ */
+  .btn-group {
+    @apply inline-flex;
+  }
+
+  .btn-group > .btn:not(:first-child) {
+    @apply rounded-l-none border-l-0;
+  }
+
+  .btn-group > .btn:not(:last-child) {
+    @apply rounded-r-none;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+@layer utilities {
+  /* Hover lift effect */
+  .hover-lift {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-0.5;
+  }
+
+  /* Hover scale effect */
+  .hover-scale {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-scale:hover {
+    @apply scale-105;
+  }
+}

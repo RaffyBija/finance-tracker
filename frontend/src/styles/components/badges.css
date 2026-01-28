@@ -1,0 +1,341 @@
+/* ============================================
+   BADGES & TAGS SYSTEM
+   Sistema completo di badge e tag riutilizzabili
+   ============================================ */
+
+@layer components {
+  /* ============================
+     BASE BADGE
+     ============================ */
+  .badge {
+    @apply inline-flex items-center justify-center;
+    @apply px-2 py-1;
+    @apply text-xs font-medium;
+    @apply rounded;
+    @apply transition-colors duration-200;
+  }
+
+  .badge-sm {
+    @apply px-1.5 py-0.5 text-xxs;
+  }
+
+  .badge-md {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .badge-lg {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  /* ============================
+     BADGE VARIANTS - SOLID
+     ============================ */
+  .badge-primary {
+    @apply bg-primary-100 text-primary-700;
+  }
+
+  .badge-success {
+    @apply bg-success-100 text-success-700;
+  }
+
+  .badge-danger {
+    @apply bg-danger-100 text-danger-700;
+  }
+
+  .badge-warning {
+    @apply bg-warning-100 text-warning-700;
+  }
+
+  .badge-info {
+    @apply bg-info-100 text-info-700;
+  }
+
+  .badge-neutral {
+    @apply bg-neutral-100 text-neutral-700;
+  }
+
+  /* ============================
+     BADGE VARIANTS - OUTLINE
+     ============================ */
+  .badge-outline {
+    @apply bg-transparent border;
+  }
+
+  .badge-outline-primary {
+    @apply badge-outline border-primary-500 text-primary-700;
+  }
+
+  .badge-outline-success {
+    @apply badge-outline border-success-500 text-success-700;
+  }
+
+  .badge-outline-danger {
+    @apply badge-outline border-danger-500 text-danger-700;
+  }
+
+  .badge-outline-warning {
+    @apply badge-outline border-warning-500 text-warning-700;
+  }
+
+  .badge-outline-neutral {
+    @apply badge-outline border-neutral-400 text-neutral-700;
+  }
+
+  /* ============================
+     STATUS BADGES
+     ============================ */
+  .badge-status-active {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-status-inactive {
+    @apply badge bg-neutral-100 text-neutral-600;
+  }
+
+  .badge-status-pending {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-status-completed {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+
+  /* ============================
+     TRANSACTION TYPE BADGES
+     ============================ */
+  .badge-income {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-expense {
+    @apply badge bg-danger-100 text-danger-700;
+  }
+
+  /* ============================
+     DOT BADGES (with indicator)
+     ============================ */
+  .badge-dot {
+    @apply badge pl-1.5;
+  }
+
+  .badge-dot::before {
+    content: '';
+    @apply inline-block w-1.5 h-1.5 rounded-full mr-1.5;
+  }
+
+  .badge-dot-success::before {
+    @apply bg-success-500;
+  }
+
+  .badge-dot-danger::before {
+    @apply bg-danger-500;
+  }
+
+  .badge-dot-warning::before {
+    @apply bg-warning-500;
+  }
+
+  .badge-dot-primary::before {
+    @apply bg-primary-500;
+  }
+
+  /* ============================
+     ROUNDED BADGES
+     ============================ */
+  .badge-rounded {
+    @apply rounded-lg;
+  }
+
+  .badge-pill {
+    @apply rounded-full;
+  }
+
+  /* ============================
+     REMOVABLE BADGES (with X)
+     ============================ */
+  .badge-removable {
+    @apply badge pr-1;
+  }
+
+  .badge-remove-btn {
+    @apply ml-1 -mr-1 p-0.5 rounded-full;
+    @apply hover:bg-black/10;
+    @apply transition-colors duration-200;
+  }
+
+  /* ============================
+     NUMBER BADGE (notification style)
+     ============================ */
+  .badge-number {
+    @apply inline-flex items-center justify-center;
+    @apply min-w-[1.25rem] h-5;
+    @apply px-1;
+    @apply text-xs font-bold;
+    @apply rounded-full;
+  }
+
+  .badge-number-primary {
+    @apply badge-number bg-primary-600 text-white;
+  }
+
+  .badge-number-danger {
+    @apply badge-number bg-danger-600 text-white;
+  }
+
+  /* ============================
+     POSITIONED BADGES
+     ============================ */
+  .badge-positioned {
+    @apply absolute;
+  }
+
+  .badge-top-right {
+    @apply badge-positioned -top-1 -right-1;
+  }
+
+  .badge-top-left {
+    @apply badge-positioned -top-1 -left-1;
+  }
+
+  .badge-bottom-right {
+    @apply badge-positioned -bottom-1 -right-1;
+  }
+
+  /* ============================
+     DATE BADGES
+     ============================ */
+  .badge-date-today {
+    @apply badge bg-danger-100 text-danger-700;
+  }
+
+  .badge-date-tomorrow {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-date-upcoming {
+    @apply badge bg-info-100 text-info-700;
+  }
+
+  .badge-date-past {
+    @apply badge bg-neutral-300 text-neutral-700;
+  }
+
+  /* ============================
+     PRIORITY BADGES
+     ============================ */
+  .badge-priority-high {
+    @apply badge bg-danger-100 text-danger-700 font-semibold;
+  }
+
+  .badge-priority-medium {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-priority-low {
+    @apply badge bg-info-100 text-info-700;
+  }
+
+  /* ============================
+     TAGS (larger, interactive)
+     ============================ */
+  .tag {
+    @apply inline-flex items-center gap-1.5;
+    @apply px-3 py-1.5;
+    @apply text-sm font-medium;
+    @apply rounded-lg;
+    @apply transition-all duration-200;
+  }
+
+  .tag-clickable {
+    @apply tag cursor-pointer;
+    @apply hover:shadow-sm;
+  }
+
+  .tag-primary {
+    @apply bg-primary-100 text-primary-700;
+    @apply hover:bg-primary-200;
+  }
+
+  .tag-success {
+    @apply bg-success-100 text-success-700;
+    @apply hover:bg-success-200;
+  }
+
+  .tag-danger {
+    @apply bg-danger-100 text-danger-700;
+    @apply hover:bg-danger-200;
+  }
+
+  /* ============================
+     CATEGORY TAGS
+     ============================ */
+  .category-tag {
+    @apply tag;
+  }
+
+  .category-tag-icon {
+    @apply text-base;
+  }
+
+  /* ============================
+     BUDGET PERCENTAGE BADGES
+     ============================ */
+  .badge-budget-safe {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-budget-warning {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-budget-danger {
+    @apply badge bg-danger-100 text-danger-700;
+  }
+
+  .badge-budget-exceeded {
+    @apply badge bg-danger-600 text-white;
+  }
+
+  /* ============================
+     FREQUENCY BADGES
+     ============================ */
+  .badge-frequency-weekly {
+    @apply badge bg-info-100 text-info-700;
+  }
+
+  .badge-frequency-monthly {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+
+  .badge-frequency-yearly {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  /* ============================
+     PAYMENT STATUS
+     ============================ */
+  .badge-paid {
+    @apply badge bg-success-100 text-success-700;
+  }
+
+  .badge-unpaid {
+    @apply badge bg-warning-100 text-warning-700;
+  }
+
+  .badge-overdue {
+    @apply badge bg-danger-100 text-danger-700;
+  }
+}
+
+/* ============================================
+   BADGE ANIMATIONS
+   ============================================ */
+@layer utilities {
+  .badge-pulse {
+    @apply animate-pulse-subtle;
+  }
+
+  .badge-bounce {
+    @apply animate-bounce-subtle;
+  }
+}

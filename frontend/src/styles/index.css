@@ -1,0 +1,94 @@
+@import './components/buttons.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/badges.css';
+
+@import './utilities/utilities.css';
+
+@import './Modal.css';
+@import './CategorieCard.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  
+  /* CSS Custom Properties per temi futuri */
+  --color-primary: theme('colors.primary.600');
+  --color-success: theme('colors.success.600');
+  --color-danger: theme('colors.danger.600');
+  --color-warning: theme('colors.warning.600');
+  
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  @apply bg-neutral-50 text-neutral-900;
+  @apply antialiased;
+  
+  /* Miglior rendering dei font */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   GLOBAL IMPROVEMENTS
+   ============================================ */
+
+/* Focus visible migliore */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Selection color */
+::selection {
+  @apply bg-primary-200 text-primary-900;
+}
+
+/* Scrollbar globale */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.neutral.300') theme('colors.neutral.100');
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  @apply bg-neutral-100;
+}
+
+*::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400;
+}
+
+/* Touch devices improvements */
+@media (hover: none) {
+  /* Rimuove hover su touch devices */
+  button:hover,
+  a:hover {
+    opacity: 1;
+  }
+  
+  /* Migliora tap target size */
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply min-h-[44px];
+  }
+}
