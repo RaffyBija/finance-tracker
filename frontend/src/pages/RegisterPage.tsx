@@ -43,30 +43,30 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
-        <div className="flex items-center justify-center mb-8">
-          <div className="bg-indigo-600 rounded-full p-3">
-            <UserPlus className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex-center p-4">
+      <div className="card card-xl w-full max-w-md">
+        <div className="flex-center mb-8">
+          <div className="gradient-primary rounded-full p-3">
+            <UserPlus className="icon-xl text-white" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+        <h1 className="text-3xl font-bold text-center text-neutral-800 mb-2">
           Crea Account
         </h1>
-        <p className="text-center text-gray-600 mb-8">
+        <p className="text-center text-neutral-600 mb-8">
           Inizia a gestire le tue finanze
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error}
+          <div className="card card-danger p-4 mb-4">
+            <p className="text-sm text-danger-700">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="form-group">
+            <label htmlFor="name" className="form-label">
               Nome
             </label>
             <input
@@ -75,13 +75,13 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="form-input"
               placeholder="Mario Rossi"
             />
           </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">
               Email
             </label>
             <input
@@ -90,13 +90,13 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="form-input"
               placeholder="mario.rossi@email.com"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">
               Password
             </label>
             <input
@@ -105,13 +105,13 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="form-input"
               placeholder="••••••••"
             />
           </div>
 
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">
               Conferma Password
             </label>
             <input
@@ -120,7 +120,7 @@ export default function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="form-input"
               placeholder="••••••••"
             />
           </div>
@@ -128,15 +128,15 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:bg-indigo-300 disabled:cursor-not-allowed"
+            className={`btn btn-primary btn-block btn-lg ${isLoading ? 'btn-loading' : ''}`}
           >
             {isLoading ? 'Registrazione in corso...' : 'Registrati'}
           </button>
         </form>
 
-        <p className="text-center text-gray-600 mt-6">
+        <p className="text-center text-neutral-600 mt-6">
           Hai già un account?{' '}
-          <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
             Accedi
           </Link>
         </p>

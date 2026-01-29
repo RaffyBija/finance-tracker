@@ -64,7 +64,7 @@ export const Budgets = () => {
       await budgetApi.delete(id);
       loadData();
     } catch (error) {
-      alert('Errore nell\'eliminazione');
+      alert("Errore nell'eliminazione");
     }
   };
 
@@ -99,31 +99,34 @@ export const Budgets = () => {
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return 'bg-red-500';
-    if (percentage >= 80) return 'bg-orange-500';
-    if (percentage >= 60) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (percentage >= 100) return 'bg-danger-500';
+    if (percentage >= 80) return 'bg-warning-500';
+    if (percentage >= 60) return 'bg-warning-400';
+    return 'bg-success-500';
   };
 
   const getStatusIcon = (percentage: number) => {
-    if (percentage >= 100) return <AlertTriangle className="w-5 h-5 text-red-500" />;
-    if (percentage >= 80) return <AlertTriangle className="w-5 h-5 text-orange-500" />;
-    return <CheckCircle className="w-5 h-5 text-green-500" />;
+    if (percentage >= 100)
+      return <AlertTriangle className="icon-md text-danger-500" />;
+    if (percentage >= 80)
+      return <AlertTriangle className="icon-md text-warning-500" />;
+    return <CheckCircle className="icon-md text-success-500" />;
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Caricamento...</div>;
+    return (
+      <div className="flex-center h-64">
+        <div className="skeleton skeleton-text w-32">Caricamento...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="px-4 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Budget</h1>
-        <button
-          onClick={handleOpenModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
+    <div className="container-custom">
+      <div className="flex-between mb-6">
+        <h1 className="text-3xl font-bold text-neutral-900">Budget</h1>
+        <button onClick={handleOpenModal} className="btn btn-primary btn-md">
+          <Plus className="icon-md" />
           Nuovo Budget
         </button>
       </div>
@@ -131,67 +134,89 @@ export const Budgets = () => {
       {/* Lista Budget */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {budgets.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            Nessun budget trovato
+          <div className="empty-state-card col-span-full">
+            <p className="empty-state-title">Nessun budget trovato</p>
+            <p className="empty-state-description">
+              Crea il tuo primo budget per monitorare le spese
+            </p>
+            <button onClick={handleOpenModal} className="btn btn-primary btn-md">
+              <Plus className="icon-md" />
+              Crea Budget
+            </button>
           </div>
         ) : (
           budgets.map((budget) => (
-            <div key={budget.id} className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex justify-between items-start mb-4">
+            <div key={budget.id} className="budget-card">
+              <div className="budget-card-header">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">{budget.name}</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 className="budget-card-title">{budget.name}</h3>
+                  <p className="budget-card-subtitle">
                     {budget.category?.name || 'Tutte le categorie'} • {budget.period}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-neutral-400 mt-1">
                     {format(new Date(budget.startDate), 'dd MMM yyyy', { locale: it })}
-                    {budget.endDate && ` - ${format(new Date(budget.endDate), 'dd MMM yyyy', { locale: it })}`}
+                    {budget.endDate &&
+                      ` - ${format(new Date(budget.endDate), 'dd MMM yyyy', {
+                        locale: it,
+                      })}`}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   {getStatusIcon(budget.percentage || 0)}
                   <button
                     onClick={() => handleEdit(budget)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    className="btn-icon-primary"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="icon-sm" />
                   </button>
                   <button
                     onClick={() => handleDelete(budget.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
+                    className="btn-icon-danger"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="icon-sm" />
                   </button>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">
+              <div className="budget-card-progress">
+                <div className="flex-between text-sm mb-2">
+                  <span className="text-neutral-600">
                     Speso: €{budget.spent?.toFixed(2) || 0}
                   </span>
                   <span className="font-semibold">
                     {budget.percentage?.toFixed(1) || 0}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="budget-card-progress-bar">
                   <div
-                    className={`h-3 rounded-full transition-all ${getProgressColor(budget.percentage || 0)}`}
-                    style={{ width: `${Math.min(budget.percentage || 0, 100)}%` }}
+                    className={`budget-card-progress-fill ${getProgressColor(
+                      budget.percentage || 0
+                    )}`}
+                    style={{
+                      width: `${Math.min(budget.percentage || 0, 100)}%`,
+                    }}
                   />
                 </div>
               </div>
 
               {/* Importi */}
-              <div className="flex justify-between items-center pt-4 border-t">
+              <div className="budget-card-stats">
                 <div>
-                  <p className="text-xs text-gray-500">Budget</p>
-                  <p className="text-lg font-bold text-gray-900">€{Number(budget.amount).toFixed(2)}</p>
+                  <p className="text-xs text-neutral-500">Budget</p>
+                  <p className="text-lg font-bold text-neutral-900">
+                    €{Number(budget.amount).toFixed(2)}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Rimanente</p>
-                  <p className={`text-lg font-bold ${(budget.remaining || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className="text-xs text-neutral-500">Rimanente</p>
+                  <p
+                    className={`text-lg font-bold ${
+                      (budget.remaining || 0) >= 0
+                        ? 'text-success-600'
+                        : 'text-danger-600'
+                    }`}
+                  >
                     €{budget.remaining?.toFixed(2) || 0}
                   </p>
                 </div>
@@ -203,52 +228,68 @@ export const Budgets = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div
+            className="card card-lg w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="card-header-title mb-4">
               {editingBudget ? 'Modifica Budget' : 'Nuovo Budget'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Nome</label>
+              <div className="form-group">
+                <label className="form-label">Nome</label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="form-input"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Importo Budget (€)</label>
+              <div className="form-group">
+                <label className="form-label">Importo Budget (€)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({ ...formData, amount: parseFloat(e.target.value) })
+                  }
+                  className="form-input"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Categoria (opzionale)</label>
+              <div className="form-group">
+                <label className="form-label">Categoria (opzionale)</label>
                 <select
                   value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
+                  className="form-select"
                 >
                   <option value="">Tutte le spese</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Periodo</label>
+              <div className="form-group">
+                <label className="form-label">Periodo</label>
                 <select
                   value={formData.period}
-                  onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      period: e.target.value as BudgetPeriod,
+                    })
+                  }
+                  className="form-select"
                   required
                 >
                   <option value="WEEKLY">Settimanale</option>
@@ -256,37 +297,41 @@ export const Budgets = () => {
                   <option value="YEARLY">Annuale</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Data Inizio</label>
+              <div className="form-group">
+                <label className="form-label">Data Inizio</label>
                 <input
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                  className="form-input"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Data Fine (opzionale)</label>
+              <div className="form-group">
+                <label className="form-label">Data Fine (opzionale)</label>
                 <input
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                  className="form-input"
                 />
               </div>
-              <div className="flex gap-4">
+              <div className="form-button-group">
                 <button
                   type="button"
-                  onClick={() => { setShowModal(false); resetForm(); }}
-                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  onClick={() => {
+                    setShowModal(false);
+                    resetForm();
+                  }}
+                  className="btn btn-secondary flex-1"
                 >
                   Annulla
                 </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
+                <button type="submit" className="btn btn-primary flex-1">
                   Salva
                 </button>
               </div>

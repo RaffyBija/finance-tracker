@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import { transactionAPI,categoryAPI } from '../api/client';
-
+import { transactionAPI, categoryAPI } from '../api/client';
 import type { Transaction, Category, TransactionType } from '../types';
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
 import FilterNav from '../components/layout/FilterNav';
-
-import matchesFilters from '../utils/filters.ts'
+import matchesFilters from '../utils/filters.ts';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -19,6 +17,7 @@ export default function TransactionsPage() {
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [searchFilter, setFilterSearch] = useState('');
+
   useEffect(() => {
     loadData();
   }, [refreshFlag]);
@@ -40,8 +39,6 @@ export default function TransactionsPage() {
     }
   };
 
-  
-
   const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro di voler eliminare questa transazione?')) return;
     try {
@@ -55,118 +52,125 @@ export default function TransactionsPage() {
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setShowModal(true);
-  };  
+  };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Caricamento...</div>;
+    return (
+      <div className="flex-center h-64">
+        <div className="skeleton skeleton-text w-32">Caricamento...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="px-4 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Transazioni</h1>
+    <div className="container-custom">
+      <div className="flex-between mb-6">
+        <h1 className="text-3xl font-bold text-neutral-900">Transazioni</h1>
         <button
-          onClick={() => {setShowModal(true); setEditingTransaction(null);}}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          onClick={() => {
+            setShowModal(true);
+            setEditingTransaction(null);
+          }}
+          className="btn btn-primary btn-md"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="icon-md" />
           Nuova Transazione
         </button>
       </div>
 
       {/* Filtri */}
-      <FilterNav      
+      <FilterNav
         filterType={filterType}
         setFilterType={setFilterType}
         setSearchFilter={setFilterSearch}
       />
 
       {/* Lista transazioni */}
-     <div className="bg-white rounded-lg shadow divide-y">
-  {transactions.length === 0 ? (
-    <div className="p-8 text-center text-gray-500">
-      Nessuna transazione trovata
-    </div>
-  ) : (
-    transactions.map((transaction) => {
-      //Filtro 
-        if (
-          !matchesFilters(transaction, {
-            typeValue: filterType,
-            itemType: (t) => t.type,
-            searchValue: searchFilter,
-            searchFields: [
-              (t) => t.description,
-              (t) => t.category?.name,
-            ],
+      <div className="list-card">
+        {transactions.length === 0 ? (
+          <div className="empty-state-card">
+            <p className="empty-state-title">Nessuna transazione trovata</p>
+            <p className="empty-state-description">
+              Inizia aggiungendo la tua prima transazione
+            </p>
+            <button onClick={() => setShowModal(true)} className="btn btn-primary btn-md">
+              <Plus className="icon-md" />
+              Aggiungi Transazione
+            </button>
+          </div>
+        ) : (
+          transactions.map((transaction) => {
+            // Filtro
+            if (
+              !matchesFilters(transaction, {
+                typeValue: filterType,
+                itemType: (t) => t.type,
+                searchValue: searchFilter,
+                searchFields: [(t) => t.description, (t) => t.category?.name],
+              })
+            )
+              return null;
+
+            return (
+              <div key={transaction.id} className="transaction-card">
+                <div className="transaction-card-left">
+                  <div
+                    className={
+                      transaction.type === 'INCOME'
+                        ? 'transaction-card-icon-income'
+                        : 'transaction-card-icon-expense'
+                    }
+                  >
+                    {transaction.type === 'INCOME' ? (
+                      <TrendingUp className="icon-md text-success-600" />
+                    ) : (
+                      <TrendingDown className="icon-md text-danger-600" />
+                    )}
+                  </div>
+                  <div className="transaction-card-info">
+                    <p className="transaction-card-title">
+                      {transaction.description || 'Nessuna descrizione'}
+                    </p>
+                    <p className="transaction-card-subtitle">
+                      {transaction.category?.name || 'Senza categoria'} •{' '}
+                      {format(new Date(transaction.date), 'dd MMM yyyy', {
+                        locale: it,
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="transaction-card-right">
+                  <span
+                    className={
+                      transaction.type === 'INCOME'
+                        ? 'transaction-card-amount-income'
+                        : 'transaction-card-amount-expense'
+                    }
+                  >
+                    {transaction.type === 'INCOME' ? '+' : '-'}€
+                    {Number(transaction.amount).toFixed(2)}
+                  </span>
+
+                  <button
+                    onClick={() => handleEdit(transaction)}
+                    className="btn-icon-primary"
+                  >
+                    <Pencil className="icon-sm" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(transaction.id)}
+                    className="btn-icon-danger"
+                  >
+                    <Trash2 className="icon-sm" />
+                  </button>
+                </div>
+              </div>
+            );
           })
-        )
-    return null;
-
-      return (
-        <div
-          key={transaction.id}
-          className="p-4 flex items-center justify-between hover:bg-gray-50"
-        >
-          <div className="flex items-center gap-4">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                transaction.type === 'INCOME'
-                  ? 'bg-green-100'
-                  : 'bg-red-100'
-              }`}
-            >
-              {transaction.type === 'INCOME' ? (
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              ) : (
-                <TrendingDown className="w-5 h-5 text-red-600" />
-              )}
-            </div>
-            <div>
-              <p className="font-medium">
-                {transaction.description || 'Nessuna descrizione'}
-              </p>
-              <p className="text-sm text-gray-500">
-                {transaction.category?.name || 'Senza categoria'} •{' '}
-                {format(new Date(transaction.date), 'dd MMM yyyy', {
-                  locale: it,
-                })}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span
-              className={`text-lg font-semibold ${
-                transaction.type === 'INCOME'
-                  ? 'text-green-600'
-                  : 'text-red-600'
-              }`}
-            >
-              {transaction.type === 'INCOME' ? '+' : '-'}€
-              {Number(transaction.amount).toFixed(2)}
-            </span>
-
-            <button
-              onClick={() => handleEdit(transaction)}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => handleDelete(transaction.id)}
-              className="p-2 text-red-600 hover:bg-red-50 rounded"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      );
-    })
-  )}
-</div>
-
+        )}
+      </div>
 
       {/* Modal */}
       <TransactionModal
@@ -178,4 +182,4 @@ export default function TransactionsPage() {
       />
     </div>
   );
-};
+}

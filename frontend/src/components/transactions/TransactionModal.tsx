@@ -1,10 +1,12 @@
-
-import {useState} from "react";
-import BaseModal from "../layout/ModalBase";
-import type { CreateTransactionDTO, Category, Transaction,AlertPopUp } from "../../types";
-import { transactionAPI} from "../../api/client";
-
-
+import { useState } from 'react';
+import BaseModal from '../layout/ModalBase';
+import type {
+  CreateTransactionDTO,
+  Category,
+  Transaction,
+  AlertPopUp,
+} from '../../types';
+import { transactionAPI } from '../../api/client';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -21,10 +23,10 @@ export default function TransactionModal({
   onClose,
   sentFeed,
 }: TransactionModalProps) {
+  if (!isOpen) return null;
 
-  if(!isOpen) return null;
-    // Form state
-    const [formData, setFormData] = useState<CreateTransactionDTO>({
+  // Form state
+  const [formData, setFormData] = useState<CreateTransactionDTO>({
     amount: 0,
     type: 'EXPENSE',
     description: '',
@@ -32,66 +34,72 @@ export default function TransactionModal({
     categoryId: '',
   });
 
-  const [alertConfig,setAlertConfig] = useState <AlertPopUp>({
-        messaggio: '',
-        tipo: '',
-        checked: false
-      });
-
-
-if(editingTransactionData && formData.amount === 0) {
-  setFormData({
-    amount: editingTransactionData.amount,
-    type: editingTransactionData.type,
-    description: editingTransactionData.description || '',
-    date: editingTransactionData.date.split('T')[0],
-    categoryId: editingTransactionData.categoryId || '',
+  const [alertConfig, setAlertConfig] = useState<AlertPopUp>({
+    messaggio: '',
+    tipo: '',
+    checked: false,
   });
-}
 
-  const filteredCategories = categories.filter(cat => cat.type === formData.type);
+  if (editingTransactionData && formData.amount === 0) {
+    setFormData({
+      amount: editingTransactionData.amount,
+      type: editingTransactionData.type,
+      description: editingTransactionData.description || '',
+      date: editingTransactionData.date.split('T')[0],
+      categoryId: editingTransactionData.categoryId || '',
+    });
+  }
+
+  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
-      let messaggio = '';
-      e.preventDefault();
-      try {
-        if (editingTransactionData) {
-          if(editingTransactionData.amount === formData.amount &&
-            editingTransactionData.type === formData.type &&
-            editingTransactionData.description === formData.description &&
-            editingTransactionData.date === formData.date){
-            setAlertConfig({...alertConfig, 
-              messaggio:'Nessuna modifica apportata',
-              tipo:'info',
-              checked:true,
-            });
-              
-              setTimeout(onClose,800);
-              return;
-            }
-          await transactionAPI.update(editingTransactionData.id, formData);
-          messaggio='Transazione aggiornata con successo';
-        } else {
-          await transactionAPI.create(formData);
-          messaggio='Transazione creata con successo';
+    let messaggio = '';
+    e.preventDefault();
+    try {
+      if (editingTransactionData) {
+        if (
+          editingTransactionData.amount === formData.amount &&
+          editingTransactionData.type === formData.type &&
+          editingTransactionData.description === formData.description &&
+          editingTransactionData.date === formData.date
+        ) {
+          setAlertConfig({
+            ...alertConfig,
+            messaggio: 'Nessuna modifica apportata',
+            tipo: 'info',
+            checked: true,
+          });
+
+          setTimeout(onClose, 800);
+          return;
         }
-        setAlertConfig({...alertConfig, 
-          messaggio: messaggio,
-          tipo: 'success',
-          checked: true,
-        });
-        setTimeout(() => {onClose(); sentFeed();}, 800);
-      } catch (error: any) {
-        alert(error.response?.data?.error || 'Errore nel salvataggio');
+        await transactionAPI.update(editingTransactionData.id, formData);
+        messaggio = 'Transazione aggiornata con successo';
+      } else {
+        await transactionAPI.create(formData);
+        messaggio = 'Transazione creata con successo';
       }
-    };
+      setAlertConfig({
+        ...alertConfig,
+        messaggio: messaggio,
+        tipo: 'success',
+        checked: true,
+      });
+      setTimeout(() => {
+        onClose();
+        sentFeed();
+      }, 800);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Errore nel salvataggio');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const newTransaction: CreateTransactionDTO = {
       amount: Number(formData.amount),
-      type: formData.type as "INCOME" | "EXPENSE",
+      type: formData.type as 'INCOME' | 'EXPENSE',
       categoryId: formData.categoryId as string,
       date: formData.date as string,
       description: formData.description as string,
@@ -109,92 +117,111 @@ if(editingTransactionData && formData.amount === 0) {
   return (
     <BaseModal
       isOpen={isOpen}
-      title={editingTransactionData ? 'Modifica Transazione' : 'Nuova Transazione'}
+      title={
+        editingTransactionData ? 'Modifica Transazione' : 'Nuova Transazione'
+      }
       onClose={onClose}
       feedAlert={alertConfig}
     >
-            <form 
-              className="modal-form"
-              onSubmit=
-                {editingTransactionData ? handleSubmitEdit : handleSubmit} 
+      <form
+        className="modal-form"
+        onSubmit={editingTransactionData ? handleSubmitEdit : handleSubmit}
+      >
+        <div className="form-group">
+          <label className="form-label">Tipo</label>
+          <div className="form-button-group">
+            <button
+              type="button"
+              onClick={() =>
+                setFormData({ ...formData, type: 'INCOME', categoryId: '' })
+              }
+              className={`btn-toggle flex-1 ${
+                formData.type === 'INCOME'
+                  ? 'btn-toggle-income-active'
+                  : 'btn-toggle-inactive'
+              }`}
             >
-              <div>
-                <label>Tipo</label>
-                <div className="modal-buttons">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: 'INCOME', categoryId: '' })}
-                    className={`modal-btn ${formData.type === 'INCOME' ? 'bg-green-600 text-white' : 'bg-gray-100'}`}
-                  >
-                    Entrata
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: 'EXPENSE', categoryId: '' })}
-                    className={`modal-btn ${formData.type === 'EXPENSE' ? 'bg-red-600 text-white' : 'bg-gray-100'}`}
-                  >
-                    Uscita
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label>Importo (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-                  required
-                />
-              </div>
-              <div>
-                <label >Categoria</label>
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                 
-                >
-                  <option value="">Nessuna categoria</option>
-                  {filteredCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label >Descrizione</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Data</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                />
-              </div>
-                   <div className="modal-buttons">
-                <button
-                  type="submit"
-                  className="modal-btn modal-btn-primary"
-                >
-                  Salva
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="modal-btn modal-btn-secondary"
-                >
-                  Annulla
-                </button>
+              Entrata
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setFormData({ ...formData, type: 'EXPENSE', categoryId: '' })
+              }
+              className={`btn-toggle flex-1 ${
+                formData.type === 'EXPENSE'
+                  ? 'btn-toggle-expense-active'
+                  : 'btn-toggle-inactive'
+              }`}
+            >
+              Uscita
+            </button>
+          </div>
         </div>
-            </form>
-  
+        <div className="form-group">
+          <label className="form-label">Importo (€)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={formData.amount}
+            onChange={(e) =>
+              setFormData({ ...formData, amount: parseFloat(e.target.value) })
+            }
+            className="form-input"
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Categoria</label>
+          <select
+            value={formData.categoryId}
+            onChange={(e) =>
+              setFormData({ ...formData, categoryId: e.target.value })
+            }
+            className="form-select"
+          >
+            <option value="">Nessuna categoria</option>
+            {filteredCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Descrizione</label>
+          <input
+            type="text"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            className="form-input"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Data</label>
+          <input
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            className="form-input"
+            required
+          />
+        </div>
+        <div className="form-button-group">
+          <button type="submit" className="btn btn-primary flex-1">
+            Salva
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-secondary flex-1"
+          >
+            Annulla
+          </button>
+        </div>
+      </form>
     </BaseModal>
   );
 }
