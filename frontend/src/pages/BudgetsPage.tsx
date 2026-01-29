@@ -5,6 +5,7 @@ import type { Budget, Category, CreateBudgetDTO, BudgetPeriod } from '../types';
 import { Plus, Trash2, Pencil, AlertTriangle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import {OrbitProgress} from 'react-loading-indicators'
 
 export const Budgets = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -115,8 +116,8 @@ export const Budgets = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
+      <div className='flex items-center justify-center'>
+        <OrbitProgress variant="split-disc" color="#3161cc" size="large" text="" textColor="" />
       </div>
     );
   }
