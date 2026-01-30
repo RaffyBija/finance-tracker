@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-//@ts-ignore
 import { UserPlus } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -34,7 +33,7 @@ export default function RegisterPage() {
 
     try {
       await register({ email, password, name });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante la registrazione');
     } finally {
