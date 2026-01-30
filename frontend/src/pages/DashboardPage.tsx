@@ -25,6 +25,9 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard.tsx';
 
+import Loading from '../components/layout/Loading';
+
+
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
@@ -89,9 +92,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
-      </div>
+      <Loading />
     );
   }
 

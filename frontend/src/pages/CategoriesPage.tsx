@@ -7,6 +7,9 @@ import CategoriesModal from '../components/categories/CategoriesModal';
 import CategoriesCard from '../components/categories/CategoriesCard';
 import matchesFilters from '../utils/filters.ts';
 
+import Loading from '../components/layout/Loading';
+
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,9 +58,7 @@ export default function CategoriesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
-      </div>
+      <Loading />
     );
   }
 

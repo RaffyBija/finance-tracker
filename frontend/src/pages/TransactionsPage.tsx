@@ -8,6 +8,8 @@ import TransactionModal from '../components/transactions/TransactionModal';
 import FilterNav from '../components/layout/FilterNav';
 import matchesFilters from '../utils/filters.ts';
 
+import Loading from '../components/layout/Loading';
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -56,9 +58,7 @@ export default function TransactionsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
-      </div>
+     <Loading />
     );
   }
 

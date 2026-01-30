@@ -11,6 +11,9 @@ import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar } from 
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
+import Loading from '../components/layout/Loading';
+
+
 export const RecurringTransactions = () => {
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -135,9 +138,7 @@ export const RecurringTransactions = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
-      </div>
+     <Loading />
     );
   }
 

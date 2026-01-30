@@ -15,6 +15,9 @@ import {
 import { format, isPast, isToday, isTomorrow } from 'date-fns';
 import { it } from 'date-fns/locale';
 
+import Loading from '../components/layout/Loading';
+
+
 export const PlannedTransactions = () => {
   const [planned, setPlanned] = useState<PlannedTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -153,9 +156,7 @@ export const PlannedTransactions = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-center h-64">
-        <div className="skeleton skeleton-text w-32">Caricamento...</div>
-      </div>
+      <Loading />
     );
   }
 
