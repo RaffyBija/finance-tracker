@@ -7,11 +7,7 @@ import RecurringList from '../components/recurring/RecurringList';
 import RecurringFormModal from '../components/recurring/RecurringFormModal';
 import type { RecurringTransaction } from '../types';
 
-/**
- * Pagina Spese Ricorrenti - REFACTORED
- * Prima: 406 righe
- * Dopo: ~75 righe (-82%)
- */
+
 export const RecurringTransactions = () => {
   const {
     recurring,

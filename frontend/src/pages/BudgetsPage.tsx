@@ -7,11 +7,7 @@ import BudgetList from '../components/budgets/BudgetList';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
 import type { Budget } from '../types';
 
-/**
- * Pagina Budget - REFACTORED
- * Prima: 344 righe
- * Dopo: ~70 righe (-80%)
- */
+
 export const Budgets = () => {
   const {
     budgets,

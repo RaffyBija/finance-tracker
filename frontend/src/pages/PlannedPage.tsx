@@ -8,11 +8,7 @@ import PlannedList from '../components/planned/PlannedList';
 import PlannedFormModal from '../components/planned/PlannedFormModal';
 import type { PlannedTransaction } from '../types';
 
-/**
- * Pagina Spese Pianificate - REFACTORED
- * Prima: 450 righe
- * Dopo: ~80 righe (-82%)
- */
+
 export const PlannedTransactions = () => {
   const {
     planned,
