@@ -12,7 +12,9 @@ import CategoriesPage from './pages/CategoriesPage';
 import  {Budgets}  from './pages/BudgetsPage';
 import  {RecurringTransactions}  from './pages/RecurringTransactions';
 import { PlannedTransactions } from './pages/PlannedPage';
-import { Analytics } from '@vercel/analytics/next';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +27,6 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
@@ -108,8 +109,6 @@ function App() {
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
-            <Analytics />
-    </>
   );
 }
 
