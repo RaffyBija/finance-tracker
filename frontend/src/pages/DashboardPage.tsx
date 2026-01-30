@@ -25,7 +25,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard.tsx';
 
-import Loading from '../components/layout/Loading';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 
 export default function DashboardPage() {
@@ -92,7 +92,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <Loading />
+      <LoadingSpinner message='Caricamento Dashboard ...' />
     );
   }
 

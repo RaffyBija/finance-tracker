@@ -7,7 +7,7 @@ import CategoriesModal from '../components/categories/CategoriesModal';
 import CategoriesCard from '../components/categories/CategoriesCard';
 import matchesFilters from '../utils/filters.ts';
 
-import Loading from '../components/layout/Loading';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 
 export default function CategoriesPage() {
@@ -58,7 +58,7 @@ export default function CategoriesPage() {
 
   if (isLoading) {
     return (
-      <Loading />
+      <LoadingSpinner message='Caricamento Categorie ...' />
     );
   }
 

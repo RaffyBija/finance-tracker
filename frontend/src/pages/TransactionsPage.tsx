@@ -8,7 +8,7 @@ import TransactionModal from '../components/transactions/TransactionModal';
 import FilterNav from '../components/layout/FilterNav';
 import matchesFilters from '../utils/filters.ts';
 
-import Loading from '../components/layout/Loading';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -58,7 +58,7 @@ export default function TransactionsPage() {
 
   if (isLoading) {
     return (
-     <Loading />
+     <LoadingSpinner message='Caricamento Transazioni ...' />
     );
   }
 
