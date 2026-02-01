@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryAPI } from '../api/client';
-import type { Category, CreateCategoryDTO, TransactionType } from '../types';
+import type { CreateCategoryDTO, TransactionType } from '../types';
 
 export const useCategories = (filterType?: TransactionType | 'ALL') => {
   const params = filterType !== 'ALL' ? { type: filterType } : {};

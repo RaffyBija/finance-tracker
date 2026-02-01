@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSummary, useCategoryStats, useMonthlyTrend, useRecentTransactions, useProjectedBalance } from '../hooks/useDashboard';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import {
