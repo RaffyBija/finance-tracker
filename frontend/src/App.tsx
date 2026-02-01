@@ -12,6 +12,7 @@ import  {Budgets}  from './pages/BudgetsPage';
 import  {RecurringTransactions}  from './pages/RecurringTransactions';
 import { PlannedTransactions } from './pages/PlannedPage';
 import { inject } from '@vercel/analytics';
+import {Privacy} from './pages/Privacy';
 
 inject();
 
@@ -33,6 +34,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/privacy" element={<Privacy/>} />
 
             {/* Protected Routes */}
             <Route
