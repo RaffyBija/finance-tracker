@@ -1,12 +1,5 @@
 import { useEffect, useState } from 'react';
-import { dashboardAPI } from '../api/client.ts';
-import type {
-  Summary,
-  CategoryStat,
-  MonthlyTrend,
-  Transaction,
-  ProjectedBalance,
-} from '../types';
+import { useSummary, useCategoryStats, useMonthlyTrend, useRecentTransactions, useProjectedBalance } from '../hooks/useDashboard';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import {
   LineChart,
@@ -29,57 +22,16 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [projectedBalance, setProjectedBalance] = useState<ProjectedBalance | null>(
-    null
-  );
   const [projectionMonths, setProjectionMonths] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const { data: summary, isLoading: summaryLoading } = useSummary();
+  const { data: categoryStats = [], isLoading: statsLoading } = useCategoryStats();
+  const { data: monthlyTrend = [], isLoading: trendLoading } = useMonthlyTrend(6);
+  const { data: recentTransactions = [], isLoading: recentLoading } = useRecentTransactions(5);
+  const { data: projectedBalance, isLoading: projectedLoading } = useProjectedBalance(projectionMonths);
 
-  useEffect(() => {
-    refreshProjectedBalance();
-  }, [projectionMonths]);
+  const isLoading = summaryLoading || statsLoading || trendLoading || recentLoading || projectedLoading;
 
-  const refreshProjectedBalance = async () => {
-    try {
-      const [projectedData] = await Promise.all([
-        dashboardAPI.getProjectedBalance(projectionMonths),
-      ]);
-      setProjectedBalance(projectedData);
-    } catch (error) {
-      console.error('Errore nel caricamento della dashboard:', error);
-    }
-  };
-
-  const loadDashboardData = async () => {
-    try {
-      setIsLoading(true);
-      const [summaryData, categoryData, trendData, recentData, projectedData] =
-        await Promise.all([
-          dashboardAPI.getSummary(),
-          dashboardAPI.getCategoryStats(),
-          dashboardAPI.getMonthlyTrend(6),
-          dashboardAPI.getRecent(5),
-          dashboardAPI.getProjectedBalance(projectionMonths),
-        ]);
-      setSummary(summaryData);
-      setCategoryStats(categoryData);
-      setMonthlyTrend(trendData);
-      setRecentTransactions(recentData);
-      setProjectedBalance(projectedData);
-    } catch (error) {
-      console.error('Errore nel caricamento della dashboard:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const COLORS = [
     '#0088FE',

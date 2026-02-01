@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Navbar from './Navbar';
+import { CookieBanner } from '../CookieConsent';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ export default function Layout({ children }: LayoutProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+      <CookieBanner />
     </div>
   );
 }
