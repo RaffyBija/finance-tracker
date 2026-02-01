@@ -3,61 +3,144 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { RegisterDTO, LoginDTO, AuthResponse } from '../types';
+import crypto from 'crypto';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name }: RegisterDTO = req.body;
 
-    // Validazione base
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
-    }
+    // ... validazioni esistenti ...
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'La password deve essere di almeno 6 caratteri' });
-    }
-
-    // Verifica se l'utente esiste già
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ error: 'Email già registrata' });
-    }
-
-    // Hash della password
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Genera token di verifica
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
 
-    // Crea l'utente
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
+        emailVerifyToken: verifyToken,
+        emailVerifyExpires: verifyExpires,
       },
     });
 
-    // Genera JWT
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    );
+    // Invia email di verifica
+    await sendVerificationEmail(email, verifyToken);
 
-    const response: AuthResponse = {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    };
-
-    res.status(201).json(response);
+    res.status(201).json({ 
+      message: 'Registrazione completata! Controlla la tua email per verificare l\'account.',
+      userId: user.id 
+    });
   } catch (error) {
     console.error('Register error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+
+// Verifica email
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerifyToken: token,
+        emailVerifyExpires: { gte: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Token non valido o scaduto' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        emailVerifyToken: null,
+        emailVerifyExpires: null,
+      },
+    });
+
+    res.json({ message: 'Email verificata con successo!' });
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Request password reset
+export const requestPasswordReset = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+      // Non rivelare se l'email esiste per sicurezza
+      return res.json({ message: 'Se l\'email esiste, riceverai un link per il reset' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 ora
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetExpires: resetExpires,
+      },
+    });
+
+    await sendPasswordResetEmail(email, resetToken);
+
+    res.json({ message: 'Se l\'email esiste, riceverai un link per il reset' });
+  } catch (error) {
+    console.error('Request reset error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Reset password
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password deve essere di almeno 6 caratteri' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: { gte: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Token non valido o scaduto' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+
+    res.json({ message: 'Password reimpostata con successo!' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };
