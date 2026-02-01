@@ -1,13 +1,13 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authAPI } from '../api/client';
-import type { User, LoginCredentials, RegisterCredentials } from '../types';
+import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<AuthResponse>;
   logout: () => void;
 }
 
@@ -57,11 +57,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(response.user);
   };
 
+  //Effettua solo la registrazione senza effettuare il login automatico
   const register = async (credentials: RegisterCredentials) => {
     const response = await authAPI.register(credentials);
-    localStorage.setItem('token', response.token);
-    setToken(response.token);
-    setUser(response.user);
+    return response;
+    
+  
   };
 
   const logout = () => {
