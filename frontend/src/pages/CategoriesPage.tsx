@@ -1,35 +1,30 @@
-import { useEffect, useState } from 'react';
-import { categoryAPI } from '../api/client';
-import type { Category, TransactionType } from '../types/index';
+import { useCategories, useDeleteCategory } from '../hooks/useCategories';
+import type { Category, TransactionType } from '../types';
 import { Plus } from 'lucide-react';
 import FilterNav from '../components/layout/FilterNav';
 import CategoriesModal from '../components/categories/CategoriesModal';
 import CategoriesCard from '../components/categories/CategoriesCard';
-import matchesFilters from '../utils/filters.ts';
-
+import matchesFilters from '../utils/filters';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-
+import { useState } from 'react';
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [searchFilter, setFilterSearch] = useState('');
-  const [refreshFeed, setRefreshFeed] = useState(false);
 
-  useEffect(() => {
-    loadCategories();
-    setRefreshFeed(false);
-  }, [refreshFeed]);
+  // React Query hooks - gestiscono cache, loading, refetch automaticamente
+  const { data: categories = [], isLoading } = useCategories(filterType);
+  const deleteCategoryMutation = useDeleteCategory();
 
   const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro? Le transazioni associate non verranno eliminate.'))
       return;
+    
     try {
-      await categoryAPI.delete(id);
-      loadCategories();
+      await deleteCategoryMutation.mutateAsync(id);
+      // React Query invalida automaticamente la cache
     } catch (error) {
       alert("Errore nell'eliminazione");
     }
@@ -40,26 +35,18 @@ export default function CategoriesPage() {
     setShowModal(true);
   };
 
-  const loadCategories = async () => {
-    try {
-      setIsLoading(true);
-      const data = await categoryAPI.getAll();
-      setCategories(data);
-    } catch (error) {
-      console.error('Errore nel caricamento:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleOpenModal = () => {
+    setEditingCategory(null);
     setShowModal(true);
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingCategory(null);
+  };
+
   if (isLoading) {
-    return (
-      <LoadingSpinner message='Caricamento Categorie ...' />
-    );
+    return <LoadingSpinner message="Caricamento Categorie..." />;
   }
 
   return (
@@ -105,6 +92,7 @@ export default function CategoriesPage() {
                 })
               )
                 return null;
+              
               return (
                 <CategoriesCard
                   key={category.id}
@@ -121,13 +109,8 @@ export default function CategoriesPage() {
       {/* Modal */}
       <CategoriesModal
         isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setEditingCategory(null);
-        }}
-        sentFeed={() => {
-          setRefreshFeed(true);
-        }}
+        onClose={handleCloseModal}
+        sentFeed={() => {}} // React Query gestisce il refresh automaticamente
         editingCategory={editingCategory}
       />
     </>

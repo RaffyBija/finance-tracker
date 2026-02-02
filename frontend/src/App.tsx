@@ -13,6 +13,9 @@ import  {RecurringTransactions}  from './pages/RecurringTransactions';
 import { PlannedTransactions } from './pages/PlannedPage';
 import { inject } from '@vercel/analytics';
 import {Privacy} from './pages/Privacy';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 inject();
 
@@ -34,6 +37,9 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/privacy" element={<Privacy/>} />
 
             {/* Protected Routes */}

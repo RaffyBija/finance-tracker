@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-//@ts-ignore
-import { LogIn } from 'lucide-react'; 
+import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -67,9 +66,17 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
+            <div className="flex-between mb-2">
+              <label htmlFor="password" className="form-label mb-0">
+                Password
+              </label>
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Password dimenticata?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

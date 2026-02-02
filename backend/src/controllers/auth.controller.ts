@@ -10,14 +10,24 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name }: RegisterDTO = req.body;
+    // Validazione base
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, password e nome sono obbligatori' });
+    }
 
-    // ... validazioni esistenti ...
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email già in uso' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
     // Genera token di verifica
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
+
+     // Invia email di verifica
+    await sendVerificationEmail(email, verifyToken);
 
     const user = await prisma.user.create({
       data: {
@@ -29,8 +39,7 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    // Invia email di verifica
-    await sendVerificationEmail(email, verifyToken);
+   
 
     res.status(201).json({ 
       message: 'Registrazione completata! Controlla la tua email per verificare l\'account.',
@@ -50,8 +59,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findFirst({
       where: {
-        emailVerifyToken: token,
-        emailVerifyExpires: { gte: new Date() },
+        emailVerifyToken: token
       },
     });
 

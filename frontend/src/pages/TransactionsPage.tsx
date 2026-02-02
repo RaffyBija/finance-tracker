@@ -1,53 +1,36 @@
-import { useEffect, useState } from 'react';
-import { transactionAPI, categoryAPI } from '../api/client';
-import type { Transaction, Category, TransactionType } from '../types';
+import { useTransactions, useDeleteTransaction } from '../hooks/useTransactions';
+import { useCategories } from '../hooks/useCategories';
+import type { Transaction, TransactionType } from '../types';
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
 import FilterNav from '../components/layout/FilterNav';
-import matchesFilters from '../utils/filters.ts';
-
+import matchesFilters from '../utils/filters';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
+import { useState } from 'react';
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
+  const [searchFilter, setFilterSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
-  const [refreshFlag, setRefreshFlag] = useState(false);
-  const [searchFilter, setFilterSearch] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, [refreshFlag]);
+  // React Query hooks - gestiscono cache, loading, refetch automaticamente
+  const { data: transactions = [], isLoading: transactionsLoading } = useTransactions(filterType);
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const deleteTransactionMutation = useDeleteTransaction();
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const params = filterType !== 'ALL' ? { type: filterType } : {};
-      const [transactionsData, categoriesData] = await Promise.all([
-        transactionAPI.getAll(params),
-        categoryAPI.getAll(),
-      ]);
-      setTransactions(transactionsData);
-      setCategories(categoriesData);
-    } catch (error) {
-      console.error('Errore nel caricamento:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isLoading = transactionsLoading || categoriesLoading;
 
   const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro di voler eliminare questa transazione?')) return;
+    
     try {
-      await transactionAPI.delete(id);
-      loadData();
+      await deleteTransactionMutation.mutateAsync(id);
+      // React Query invalida automaticamente la cache e ricarica i dati
     } catch (error) {
-      alert('Errore nell\'eliminazione');
+      alert("Errore nell'eliminazione");
     }
   };
 
@@ -56,10 +39,13 @@ export default function TransactionsPage() {
     setShowModal(true);
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingTransaction(null);
+  };
+
   if (isLoading) {
-    return (
-     <LoadingSpinner message='Caricamento Transazioni ...' />
-    );
+    return <LoadingSpinner message="Caricamento Transazioni..." />;
   }
 
   return (
@@ -162,6 +148,7 @@ export default function TransactionsPage() {
                   <button
                     onClick={() => handleDelete(transaction.id)}
                     className="btn-icon-danger"
+                    disabled={deleteTransactionMutation.isPending}
                   >
                     <Trash2 className="icon-sm" />
                   </button>
@@ -176,9 +163,9 @@ export default function TransactionsPage() {
       <TransactionModal
         isOpen={showModal}
         categories={categories}
-        editingTransactionData={editingTransaction ? editingTransaction : null}
-        onClose={() => setShowModal(false)}
-        sentFeed={() => setRefreshFlag(!refreshFlag)}
+        editingTransactionData={editingTransaction}
+        onClose={handleCloseModal}
+        sentFeed={() => {}} // React Query gestisce il refresh automaticamente
       />
     </div>
   );
