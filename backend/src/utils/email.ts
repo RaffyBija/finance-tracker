@@ -1,20 +1,12 @@
-import nodemailer from 'nodemailer';
+import {Resend} from 'resend';
 
-// Usa un servizio come SendGrid, Mailgun, o Gmail
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 export const sendVerificationEmail = async (email: string, token: string) => {
   const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
   
-  await transporter.sendMail({
+  await resend.emails.send({
     from: process.env.SMTP_FROM || '"Finance Tracker" <noreply@financetracker.com>',
     to: email,
     subject: 'Verifica il tuo account',
@@ -30,7 +22,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
   
-  await transporter.sendMail({
+  await resend.emails.send({
     from: process.env.SMTP_FROM || '"Finance Tracker" <noreply@financetracker.com>',
     to: email,
     subject: 'Reset Password',
