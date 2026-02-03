@@ -168,6 +168,8 @@ export default function TransactionModal({
               setFormData({ ...formData, amount: parseFloat(e.target.value) })
             }
             className="form-input"
+            pattern="[0-9]*"
+            inputMode="numeric"
             required
           />
         </div>
