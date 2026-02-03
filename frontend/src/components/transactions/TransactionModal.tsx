@@ -23,9 +23,8 @@ export default function TransactionModal({
   onClose,
   sentFeed,
 }: TransactionModalProps) {
-  const [rawAmount, setRawAmount] = useState<string>("");
   if (!isOpen) return null;
-
+  const [rawAmount, setRawAmount] = useState<string>("");
   // Form state
   const [formData, setFormData] = useState<CreateTransactionDTO>({
     amount: 0 ,
@@ -124,9 +123,21 @@ export default function TransactionModal({
       const parsed = Number(value);
 
       if (!Number.isNaN(parsed)) {
+        console.log("Parsed value:", parsed);
         setFormData({ ...formData, amount: parsed });
         setRawAmount(parsed.toString().replace(".", ","));
     }
+  };
+
+  //Handle per normalizzare l'input numerico decimale
+  const handleNormalizeNumberInput = (value: string) => {
+    //regex per accettare solo numeri e una virgola o punto
+    const regex = /^[0-9]*[.,]?[0-9]*$/;
+    if (!regex.test(value)) {
+      return rawAmount;
+    }
+    return value;
+
   };
 
   return (
@@ -176,9 +187,9 @@ export default function TransactionModal({
         <div className="form-group">
           <label className="form-label">Importo (€)</label>
           <input
-            type="number"
+            type="text"
             value={rawAmount}
-            onChange={(e) => setRawAmount(e.target.value)}
+            onChange={(e) => setRawAmount(handleNormalizeNumberInput(e.target.value))}
             onBlur = {handleFixNumberInput}
             onFocus={(e)=>{
               e.target.value === '0' && (e.target.value = '')
