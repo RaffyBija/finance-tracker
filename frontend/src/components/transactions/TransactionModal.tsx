@@ -167,9 +167,10 @@ export default function TransactionModal({
             onChange={(e) =>
               setFormData({ ...formData, amount: parseFloat(e.target.value) })
             }
+            onFocus={(e)=>e.target.value = ''}
             className="form-input"
-            pattern="[0-9]*"
-            inputMode="numeric"
+            pattern="[0-9]*[.,]?[0-9]*"
+            inputMode="decimal"
             required
           />
         </div>
