@@ -23,11 +23,12 @@ export default function TransactionModal({
   onClose,
   sentFeed,
 }: TransactionModalProps) {
+  const [rawAmount, setRawAmount] = useState<string>("");
   if (!isOpen) return null;
 
   // Form state
   const [formData, setFormData] = useState<CreateTransactionDTO>({
-    amount: 0,
+    amount: 0 ,
     type: 'EXPENSE',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -114,23 +115,20 @@ export default function TransactionModal({
       .catch(console.error);
   };
 
-  const handleFixNumberInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
+  const handleFixNumberInput = () => {
+      let value = rawAmount.trim();
 
-    // permetto solo numeri, punto e virgola
-    value = value.replace(/[^0-9.,]/g, "");
+      if (!value) return;
 
-    // sostituisco la virgola con il punto
-    value = value.replace(",", ".");
+      value = value.replace(",", ".");
+      const parsed = Number(value);
 
-    // evito più punti
-    const parts = value.split(".");
-    if (parts.length > 2) {
-      value = parts[0] + "." + parts.slice(1).join("");
+      if (!Number.isNaN(parsed)) {
+        setFormData({ ...formData, amount: parsed });
+        setRawAmount(parsed.toString().replace(".", ","));
     }
+  };
 
-    setFormData({ ...formData, amount: parseFloat(value) || 0 });
-  }
   return (
     <BaseModal
       isOpen={isOpen}
@@ -178,10 +176,13 @@ export default function TransactionModal({
         <div className="form-group">
           <label className="form-label">Importo (€)</label>
           <input
-            type="text"
-            value={formData.amount}
-            onChange={(e) => handleFixNumberInput(e)}
-            onFocus={(e)=>e.target.value = ''}
+            type="number"
+            value={rawAmount}
+            onChange={(e) => setRawAmount(e.target.value)}
+            onBlur = {handleFixNumberInput}
+            onFocus={(e)=>{
+              e.target.value === '0' && (e.target.value = '')
+            }}
             className="form-input"
             pattern="[0-9]*[.,]?[0-9]*"
             inputMode="decimal"
