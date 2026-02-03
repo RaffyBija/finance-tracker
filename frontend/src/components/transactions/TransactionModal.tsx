@@ -161,8 +161,7 @@ export default function TransactionModal({
         <div className="form-group">
           <label className="form-label">Importo (€)</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
             value={formData.amount}
             onChange={(e) =>
               setFormData({ ...formData, amount: parseFloat(e.target.value) })
