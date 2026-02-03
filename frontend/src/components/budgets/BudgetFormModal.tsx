@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
 import type { Budget, Category, CreateBudgetDTO, BudgetPeriod, AlertPopUp } from '../../types';
 import { budgetApi } from '../../api/budgets';
-
+import { InputDecimal } from '../layout/InputNumberDecimal';
 interface BudgetFormModalProps {
   isOpen: boolean;
   editingItem: Budget | null;
@@ -110,19 +110,12 @@ export default function BudgetFormModal({
           />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Importo Budget (€)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: parseFloat(e.target.value) })
-            }
-            className="form-input"
-            required
-          />
-        </div>
+        <InputDecimal
+          setFormData={setFormData}
+          formData={formData}
+          label={"Importo Budget(€)"}
+        />
+        
 
         <div className="form-group">
           <label className="form-label">Categoria (opzionale)</label>

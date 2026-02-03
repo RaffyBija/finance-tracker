@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
+import { InputDecimal } from '../layout/InputNumberDecimal';
 import type {
   RecurringTransaction,
   Category,
@@ -161,19 +162,11 @@ export default function RecurringFormModal({
           />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Importo (€)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: parseFloat(e.target.value) })
-            }
-            className="form-input"
-            required
-          />
-        </div>
+        <InputDecimal
+          setFormData={setFormData}
+          formData={formData}
+          label={"Importo (€)"}
+        />
 
         <div className="form-group">
           <label className="form-label">Categoria</label>

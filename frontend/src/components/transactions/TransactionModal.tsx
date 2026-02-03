@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import BaseModal from '../layout/ModalBase';
+import {InputDecimal} from '../layout/InputNumberDecimal'
 import type {
   CreateTransactionDTO,
   Category,
@@ -24,7 +25,7 @@ export default function TransactionModal({
   sentFeed,
 }: TransactionModalProps) {
   if (!isOpen) return null;
-  const [rawAmount, setRawAmount] = useState<string>("");
+ 
   // Form state
   const [formData, setFormData] = useState<CreateTransactionDTO>({
     amount: 0 ,
@@ -114,31 +115,7 @@ export default function TransactionModal({
       .catch(console.error);
   };
 
-  const handleFixNumberInput = () => {
-      let value = rawAmount.trim();
-
-      if (!value) return;
-
-      value = value.replace(",", ".");
-      const parsed = Number(value);
-
-      if (!Number.isNaN(parsed)) {
-        console.log("Parsed value:", parsed);
-        setFormData({ ...formData, amount: parsed });
-        setRawAmount(parsed.toString().replace(".", ","));
-    }
-  };
-
-  //Handle per normalizzare l'input numerico decimale
-  const handleNormalizeNumberInput = (value: string) => {
-    //regex per accettare solo numeri e una virgola o punto
-    const regex = /^[0-9]*[.,]?[0-9]*$/;
-    if (!regex.test(value)) {
-      return rawAmount;
-    }
-    return value;
-
-  };
+  
 
   return (
     <BaseModal
@@ -184,7 +161,7 @@ export default function TransactionModal({
             </button>
           </div>
         </div>
-        <div className="form-group">
+        {/* <div className="form-group">
           <label className="form-label">Importo (€)</label>
           <input
             type="text"
@@ -199,7 +176,12 @@ export default function TransactionModal({
             inputMode="decimal"
             required
           />
-        </div>
+        </div> */}
+        {<InputDecimal
+          setFormData={setFormData}
+          formData={formData}
+          label = {"Importo (€)"}
+        />}
         <div className="form-group">
           <label className="form-label">Categoria</label>
           <select
