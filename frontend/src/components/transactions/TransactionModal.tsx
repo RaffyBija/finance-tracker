@@ -114,6 +114,23 @@ export default function TransactionModal({
       .catch(console.error);
   };
 
+  const handleFixNumberInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+
+    // permetto solo numeri, punto e virgola
+    value = value.replace(/[^0-9.,]/g, "");
+
+    // sostituisco la virgola con il punto
+    value = value.replace(",", ".");
+
+    // evito più punti
+    const parts = value.split(".");
+    if (parts.length > 2) {
+      value = parts[0] + "." + parts.slice(1).join("");
+    }
+
+    setFormData({ ...formData, amount: parseFloat(value) || 0 });
+  }
   return (
     <BaseModal
       isOpen={isOpen}
@@ -163,9 +180,7 @@ export default function TransactionModal({
           <input
             type="text"
             value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: parseFloat(e.target.value) })
-            }
+            onChange={(e) => handleFixNumberInput(e)}
             onFocus={(e)=>e.target.value = ''}
             className="form-input"
             pattern="[0-9]*[.,]?[0-9]*"
