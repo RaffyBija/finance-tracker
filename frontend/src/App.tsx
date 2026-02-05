@@ -16,6 +16,7 @@ import {Privacy} from './pages/Privacy';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import PublicRoute from './components/PublicRoute';
 
 inject();
 
@@ -35,7 +36,11 @@ function App() {
         <AuthProvider>
           <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            } />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -111,7 +116,7 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
             {/* 404 */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<div>404 - Pagina non trovata</div>} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>

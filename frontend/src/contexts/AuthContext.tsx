@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { authAPI } from '../api/client';
 import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
 
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -46,30 +47,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       setIsLoading(false);
     };
-
     initAuth();
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    setIsLoading(true);
     try {
       const response = await authAPI.login(credentials);
       localStorage.setItem('token', response.token);
-      setToken(response.token);
-      setUser(response.user);
-    } catch (error) {
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
-      throw error;
-    }
+        setToken(response.token);
+        setUser(response.user);
+      }
+      catch (error) {
+          setIsLoading(false);
+          throw error;
+        }
+    setIsLoading(false);
   };
 
-  //Effettua solo la registrazione senza effettuare il login automatico
   const register = async (credentials: RegisterCredentials) => {
     const response = await authAPI.register(credentials);
     return response;
-    
-  
   };
 
   const logout = () => {
