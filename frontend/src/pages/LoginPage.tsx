@@ -19,11 +19,11 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante il login');
     } finally {
       setIsLoading(false);
+      navigate('/dashboard');
     }
   };
 

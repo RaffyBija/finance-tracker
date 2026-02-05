@@ -51,10 +51,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    const response = await authAPI.login(credentials);
-    localStorage.setItem('token', response.token);
-    setToken(response.token);
-    setUser(response.user);
+    try {
+      const response = await authAPI.login(credentials);
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+      setUser(response.user);
+    } catch (error) {
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      throw error;
+    }
   };
 
   //Effettua solo la registrazione senza effettuare il login automatico

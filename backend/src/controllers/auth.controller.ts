@@ -172,6 +172,11 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
+    //Verifico che l'email sia verificata
+    if (!user.isEmailVerified) {
+      return res.status(401).json({ error: 'Email non verificata. Controlla la tua casella di posta.' });
+    }
+
     // Verifica password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
