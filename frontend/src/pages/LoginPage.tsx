@@ -7,19 +7,22 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
+      setIsLoading(true);
       await login({ email, password });
       navigate('/dashboard');
     } catch (err: any) {
-      console.error(err);
       setError(err.response?.data?.error || 'Errore durante il login');
+    } finally{
+      setIsLoading(false);
     }
   };
 

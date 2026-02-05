@@ -51,7 +51,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    setIsLoading(true);
     try {
       const response = await authAPI.login(credentials);
       localStorage.setItem('token', response.token);
@@ -59,10 +58,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(response.user);
       }
       catch (error) {
-          setIsLoading(false);
           throw error;
         }
-    setIsLoading(false);
   };
 
   const register = async (credentials: RegisterCredentials) => {
