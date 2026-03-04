@@ -320,3 +320,114 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Errore del server' });
   }
 };
+
+//Ottieni saldo previsto con spese ricorrenti e pianificate in un intervallo di date personalizzato
+export const getProjectedBalanceByDate = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { startDate, endDate } = req.query;
+    console.log('Received dates:', startDate, endDate);
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate e endDate sono obbligatori' });
+    }
+
+    const start = new Date(startDate as string);
+    const end = new Date(endDate as string);
+
+    // Calcola saldo corrente
+    const totalIncome = await prisma.transaction.aggregate({
+      where: { userId, type: 'INCOME' },
+      _sum: { amount: true },
+    });
+
+    const totalExpense = await prisma.transaction.aggregate({
+      where: { userId, type: 'EXPENSE' },
+      _sum: { amount: true },
+    });
+
+    const currentBalance = Number(totalIncome._sum.amount || 0) - Number(totalExpense._sum.amount || 0);
+
+    // Ottieni transazioni ricorrenti attive che impattano nell'intervallo
+    const recurringTransactions = await prisma.recurringTransaction.findMany({
+      where: {
+        userId,
+        isActive: true,
+        OR: [
+          { endDate: null },
+          { endDate: { gte: start } },
+        ],
+      },
+    });
+
+    let projectedIncome = 0;
+    let projectedExpense = 0;
+
+    recurringTransactions.forEach((rec) => {
+      const amount = Number(rec.amount);
+      let occurrences = 0;
+
+      switch (rec.frequency) {
+        case 'WEEKLY':
+          occurrences = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+          break;
+        case 'MONTHLY':
+          occurrences = Math.ceil((end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
+          break;
+        case 'YEARLY':
+          occurrences = Math.ceil(end.getFullYear() - start.getFullYear());
+          break;
+      }
+
+      if (rec.type === 'INCOME') {
+        projectedIncome += amount * occurrences;
+      } else {
+        projectedExpense += amount * occurrences;
+      }
+    });
+
+    // Ottieni transazioni pianificate non pagate nell'intervallo
+    const plannedTransactions = await prisma.plannedTransaction.findMany({
+      where: {
+        userId,
+        isPaid: false,
+        plannedDate: {
+          gte: start,
+          lte: end,
+        },
+      },
+    });
+
+    let plannedIncome = 0;
+    let plannedExpense = 0;
+
+    plannedTransactions.forEach((planned) => {
+      const amount = Number(planned.amount);
+      if (planned.type === 'INCOME') {
+        plannedIncome += amount;
+      } else {
+        plannedExpense += amount;
+      }
+    });
+
+    projectedIncome += plannedIncome;
+    projectedExpense += plannedExpense;
+
+    const projectedBalance = currentBalance + projectedIncome - projectedExpense;
+
+    res.json({
+      currentBalance,
+      projectedIncome,
+      projectedExpense,
+      projectedBalance,
+      projectionPeriod: {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+      },
+      recurringCount: recurringTransactions.length,
+      plannedCount: plannedTransactions.length,
+    });
+  } catch (error) {
+    console.error('Get projected balance by date error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};

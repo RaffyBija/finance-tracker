@@ -164,6 +164,13 @@ export const dashboardAPI = {
     });
     return response.data;
   },
+  
+  getProjectedBalanceByDate: async (startDate: string, endDate: string): Promise<ProjectedBalance> => {
+    const response = await api.get<ProjectedBalance>('/dashboard/projected-balance/custom-range', {
+      params: { startDate, endDate },
+    });
+    return response.data;
+  }
 };
 
 export default api;

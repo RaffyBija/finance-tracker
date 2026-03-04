@@ -33,10 +33,20 @@ export const useRecentTransactions = (limit: number = 5) => {
   });
 };
 
-export const useProjectedBalance = (months: number = 3) => {
+export const useProjectedBalance = (months: number = 3, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['dashboard', 'projected-balance', months],
     queryFn: () => dashboardAPI.getProjectedBalance(months),
     staleTime: 2 * 60 * 1000,
+    enabled,
   });
 };
+
+export const useProjectedBalanceByDate = (startDate: string, endDate: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'projected-balance', 'custom-range', startDate, endDate],
+    queryFn: () => dashboardAPI.getProjectedBalanceByDate(startDate, endDate),
+    staleTime: 2 * 60 * 1000,
+    enabled,
+  });
+}

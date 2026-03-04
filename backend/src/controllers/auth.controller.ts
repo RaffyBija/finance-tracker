@@ -5,6 +5,7 @@ import prisma from '../utils/prisma';
 import { RegisterDTO, LoginDTO, AuthResponse } from '../types';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
+import {AuthRequest} from '../types'
 
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
@@ -208,9 +209,9 @@ export const login = async (req: Request, res: Response) => {
 };
 
 // Get user info
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId!;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

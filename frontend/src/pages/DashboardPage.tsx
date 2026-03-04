@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSummary, useCategoryStats, useMonthlyTrend, useRecentTransactions, useProjectedBalance } from '../hooks/useDashboard';
+import { useSummary, useCategoryStats, useMonthlyTrend, useRecentTransactions, useProjectedBalance, useProjectedBalanceByDate } from '../hooks/useDashboard';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import {
   LineChart,
@@ -23,14 +23,30 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 export default function DashboardPage() {
   const [projectionMonths, setProjectionMonths] = useState(1);
+  const [projectionRange, setProjectionRange] = useState({ startDate: '', endDate: '' });
 
   const { data: summary, isLoading: summaryLoading } = useSummary();
   const { data: categoryStats = [], isLoading: statsLoading } = useCategoryStats();
   const { data: monthlyTrend = [], isLoading: trendLoading } = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading } = useRecentTransactions(5);
-  const { data: projectedBalance, isLoading: projectedLoading } = useProjectedBalance(projectionMonths);
+  
+  // Abilita la query per mesi solo quando projectionMonths > 0
+  const { data: projectedBalance, isLoading: projectedLoading} = useProjectedBalance(
+    projectionMonths,
+    projectionMonths > 0
+  );
+  
+  // Abilita la query per range di date solo quando projectionMonths === 0 e entrambe le date sono impostate
+  const { data: projectedBalanceByDate, isLoading: projectedByDateLoading } = useProjectedBalanceByDate(
+    projectionRange.startDate,
+    projectionRange.endDate,
+    projectionMonths === 0 && !!projectionRange.startDate && !!projectionRange.endDate
+  );
+  
+  const isLoading = summaryLoading || statsLoading || trendLoading || recentLoading || projectedLoading || projectedByDateLoading;
 
-  const isLoading = summaryLoading || statsLoading || trendLoading || recentLoading || projectedLoading;
+  // Seleziona il dato corretto in base alla modalità attiva
+  const activeProjectedBalance = projectionMonths > 0 ? projectedBalance : projectedBalanceByDate;
 
 
   const COLORS = [
@@ -114,13 +130,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Projection Details Card */}
-      {projectedBalance && (
+      {activeProjectedBalance && (
         <ProjectedDetailCard
-          projectedBalance={projectedBalance}
+          projectedBalance={activeProjectedBalance}
           projectionMonths={projectionMonths}
           setProjectionMonths={(value) => {
             setProjectionMonths(value);
           }}
+          setProjectionRange={(value)=>{setProjectionMonths(0); setProjectionRange(value as { startDate: string; endDate: string })}}
         />
       )}
 
