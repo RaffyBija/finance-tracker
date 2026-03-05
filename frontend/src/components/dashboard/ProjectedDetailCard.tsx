@@ -32,16 +32,17 @@ export default function ProjectedDetailCard({
   return (
 
     <div className="card-gradient-purple card-lg mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <Calendar className="icon-md text-primary-600" />
-        <h2 className="flex items-end gap-4 text-3xl font-semibold text-neutral-900">
-          Proiezione
-          
-        </h2>
+      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-2 mb-4 md:mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="icon-md text-primary-600" />
+          <h2 className="text-2xl md:text-3xl font-semibold text-neutral-900">
+            Proiezione
+          </h2>
+        </div>
         <select
             value={projectionMonths}
             onChange={(e) => setProjectionMonths(Number(e.target.value))}
-            className="text-lg bg-white/20 rounded px-2 py-1 border-0 cursor-pointer"
+            className="w-full md:w-auto text-base md:text-lg bg-white/20 rounded px-3 md:px-2 py-2 md:py-1 border-0 cursor-pointer font-medium"
             onClick={(e) => e.stopPropagation()}
           >
             <option value="1">1 Mese</option>
@@ -50,27 +51,33 @@ export default function ProjectedDetailCard({
             <option value="12">12 Mesi</option>
           </select>
       </div>
-      <div className="flex items-center gap-4 mb-6">
-        <p className="text-sm text-neutral-600">Seleziona il periodo di proiezione da</p>
-        <input 
-         type="date"
-         name="startDate"
-         className="bg-white/20 rounded px-2 py-1 border-0 cursor-pointer"
-         onChange={(e) => setProjectRange({...projectRange, startDate: e.target.value})}
-        />
-        <p className="text-sm text-neutral-600"> a </p>
-        <input 
-         type="date"
-         name="endDate"
-         className="bg-white/20 rounded px-2 py-1 border-0 cursor-pointer"
-          onChange={(e) => setProjectRange({...projectRange, endDate: e.target.value})}
-        />
+      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+        <p className="text-sm text-neutral-600 md:whitespace-nowrap">Seleziona il periodo di proiezione</p>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto md:gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+            <p className="text-sm text-neutral-600 hidden sm:block">da</p>
+            <input 
+             type="date"
+             name="startDate"
+             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer"
+             onChange={(e) => setProjectRange({...projectRange, startDate: e.target.value})}
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+            <p className="text-sm text-neutral-600 hidden sm:block">a</p>
+            <input 
+             type="date"
+             name="endDate"
+             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer"
+              onChange={(e) => setProjectRange({...projectRange, endDate: e.target.value})}
+            />
+          </div>
+        </div>
         <input type= "button"
           value="Applica"
-          className="text-sm bg-primary-600 text-white px-3 py-1 rounded"
+          className="w-full md:w-auto text-base md:text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 md:px-3 py-2 md:py-1 rounded font-medium transition-colors"
           onClick={() => setProjectionRange(projectRange)}
         />
-          
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="card card-md">
