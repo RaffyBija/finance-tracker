@@ -42,7 +42,7 @@ export default function ProjectedDetailCard({
         <select
             value={projectionMonths}
             onChange={(e) => setProjectionMonths(Number(e.target.value))}
-            className="w-full md:w-auto text-base md:text-lg bg-white/20 rounded px-3 md:px-2 py-2 md:py-1 border-0 cursor-pointer font-medium"
+            className="w-full md:w-auto text-base md:text-lg bg-white/20 rounded px-3 md:px-2 py-2 md:py-1 border-0 cursor-pointer font-medium shadow-md"
             onClick={(e) => e.stopPropagation()}
           >
             <option value="1">1 Mese</option>
@@ -59,7 +59,7 @@ export default function ProjectedDetailCard({
             <input 
              type="date"
              name="startDate"
-             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer"
+             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer shadow-md"
              onChange={(e) => setProjectRange({...projectRange, startDate: e.target.value})}
             />
           </div>
@@ -68,7 +68,7 @@ export default function ProjectedDetailCard({
             <input 
              type="date"
              name="endDate"
-             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer"
+             className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer shadow-md"
               onChange={(e) => setProjectRange({...projectRange, endDate: e.target.value})}
             />
           </div>

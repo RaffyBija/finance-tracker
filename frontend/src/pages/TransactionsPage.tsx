@@ -51,7 +51,7 @@ export default function TransactionsPage() {
   return (
     <div className="container-custom">
       <div className="flex-between mb-6">
-        <h1 className="text-3xl font-bold text-neutral-900">Transazioni</h1>
+        <h1 className="text-3xl font-bold text-neutral-900 ">Transazioni</h1>
         <button
           onClick={() => {
             setShowModal(true);
@@ -165,7 +165,7 @@ export default function TransactionsPage() {
         categories={categories}
         editingTransactionData={editingTransaction}
         onClose={handleCloseModal}
-        sentFeed={() => {}} // React Query gestisce il refresh automaticamente
+        sentFeed={() => {console.log('Feed aggiornato')}} // React Query gestisce il refresh automaticamente
       />
     </div>
   );

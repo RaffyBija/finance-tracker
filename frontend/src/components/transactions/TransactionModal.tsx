@@ -9,6 +9,7 @@ import type {
 } from '../../types';
 import { transactionAPI } from '../../api/client';
 
+
 interface TransactionModalProps {
   isOpen: boolean;
   categories: Category[];
@@ -41,7 +42,10 @@ export default function TransactionModal({
     checked: false,
   });
 
+  const [isLoading, setIsLoading] = useState(false);
+
   if (editingTransactionData && formData.amount === 0) {
+    
     setFormData({
       amount: editingTransactionData.amount,
       type: editingTransactionData.type,
@@ -53,10 +57,11 @@ export default function TransactionModal({
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
 
-  const handleSubmitEdit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     let messaggio = '';
     e.preventDefault();
     try {
+      setIsLoading(true);
       if (editingTransactionData) {
         if (
           editingTransactionData.amount === formData.amount &&
@@ -93,8 +98,9 @@ export default function TransactionModal({
     } catch (error: any) {
       alert(error.response?.data?.error || 'Errore nel salvataggio');
     }
+    finally{setIsLoading(false);}
   };
-
+/*
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -114,7 +120,7 @@ export default function TransactionModal({
       })
       .catch(console.error);
   };
-
+*/
   
 
   return (
@@ -128,7 +134,7 @@ export default function TransactionModal({
     >
       <form
         className="modal-form"
-        onSubmit={editingTransactionData ? handleSubmitEdit : handleSubmit}
+        onSubmit={handleSubmit}
       >
         <div className="form-group">
           <label className="form-label">Tipo</label>
@@ -221,8 +227,8 @@ export default function TransactionModal({
           />
         </div>
         <div className="form-button-group">
-          <button type="submit" className="btn btn-primary flex-1">
-            Salva
+          <button type="submit" className="btn btn-primary flex-1" disabled={isLoading}>
+            {isLoading ? (editingTransactionData ? 'Salvataggio...' : 'Creazione...') : (editingTransactionData ? 'Salva Modifiche' : 'Crea Transazione')}
           </button>
           <button
             type="button"
