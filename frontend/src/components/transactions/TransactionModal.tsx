@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import BaseModal from '../layout/ModalBase';
-import {InputDecimal} from '../layout/InputNumberDecimal'
+import { InputDecimal } from '../layout/InputNumberDecimal';
 import type {
   CreateTransactionDTO,
   Category,
   Transaction,
   AlertPopUp,
 } from '../../types';
-import { transactionAPI } from '../../api/client';
-
+import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -26,10 +25,13 @@ export default function TransactionModal({
   sentFeed,
 }: TransactionModalProps) {
   if (!isOpen) return null;
- 
-  // Form state
+
+  // ✅ Usa i mutation hooks — invalidateQueries è già dentro onSuccess
+  const createMutation = useCreateTransaction();
+  const updateMutation = useUpdateTransaction();
+
   const [formData, setFormData] = useState<CreateTransactionDTO>({
-    amount: 0 ,
+    amount: 0,
     type: 'EXPENSE',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -42,10 +44,7 @@ export default function TransactionModal({
     checked: false,
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-
   if (editingTransactionData && formData.amount === 0) {
-    
     setFormData({
       amount: editingTransactionData.amount,
       type: editingTransactionData.type,
@@ -56,166 +55,100 @@ export default function TransactionModal({
   }
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    let messaggio = '';
     e.preventDefault();
+    let messaggio = '';
+
     try {
-      setIsLoading(true);
       if (editingTransactionData) {
+        // Nessuna modifica apportata
         if (
           editingTransactionData.amount === formData.amount &&
           editingTransactionData.type === formData.type &&
           editingTransactionData.description === formData.description &&
-          editingTransactionData.date === formData.date
+          editingTransactionData.date.split('T')[0] === formData.date &&
+          editingTransactionData.categoryId === formData.categoryId
         ) {
-          setAlertConfig({
-            ...alertConfig,
-            messaggio: 'Nessuna modifica apportata',
-            tipo: 'info',
-            checked: true,
-          });
-
+          setAlertConfig({ messaggio: 'Nessuna modifica apportata', tipo: 'info', checked: true });
           setTimeout(onClose, 800);
           return;
         }
-        await transactionAPI.update(editingTransactionData.id, formData);
+        // ✅ Usa il mutation hook → invalida automaticamente la cache
+        await updateMutation.mutateAsync({ id: editingTransactionData.id, data: formData });
         messaggio = 'Transazione aggiornata con successo';
       } else {
-        await transactionAPI.create(formData);
+        // ✅ Usa il mutation hook → invalida automaticamente la cache
+        await createMutation.mutateAsync(formData);
         messaggio = 'Transazione creata con successo';
       }
-      setAlertConfig({
-        ...alertConfig,
-        messaggio: messaggio,
-        tipo: 'success',
-        checked: true,
-      });
+
+      setAlertConfig({ messaggio, tipo: 'success', checked: true });
       setTimeout(() => {
         onClose();
         sentFeed();
       }, 800);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Errore nel salvataggio');
+      setAlertConfig({
+        messaggio: error.response?.data?.error || 'Errore nel salvataggio',
+        tipo: 'error',
+        checked: true,
+      });
     }
-    finally{setIsLoading(false);}
   };
-/*
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const newTransaction: CreateTransactionDTO = {
-      amount: Number(formData.amount),
-      type: formData.type as 'INCOME' | 'EXPENSE',
-      categoryId: formData.categoryId as string,
-      date: formData.date as string,
-      description: formData.description as string,
-    };
-
-    transactionAPI
-      .create(newTransaction)
-      .then(() => {
-        onClose();
-        sentFeed();
-      })
-      .catch(console.error);
-  };
-*/
-  
 
   return (
     <BaseModal
       isOpen={isOpen}
-      title={
-        editingTransactionData ? 'Modifica Transazione' : 'Nuova Transazione'
-      }
+      title={editingTransactionData ? 'Modifica Transazione' : 'Nuova Transazione'}
       onClose={onClose}
       feedAlert={alertConfig}
     >
-      <form
-        className="modal-form"
-        onSubmit={handleSubmit}
-      >
+      <form className="modal-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
             <button
               type="button"
-              onClick={() =>
-                setFormData({ ...formData, type: 'INCOME', categoryId: '' })
-              }
+              onClick={() => setFormData({ ...formData, type: 'INCOME', categoryId: '' })}
               className={`btn-toggle flex-1 ${
-                formData.type === 'INCOME'
-                  ? 'btn-toggle-income-active'
-                  : 'btn-toggle-inactive'
+                formData.type === 'INCOME' ? 'btn-toggle-income-active' : 'btn-toggle-inactive'
               }`}
             >
               Entrata
             </button>
             <button
               type="button"
-              onClick={() =>
-                setFormData({ ...formData, type: 'EXPENSE', categoryId: '' })
-              }
+              onClick={() => setFormData({ ...formData, type: 'EXPENSE', categoryId: '' })}
               className={`btn-toggle flex-1 ${
-                formData.type === 'EXPENSE'
-                  ? 'btn-toggle-expense-active'
-                  : 'btn-toggle-inactive'
+                formData.type === 'EXPENSE' ? 'btn-toggle-expense-active' : 'btn-toggle-inactive'
               }`}
             >
               Uscita
             </button>
           </div>
         </div>
-        {/* <div className="form-group">
-          <label className="form-label">Importo (€)</label>
-          <input
-            type="text"
-            value={rawAmount}
-            onChange={(e) => setRawAmount(handleNormalizeNumberInput(e.target.value))}
-            onBlur = {handleFixNumberInput}
-            onFocus={(e)=>{
-              e.target.value === '0' && (e.target.value = '')
-            }}
-            className="form-input"
-            pattern="[0-9]*[.,]?[0-9]*"
-            inputMode="decimal"
-            required
-          />
-        </div> */}
-        {<InputDecimal
+
+        <div className="form-group">
+          <InputDecimal
           setFormData={setFormData}
           formData={formData}
           label = {"Importo (€)"}
-        />}
-        <div className="form-group">
-          <label className="form-label">Categoria</label>
-          <select
-            value={formData.categoryId}
-            onChange={(e) =>
-              setFormData({ ...formData, categoryId: e.target.value })
-            }
-            className="form-select"
-          >
-            <option value="">Nessuna categoria</option>
-            {filteredCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+        />
         </div>
+
         <div className="form-group">
           <label className="form-label">Descrizione</label>
           <input
             type="text"
             value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="form-input"
+            placeholder="Es. Spesa supermercato"
           />
         </div>
+
         <div className="form-group">
           <label className="form-label">Data</label>
           <input
@@ -226,16 +159,29 @@ export default function TransactionModal({
             required
           />
         </div>
-        <div className="form-button-group">
-          <button type="submit" className="btn btn-primary flex-1" disabled={isLoading}>
-            {isLoading ? (editingTransactionData ? 'Salvataggio...' : 'Creazione...') : (editingTransactionData ? 'Salva Modifiche' : 'Crea Transazione')}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary flex-1"
+
+        <div className="form-group">
+          <label className="form-label">Categoria</label>
+          <select
+            value={formData.categoryId}
+            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+            className="form-select"
           >
+            <option value="">Senza categoria</option>
+            {filteredCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.icon} {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-actions">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-md">
             Annulla
+          </button>
+          <button type="submit" disabled={isLoading} className="btn btn-primary btn-md">
+            {isLoading ? 'Salvataggio...' : editingTransactionData ? 'Aggiorna' : 'Crea'}
           </button>
         </div>
       </form>

@@ -387,3 +387,60 @@
     @apply hidden md:block lg:hidden;
   }
 }
+
+/* ============================================================
+   PAGE HEADER — responsive titolo + bottone azione
+   Da aggiungere in: frontend/src/styles/utilities/utilities.css
+   ============================================================ */
+ 
+/* Desktop: affiancati come prima */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;          /* permette al bottone di andare sotto se necessario */
+}
+ 
+.page-header-text {
+  min-width: 0;             /* permette truncate se il titolo è molto lungo */
+}
+ 
+.page-header-title {
+  font-size: 1.875rem;      /* text-3xl */
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+ 
+.page-header-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+ 
+/* Il bottone non si restringe mai sotto una certa larghezza */
+.page-header-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+ 
+/* Mobile: titolo più piccolo, bottone full-width sotto */
+@media (max-width: 480px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+ 
+  .page-header-title {
+    font-size: 1.5rem;      /* text-2xl su mobile */
+  }
+ 
+  .page-header-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -8,7 +8,8 @@ interface PageHeaderProps {
 }
 
 /**
- * Header standard per le pagine con titolo e azione opzionale
+ * Header standard per le pagine con titolo e azione opzionale.
+ * Su mobile: titolo + bottone si impilano verticalmente.
  */
 export default function PageHeader({
   title,
@@ -17,15 +18,15 @@ export default function PageHeader({
   subtitle,
 }: PageHeaderProps) {
   return (
-    <div className="flex-between mb-6">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-900">{title}</h1>
-        {subtitle && <p className="text-neutral-600 mt-1">{subtitle}</p>}
+    <div className="page-header">
+      <div className="page-header-text">
+        <h1 className="page-header-title">{title}</h1>
+        {subtitle && <p className="page-header-subtitle">{subtitle}</p>}
       </div>
       {onAction && (
-        <button onClick={onAction} className="btn btn-primary btn-md">
+        <button onClick={onAction} className="btn btn-primary btn-md page-header-btn">
           <Plus className="icon-md" />
-          {actionLabel}
+          <span>{actionLabel}</span>
         </button>
       )}
     </div>

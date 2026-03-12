@@ -14,17 +14,13 @@ export default function CategoriesPage() {
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [searchFilter, setFilterSearch] = useState('');
 
-  // React Query hooks - gestiscono cache, loading, refetch automaticamente
   const { data: categories = [], isLoading } = useCategories(filterType);
   const deleteCategoryMutation = useDeleteCategory();
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Sei sicuro? Le transazioni associate non verranno eliminate.'))
-      return;
-    
+    if (!confirm('Sei sicuro? Le transazioni associate non verranno eliminate.')) return;
     try {
       await deleteCategoryMutation.mutateAsync(id);
-      // React Query invalida automaticamente la cache
     } catch (error) {
       alert("Errore nell'eliminazione");
     }
@@ -52,11 +48,13 @@ export default function CategoriesPage() {
   return (
     <>
       <div className="container-custom">
-        <div className="flex-between mb-6">
-          <h1 className="text-3xl font-bold text-neutral-900">Categorie</h1>
-          <button onClick={handleOpenModal} className="btn btn-primary btn-md">
+
+        {/* ── Header responsive ── */}
+        <div className="page-header">
+          <h1 className="page-header-title">Categorie</h1>
+          <button onClick={handleOpenModal} className="btn btn-primary btn-md page-header-btn">
             <Plus className="icon-md" />
-            Nuova Categoria
+            <span>Nuova Categoria</span>
           </button>
         </div>
 
@@ -82,7 +80,6 @@ export default function CategoriesPage() {
             </div>
           ) : (
             categories.map((category) => {
-              // Filtro
               if (
                 !matchesFilters(category, {
                   typeValue: filterType,
@@ -92,7 +89,7 @@ export default function CategoriesPage() {
                 })
               )
                 return null;
-              
+
               return (
                 <CategoriesCard
                   key={category.id}
@@ -106,11 +103,10 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Modal */}
       <CategoriesModal
         isOpen={showModal}
         onClose={handleCloseModal}
-        sentFeed={() => {}} // React Query gestisce il refresh automaticamente
+        sentFeed={() => {}}
         editingCategory={editingCategory}
       />
     </>

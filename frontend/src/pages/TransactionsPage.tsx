@@ -16,7 +16,6 @@ export default function TransactionsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // React Query hooks - gestiscono cache, loading, refetch automaticamente
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions(filterType);
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const deleteTransactionMutation = useDeleteTransaction();
@@ -25,10 +24,8 @@ export default function TransactionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro di voler eliminare questa transazione?')) return;
-    
     try {
       await deleteTransactionMutation.mutateAsync(id);
-      // React Query invalida automaticamente la cache e ricarica i dati
     } catch (error) {
       alert("Errore nell'eliminazione");
     }
@@ -50,17 +47,16 @@ export default function TransactionsPage() {
 
   return (
     <div className="container-custom">
-      <div className="flex-between mb-6">
-        <h1 className="text-3xl font-bold text-neutral-900 ">Transazioni</h1>
+
+      {/* ── Header responsive ── */}
+      <div className="page-header">
+        <h1 className="page-header-title">Transazioni</h1>
         <button
-          onClick={() => {
-            setShowModal(true);
-            setEditingTransaction(null);
-          }}
-          className="btn btn-primary btn-md"
+          onClick={() => { setShowModal(true); setEditingTransaction(null); }}
+          className="btn btn-primary btn-md page-header-btn"
         >
           <Plus className="icon-md" />
-          Nuova Transazione
+          <span>Nuova Transazione</span>
         </button>
       </div>
 
@@ -86,7 +82,6 @@ export default function TransactionsPage() {
           </div>
         ) : (
           transactions.map((transaction) => {
-            // Filtro
             if (
               !matchesFilters(transaction, {
                 typeValue: filterType,
@@ -99,41 +94,37 @@ export default function TransactionsPage() {
 
             return (
               <div key={transaction.id} className="transaction-card">
-                <div className="transaction-card-left">
-                  <div
-                    className={
-                      transaction.type === 'INCOME'
-                        ? 'transaction-card-icon-income'
-                        : 'transaction-card-icon-expense'
+
+                {/* Sinistra: icona + info — min-w-0 per permettere truncate */}
+                <div className="transaction-card-left min-w-0 flex-1">
+                  {/* <div className={
+                    transaction.type === 'INCOME'
+                      ? 'transaction-card-icon-income flex-shrink-0'
+                      : 'transaction-card-icon-expense flex-shrink-0'
+                  }>
+                    {transaction.type === 'INCOME'
+                      ? <TrendingUp className="icon-md text-success-600" />
+                      : <TrendingDown className="icon-md text-danger-600" />
                     }
-                  >
-                    {transaction.type === 'INCOME' ? (
-                      <TrendingUp className="icon-md text-success-600" />
-                    ) : (
-                      <TrendingDown className="icon-md text-danger-600" />
-                    )}
-                  </div>
-                  <div className="transaction-card-info">
-                    <p className="transaction-card-title">
+                  </div> */}
+                  <div className="transaction-card-info min-w-0">
+                    <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
+                    <p className="transaction-card-title truncate">
                       {transaction.description || 'Nessuna descrizione'}
                     </p>
-                    <p className="transaction-card-subtitle">
-                      {transaction.category?.name || 'Senza categoria'} •{' '}
-                      {format(new Date(transaction.date), 'dd MMM yyyy', {
-                        locale: it,
-                      })}
+                    <p className="transaction-card-subtitle truncate">
+                      {transaction.category?.name || 'Senza categoria'}
                     </p>
                   </div>
                 </div>
 
-                <div className="transaction-card-right">
-                  <span
-                    className={
-                      transaction.type === 'INCOME'
-                        ? 'transaction-card-amount-income'
-                        : 'transaction-card-amount-expense'
-                    }
-                  >
+                {/* Destra: importo + azioni — flex-shrink-0 per non comprimersi mai */}
+                <div className="transaction-card-right flex-shrink-0">
+                  <span className={
+                    transaction.type === 'INCOME'
+                      ? 'transaction-card-amount-income'
+                      : 'transaction-card-amount-expense'
+                  }>
                     {transaction.type === 'INCOME' ? '+' : '-'}€
                     {Number(transaction.amount).toFixed(2)}
                   </span>
@@ -153,19 +144,19 @@ export default function TransactionsPage() {
                     <Trash2 className="icon-sm" />
                   </button>
                 </div>
+
               </div>
             );
           })
         )}
       </div>
 
-      {/* Modal */}
       <TransactionModal
         isOpen={showModal}
         categories={categories}
         editingTransactionData={editingTransaction}
         onClose={handleCloseModal}
-        sentFeed={() => {console.log('Feed aggiornato')}} // React Query gestisce il refresh automaticamente
+        sentFeed={() => {}}
       />
     </div>
   );
