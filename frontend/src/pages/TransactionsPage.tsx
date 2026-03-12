@@ -1,7 +1,7 @@
 import { useTransactions, useDeleteTransaction, PAGE_SIZE } from '../hooks/useTransactions';
 import { useCategories } from '../hooks/useCategories';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, Pencil, /*TrendingUp, TrendingDown*/ } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
@@ -146,7 +146,7 @@ export default function TransactionsPage() {
             <div key={transaction.id} className="transaction-card">
 
               <div className="transaction-card-left min-w-0 flex-1">
-                <div className={
+                {/* <div className={
                   transaction.type === 'INCOME'
                     ? 'transaction-card-icon-income flex-shrink-0'
                     : 'transaction-card-icon-expense flex-shrink-0'
@@ -155,14 +155,14 @@ export default function TransactionsPage() {
                     ? <TrendingUp className="icon-md text-success-600" />
                     : <TrendingDown className="icon-md text-danger-600" />
                   }
-                </div>
+                </div> */}
                 <div className="transaction-card-info min-w-0">
+                  <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
                   <p className="transaction-card-title truncate">
                     {transaction.description || 'Nessuna descrizione'}
                   </p>
                   <p className="transaction-card-subtitle truncate">
-                    {transaction.category?.name || 'Senza categoria'} •{' '}
-                    {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
+                    {transaction.category?.name || 'Senza categoria'}
                   </p>
                 </div>
               </div>
