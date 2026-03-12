@@ -1,7 +1,7 @@
 import { useTransactions, useDeleteTransaction } from '../hooks/useTransactions';
 import { useCategories } from '../hooks/useCategories';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
