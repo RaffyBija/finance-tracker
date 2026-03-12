@@ -1,18 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { dashboardAPI } from '../api/client';
 
-export const useSummary = () => {
+interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
+export const useSummary = (dateRange?: DateRange) => {
   return useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: () => dashboardAPI.getSummary(),
-    staleTime: 2 * 60 * 1000, // 2 minuti
+    queryKey: ['dashboard', 'summary', dateRange],
+    queryFn: () => dashboardAPI.getSummary(dateRange),
+    staleTime: 2 * 60 * 1000,
   });
 };
 
-export const useCategoryStats = () => {
+export const useCategoryStats = (dateRange?: DateRange) => {
   return useQuery({
-    queryKey: ['dashboard', 'category-stats'],
-    queryFn: () => dashboardAPI.getCategoryStats(),
+    queryKey: ['dashboard', 'category-stats', dateRange],
+    queryFn: () => dashboardAPI.getCategoryStats(dateRange),
     staleTime: 2 * 60 * 1000,
   });
 };
@@ -49,4 +54,4 @@ export const useProjectedBalanceByDate = (startDate: string, endDate: string, en
     staleTime: 2 * 60 * 1000,
     enabled,
   });
-}
+};
