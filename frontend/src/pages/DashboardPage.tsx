@@ -25,13 +25,21 @@ import { it } from 'date-fns/locale';
 import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard.tsx';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
-// ─── Colori palette ───────────────────────────────────────────────────────────
-const CHART_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
-  '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
+const FALLBACK_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#EC4899', '#14B8A6', '#F97316', '#84CC16', '#06B6D4',
+  '#6366F1', '#D97706', '#BE185D', '#059669', '#DC2626',
+  '#7C3AED', '#0284C7', '#CA8A04', '#16A34A', '#DB2777',
 ];
 
-// ─── Custom Tooltip per il BarChart ──────────────────────────────────────────
+const isValidColor = (color?: string): boolean =>
+  !!color && color !== '#gray' && /^#[0-9A-Fa-f]{3,6}$/.test(color);
+
+const getCategoryColor = (entry: { categoryColor?: string }, index: number): string =>
+  isValidColor(entry.categoryColor)
+    ? entry.categoryColor!
+    : FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+
 const CustomBarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -46,7 +54,6 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-// ─── Custom Tooltip per il PieChart ──────────────────────────────────────────
 const CustomPieTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -57,14 +64,13 @@ const CustomPieTooltip = ({ active, payload }: any) => {
   );
 };
 
-// ─── Custom Legend per il PieChart ────────────────────────────────────────────
-const CustomPieLegend = ({ data, colors }: { data: any[]; colors: string[] }) => (
+const CustomPieLegend = ({ data }: { data: any[] }) => (
   <div className="flex flex-col gap-2 justify-center pl-2">
-    {data.slice(0, 6).map((entry, i) => (
+    {data.slice(0, 8).map((entry, i) => (
       <div key={entry.categoryName} className="flex items-center gap-2 text-xs">
         <span
           className="inline-block rounded-full flex-shrink-0"
-          style={{ width: 10, height: 10, background: entry.categoryColor || colors[i % colors.length] }}
+          style={{ width: 10, height: 10, background: getCategoryColor(entry, i) }}
         />
         <span className="text-neutral-600 truncate max-w-[110px]">{entry.categoryName}</span>
         <span className="ml-auto font-semibold text-neutral-800">€{Number(entry.total).toFixed(0)}</span>
@@ -73,9 +79,7 @@ const CustomPieLegend = ({ data, colors }: { data: any[]; colors: string[] }) =>
   </div>
 );
 
-// ─── Componente principale ────────────────────────────────────────────────────
 export default function DashboardPage() {
-  // Navigazione mese
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthRange = useMemo(() => ({
@@ -85,15 +89,19 @@ export default function DashboardPage() {
 
   const isCurrentMonth = useMemo(() => {
     const now = new Date();
-    return currentMonth.getMonth() === now.getMonth() && currentMonth.getFullYear() === now.getFullYear();
+    return currentMonth.getMonth() === now.getMonth() &&
+      currentMonth.getFullYear() === now.getFullYear();
   }, [currentMonth]);
 
-  // Proiezione
   const [projectionMonths, setProjectionMonths] = useState(1);
   const [projectionRange, setProjectionRange] = useState({ startDate: '', endDate: '' });
 
-  // Query — summary e categoryStats filtrate per mese
+  // Query mensile (filtrata per mese selezionato)
   const { data: summary, isLoading: summaryLoading } = useSummary(monthRange);
+
+  // Saldo totale — nessun filtro = lifetime
+  const { data: totalSummary, isLoading: totalSummaryLoading } = useSummary();
+
   const { data: categoryStats = [], isLoading: statsLoading } = useCategoryStats(monthRange);
   const { data: monthlyTrend = [], isLoading: trendLoading } = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading } = useRecentTransactions(5);
@@ -109,18 +117,16 @@ export default function DashboardPage() {
   );
 
   const isLoading =
-    summaryLoading || statsLoading || trendLoading || recentLoading ||
-    projectedLoading || projectedByDateLoading;
+    summaryLoading || totalSummaryLoading || statsLoading || trendLoading ||
+    recentLoading || projectedLoading || projectedByDateLoading;
 
   const activeProjectedBalance = projectionMonths > 0 ? projectedBalance : projectedBalanceByDate;
 
-  // Dati per il PieChart (solo EXPENSE)
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
     [categoryStats]
   );
 
-  // Formatta i mesi nel trend (es. "2025-03" → "Mar")
   const formattedTrend = useMemo(() =>
     monthlyTrend.map((item) => ({
       ...item,
@@ -129,6 +135,9 @@ export default function DashboardPage() {
     [monthlyTrend]
   );
 
+  const totalBalance = totalSummary?.balance ?? 0;
+  const isPositive = totalBalance >= 0;
+
   if (isLoading) {
     return <LoadingSpinner message="Caricamento Dashboard ..." />;
   }
@@ -136,19 +145,18 @@ export default function DashboardPage() {
   return (
     <div className="container-custom">
 
-      {/* ── Header con navigazione mese ──────────────────────────────────── */}
+      {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Situazione finanziaria di{' '}
+            Analisi di{' '}
             <span className="font-semibold text-neutral-700">
               {format(currentMonth, 'MMMM yyyy', { locale: it })}
             </span>
           </p>
         </div>
 
-        {/* Navigatore mese */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => setCurrentMonth((d) => subMonths(d, 1))}
@@ -182,14 +190,29 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Summary Cards ─────────────────────────────────────────────────── */}
+      {/* ── Banner saldo attuale ──────────────────────────────────────────── */}
+      <div className="balance-hero mb-6">
+        <div>
+          <p className="balance-hero-label">Saldo attuale</p>
+          <p className={`balance-hero-amount ${isPositive ? 'balance-hero-amount--positive' : 'balance-hero-amount--negative'}`}>
+            {isPositive ? '+' : ''}€{totalBalance.toLocaleString('it-IT', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+          <p className="balance-hero-sub">Su tutte le transazioni registrate</p>
+        </div>
+        <Wallet className="balance-hero-icon" />
+      </div>
+
+      {/* ── Summary Cards mensili ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
           <div className="flex-between">
             <div>
               <p className="stat-card-label">Entrate</p>
               <p className="stat-card-value text-success-600">
-                €{summary?.income.toFixed(2)}
+                +€{summary?.income.toFixed(2)}
               </p>
             </div>
             <TrendingUp className="icon-2xl text-success-600" />
@@ -201,7 +224,7 @@ export default function DashboardPage() {
             <div>
               <p className="stat-card-label">Uscite</p>
               <p className="stat-card-value text-danger-600">
-                €{summary?.expense.toFixed(2)}
+                -€{summary?.expense.toFixed(2)}
               </p>
             </div>
             <TrendingDown className="icon-2xl text-danger-600" />
@@ -213,7 +236,7 @@ export default function DashboardPage() {
             <div>
               <p className="stat-card-label">Saldo del mese</p>
               <p className={`stat-card-value ${summary && summary.balance >= 0 ? 'text-primary-600' : 'text-danger-600'}`}>
-                €{summary?.balance.toFixed(2)}
+                {summary && summary.balance >= 0 ? '+' : ''}€{summary?.balance.toFixed(2)}
               </p>
             </div>
             <Wallet className="icon-2xl text-primary-600" />
@@ -249,7 +272,6 @@ export default function DashboardPage() {
       {/* ── Grafici ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
-        {/* Bar Chart — Trend mensile */}
         <div className="card card-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="card-header-title">Trend Mensile</h2>
@@ -265,19 +287,8 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={formattedTrend} barCategoryGap="30%" barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 12, fill: '#94a3b8' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `€${v}`}
-                width={60}
-              />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v}`} width={60} />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
               <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="expense" name="Uscite" fill="#EF4444" radius={[4, 4, 0, 0]} opacity={0.8} />
@@ -285,7 +296,6 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Donut Chart — Spese per categoria */}
         <div className="card card-lg">
           <h2 className="card-header-title mb-4">
             Spese per Categoria
@@ -301,30 +311,16 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4 h-[280px]">
               <ResponsiveContainer width="55%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={expenseCategoryStats}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={65}
-                    outerRadius={100}
-                    dataKey="total"
-                    nameKey="categoryName"
-                    paddingAngle={2}
-                  >
+                  <Pie data={expenseCategoryStats} cx="50%" cy="50%" innerRadius={65} outerRadius={100} dataKey="total" nameKey="categoryName" paddingAngle={2}>
                     {expenseCategoryStats.map((entry, index) => (
-                      <Cell
-                        key={`cell-${entry.categoryName}`}
-                        fill={entry.categoryColor && entry.categoryColor !== '#gray'
-                          ? entry.categoryColor
-                          : CHART_COLORS[index % CHART_COLORS.length]}
-                      />
+                      <Cell key={`cell-${entry.categoryName}`} fill={getCategoryColor(entry, index)} />
                     ))}
                   </Pie>
                   <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex-1 overflow-hidden">
-                <CustomPieLegend data={expenseCategoryStats} colors={CHART_COLORS} />
+                <CustomPieLegend data={expenseCategoryStats} />
               </div>
             </div>
           )}
@@ -338,38 +334,31 @@ export default function DashboardPage() {
         </div>
         <div className="card-divided">
           {recentTransactions.length === 0 ? (
-            <div className="empty-state-card">
-              <p className="empty-state-title">Nessuna transazione trovata</p>
+            <div className="p-8 text-center text-neutral-400 text-sm">
+              Nessuna transazione recente
             </div>
           ) : (
             recentTransactions.map((transaction) => (
               <div key={transaction.id} className="transaction-card">
-                <div className="transaction-card-left">
-                  <div className={
-                    transaction.type === 'INCOME'
-                      ? 'transaction-card-icon-income'
-                      : 'transaction-card-icon-expense'
-                  }>
+                <div className="transaction-card-left min-w-0 flex-1">
+                  <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
                     {transaction.type === 'INCOME'
                       ? <TrendingUp className="icon-md text-success-600" />
-                      : <TrendingDown className="icon-md text-danger-600" />}
+                      : <TrendingDown className="icon-md text-danger-600" />
+                    }
                   </div>
-                  <div className="transaction-card-info">
-                    <p className="transaction-card-title">
+                  <div className="transaction-card-info min-w-0">
+                    <p className="transaction-card-title truncate">
                       {transaction.description || 'Nessuna descrizione'}
                     </p>
-                    <p className="transaction-card-subtitle">
+                    <p className="transaction-card-subtitle truncate">
                       {transaction.category?.name || 'Senza categoria'} •{' '}
                       {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
                     </p>
                   </div>
                 </div>
-                <div className="transaction-card-right">
-                  <span className={
-                    transaction.type === 'INCOME'
-                      ? 'transaction-amount-income'
-                      : 'transaction-amount-expense'
-                  }>
+                <div className="transaction-card-right flex-shrink-0">
+                  <span className={transaction.type === 'INCOME' ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
                     {transaction.type === 'INCOME' ? '+' : '-'}€{Number(transaction.amount).toFixed(2)}
                   </span>
                 </div>
