@@ -18,7 +18,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
