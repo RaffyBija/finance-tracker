@@ -17,6 +17,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import PublicRoute from './components/PublicRoute';
+import LandingPage from './pages/LandingPage';
 
 inject();
 
@@ -46,7 +47,7 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/privacy" element={<Privacy/>} />
-
+            <Route index element ={<LandingPage />}/>
             {/* Protected Routes */}
             <Route
               path="/dashboard"
@@ -112,8 +113,8 @@ function App() {
               }
             />
 
-            {/* Redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Redirect root to dashboard
+            <Route path="/" element={<Navigate to="/dashboard" replace />} /> */}
             
             {/* 404 */}
             <Route path="*" element={<div>404 - Pagina non trovata</div>} />
