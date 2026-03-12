@@ -2,23 +2,40 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
 import type { CreateTransactionDTO, TransactionType } from '../types';
 
-export const useTransactions = (filterType?: TransactionType | 'ALL') => {
-  const params = filterType !== 'ALL' ? { type: filterType } : {};
-  
+const PAGE_SIZE = 20;
+
+interface TransactionFilters {
+  type?: TransactionType | 'ALL';
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+}
+
+export const useTransactions = (filters: TransactionFilters = {}) => {
+  const { type, startDate, endDate, page = 0 } = filters;
+
+  const params: Record<string, any> = {
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  };
+
+  if (type && type !== 'ALL') params.type = type;
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+
   return useQuery({
-    queryKey: ['transactions', filterType],
+    queryKey: ['transactions', type, startDate, endDate, page],
     queryFn: () => transactionAPI.getAll(params),
-    staleTime: 3 * 60 * 1000, // 3 minuti
+    staleTime: 3 * 60 * 1000,
+    placeholderData: (prev) => prev, // mantiene i dati precedenti durante il caricamento
   });
 };
 
 export const useCreateTransaction = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: (data: CreateTransactionDTO) => transactionAPI.create(data),
     onSuccess: () => {
-      // Invalida la cache per forzare il refetch
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
@@ -28,9 +45,8 @@ export const useCreateTransaction = () => {
 
 export const useUpdateTransaction = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTransactionDTO> }) => 
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTransactionDTO> }) =>
       transactionAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -42,7 +58,6 @@ export const useUpdateTransaction = () => {
 
 export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: (id: string) => transactionAPI.delete(id),
     onSuccess: () => {
@@ -52,3 +67,5 @@ export const useDeleteTransaction = () => {
     },
   });
 };
+
+export { PAGE_SIZE };
