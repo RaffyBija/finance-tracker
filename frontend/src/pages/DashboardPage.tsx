@@ -81,18 +81,13 @@ export default function DashboardPage() {
       currentMonth.getFullYear() === now.getFullYear();
   }, [currentMonth]);
 
-  // Stato proiezione — rimane in DashboardPage per controllare ProjectedDetailCard
-  const [projectionMonths, setProjectionMonths] = useState(1);
-  const [projectionRange, setProjectionRange] = useState<object>({});
-
-  // Solo le query che riguardano la dashboard principale
+  //query che riguardano la dashboard principale
   const { data: summary, isLoading: summaryLoading } = useSummary(monthRange);
   const { data: totalSummary, isLoading: totalSummaryLoading } = useSummary();
   const { data: categoryStats = [], isLoading: statsLoading } = useCategoryStats(monthRange);
   const { data: monthlyTrend = [], isLoading: trendLoading } = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading } = useRecentTransactions(5);
 
-  // Le query di proiezione NON sono più qui — vivono dentro ProjectedDetailCard
   const isLoading = summaryLoading || totalSummaryLoading || statsLoading || trendLoading || recentLoading;
 
   const expenseCategoryStats = useMemo(
