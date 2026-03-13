@@ -4,25 +4,15 @@ import {
   useCategoryStats,
   useMonthlyTrend,
   useRecentTransactions,
-  useProjectedBalance,
-  useProjectedBalanceByDate,
 } from '../hooks/useDashboard';
 import { TrendingUp, TrendingDown, Wallet, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { it } from 'date-fns/locale';
-import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard.tsx';
+import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const FALLBACK_COLORS = [
@@ -32,13 +22,11 @@ const FALLBACK_COLORS = [
   '#7C3AED', '#0284C7', '#CA8A04', '#16A34A', '#DB2777',
 ];
 
-const isValidColor = (color?: string): boolean =>
+const isValidColor = (color?: string) =>
   !!color && color !== '#gray' && /^#[0-9A-Fa-f]{3,6}$/.test(color);
 
-const getCategoryColor = (entry: { categoryColor?: string }, index: number): string =>
-  isValidColor(entry.categoryColor)
-    ? entry.categoryColor!
-    : FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+const getCategoryColor = (entry: { categoryColor?: string }, index: number) =>
+  isValidColor(entry.categoryColor) ? entry.categoryColor! : FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 
 const CustomBarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -93,34 +81,19 @@ export default function DashboardPage() {
       currentMonth.getFullYear() === now.getFullYear();
   }, [currentMonth]);
 
+  // Stato proiezione — rimane in DashboardPage per controllare ProjectedDetailCard
   const [projectionMonths, setProjectionMonths] = useState(1);
-  const [projectionRange, setProjectionRange] = useState({ startDate: '', endDate: '' });
+  const [projectionRange, setProjectionRange] = useState<object>({});
 
-  // Query mensile (filtrata per mese selezionato)
+  // Solo le query che riguardano la dashboard principale
   const { data: summary, isLoading: summaryLoading } = useSummary(monthRange);
-
-  // Saldo totale — nessun filtro = lifetime
   const { data: totalSummary, isLoading: totalSummaryLoading } = useSummary();
-
   const { data: categoryStats = [], isLoading: statsLoading } = useCategoryStats(monthRange);
   const { data: monthlyTrend = [], isLoading: trendLoading } = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading } = useRecentTransactions(5);
 
-  const { data: projectedBalance, isLoading: projectedLoading } = useProjectedBalance(
-    projectionMonths,
-    projectionMonths > 0
-  );
-  const { data: projectedBalanceByDate, isLoading: projectedByDateLoading } = useProjectedBalanceByDate(
-    projectionRange.startDate,
-    projectionRange.endDate,
-    projectionMonths === 0 && !!projectionRange.startDate && !!projectionRange.endDate
-  );
-
-  const isLoading =
-    summaryLoading || totalSummaryLoading || statsLoading || trendLoading ||
-    recentLoading || projectedLoading || projectedByDateLoading;
-
-  const activeProjectedBalance = projectionMonths > 0 ? projectedBalance : projectedBalanceByDate;
+  // Le query di proiezione NON sono più qui — vivono dentro ProjectedDetailCard
+  const isLoading = summaryLoading || totalSummaryLoading || statsLoading || trendLoading || recentLoading;
 
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
@@ -145,7 +118,7 @@ export default function DashboardPage() {
   return (
     <div className="container-custom">
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
@@ -158,39 +131,28 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={() => setCurrentMonth((d) => subMonths(d, 1))}
-            className="btn btn-ghost btn-sm"
-            title="Mese precedente"
-          >
+          <button onClick={() => setCurrentMonth((d) => subMonths(d, 1))} className="btn btn-ghost btn-sm">
             <ChevronLeft className="icon-sm" />
           </button>
-
           <span className="px-4 py-1.5 rounded-lg bg-neutral-100 text-sm font-semibold text-neutral-700 min-w-[130px] text-center capitalize">
             {format(currentMonth, 'MMMM yyyy', { locale: it })}
           </span>
-
           <button
             onClick={() => setCurrentMonth((d) => addMonths(d, 1))}
             disabled={isCurrentMonth}
             className="btn btn-ghost btn-sm disabled:opacity-40"
-            title="Mese successivo"
           >
             <ChevronRight className="icon-sm" />
           </button>
-
           {!isCurrentMonth && (
-            <button
-              onClick={() => setCurrentMonth(new Date())}
-              className="btn btn-outline-primary btn-sm"
-            >
+            <button onClick={() => setCurrentMonth(new Date())} className="btn btn-outline-primary btn-sm">
               Oggi
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Banner saldo attuale ──────────────────────────────────────────── */}
+      {/* ── Banner saldo attuale ── */}
       <div className="balance-hero mb-6">
         <div>
           <p className="balance-hero-label">Saldo attuale</p>
@@ -205,32 +167,26 @@ export default function DashboardPage() {
         <Wallet className="balance-hero-icon" />
       </div>
 
-      {/* ── Summary Cards mensili ─────────────────────────────────────────── */}
+      {/* ── Summary Cards mensili ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
           <div className="flex-between">
             <div>
               <p className="stat-card-label">Entrate</p>
-              <p className="stat-card-value text-success-600">
-                +€{summary?.income.toFixed(2)}
-              </p>
+              <p className="stat-card-value text-success-600">+€{summary?.income.toFixed(2)}</p>
             </div>
             <TrendingUp className="icon-2xl text-success-600" />
           </div>
         </div>
-
         <div className="stat-card">
           <div className="flex-between">
             <div>
               <p className="stat-card-label">Uscite</p>
-              <p className="stat-card-value text-danger-600">
-                -€{summary?.expense.toFixed(2)}
-              </p>
+              <p className="stat-card-value text-danger-600">-€{summary?.expense.toFixed(2)}</p>
             </div>
             <TrendingDown className="icon-2xl text-danger-600" />
           </div>
         </div>
-
         <div className="stat-card">
           <div className="flex-between">
             <div>
@@ -242,45 +198,35 @@ export default function DashboardPage() {
             <Wallet className="icon-2xl text-primary-600" />
           </div>
         </div>
-
         <div className="stat-card">
           <div className="flex-between">
             <div>
               <p className="stat-card-label">Transazioni</p>
-              <p className="stat-card-value text-neutral-900">
-                {summary?.transactionCount}
-              </p>
+              <p className="stat-card-value text-neutral-900">{summary?.transactionCount}</p>
             </div>
             <Activity className="icon-2xl text-neutral-600" />
           </div>
         </div>
       </div>
 
-      {/* ── Proiezione ────────────────────────────────────────────────────── */}
-      {activeProjectedBalance && (
-        <ProjectedDetailCard
-          projectedBalance={activeProjectedBalance}
-          projectionMonths={projectionMonths}
-          setProjectionMonths={(value) => setProjectionMonths(value)}
-          setProjectionRange={(value) => {
-            setProjectionMonths(0);
-            setProjectionRange(value as { startDate: string; endDate: string });
-          }}
-        />
-      )}
+      {/* ── Proiezione — autonoma, gestisce il proprio loading ── */}
+      <ProjectedDetailCard
+        projectionMonths={projectionMonths}
+        setProjectionMonths={setProjectionMonths}
+        setProjectionRange={setProjectionRange}
+      />
 
-      {/* ── Grafici ───────────────────────────────────────────────────────── */}
+      {/* ── Grafici ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
         <div className="card card-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="card-header-title">Trend Mensile</h2>
             <div className="flex items-center gap-3 text-xs text-neutral-500">
               <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 rounded-sm bg-success-500"></span> Entrate
+                <span className="inline-block w-3 h-3 rounded-sm bg-success-500" /> Entrate
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 rounded-sm bg-danger-400"></span> Uscite
+                <span className="inline-block w-3 h-3 rounded-sm bg-danger-400" /> Uscite
               </span>
             </div>
           </div>
@@ -327,16 +273,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Transazioni Recenti ───────────────────────────────────────────── */}
+      {/* ── Transazioni Recenti ── */}
       <div className="card mb-8">
         <div className="card-header">
           <h2 className="card-header-title">Transazioni Recenti</h2>
         </div>
         <div className="card-divided">
           {recentTransactions.length === 0 ? (
-            <div className="p-8 text-center text-neutral-400 text-sm">
-              Nessuna transazione recente
-            </div>
+            <div className="p-8 text-center text-neutral-400 text-sm">Nessuna transazione recente</div>
           ) : (
             recentTransactions.map((transaction) => (
               <div key={transaction.id} className="transaction-card">
@@ -348,9 +292,7 @@ export default function DashboardPage() {
                     }
                   </div>
                   <div className="transaction-card-info min-w-0">
-                    <p className="transaction-card-title truncate">
-                      {transaction.description || 'Nessuna descrizione'}
-                    </p>
+                    <p className="transaction-card-title truncate">{transaction.description || 'Nessuna descrizione'}</p>
                     <p className="transaction-card-subtitle truncate">
                       {transaction.category?.name || 'Senza categoria'} •{' '}
                       {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
