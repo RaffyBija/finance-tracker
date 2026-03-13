@@ -2,11 +2,6 @@ import { Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { useProjectedBalance, useProjectedBalanceByDate } from '../../hooks/useDashboard';
 
-interface ProjectedDetailCardProps {
-  projectionMonths: number;
-  setProjectionMonths: (value: number) => void;
-  setProjectionRange: (value: object) => void;
-}
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function ProjectedSkeleton() {
@@ -30,15 +25,14 @@ function ProjectedSkeleton() {
 }
 
 // ── Componente principale ─────────────────────────────────────────────────────
-export default function ProjectedDetailCard({
-  projectionMonths,
-  setProjectionMonths,
-  setProjectionRange,
-}: ProjectedDetailCardProps) {
+export default function ProjectedDetailCard() {
+  const [projectionMonths, setProjectionMonths] = useState(1);
+  
   const [projectRange, setProjectRange] = useState({ startDate: '', endDate: '' });
+
   const isCustomRange = projectionMonths === 0;
 
-  // Le query vivono QUI dentro — non contribuiscono al loading della DashboardPage
+  //query
   const { data: projectedBalance, isFetching: fetchingMonths } = useProjectedBalance(
     projectionMonths,
     projectionMonths > 0
@@ -75,7 +69,7 @@ export default function ProjectedDetailCard({
           value={projectionMonths}
           onChange={(e) => {
             setProjectionMonths(Number(e.target.value));
-            setProjectionRange({});
+            setProjectRange({startDate: '', endDate: ''});
           }}
           className="w-full md:w-auto text-base md:text-lg bg-white/20 rounded px-3 md:px-2 py-2 md:py-1 border-0 cursor-pointer font-medium shadow-md"
         >
@@ -121,7 +115,7 @@ export default function ProjectedDetailCard({
             className="w-full md:w-auto text-base md:text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 md:px-3 py-2 md:py-1 rounded font-medium transition-colors"
             onClick={() => {
               setProjectionMonths(0);
-              setProjectionRange(projectRange);
+              setProjectRange(projectRange);
             }}
           >
             Applica
