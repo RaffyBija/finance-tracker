@@ -16,7 +16,7 @@ export default function ProjectedDetailCard({
   setProjectionRange
 }: ProjectedDetailCardProp) {
   const [projectRange, setProjectRange] = useState({ startDate: '', endDate: '' });
-  
+
   if (!projectedBalance) {
     return (
       <div className="card-gradient-purple card-lg mb-8">
@@ -39,6 +39,7 @@ export default function ProjectedDetailCard({
             Proiezione
           </h2>
         </div>
+        {/* Sezione filtri*/ }
         <select
             value={projectionMonths}
             onChange={(e) => setProjectionMonths(Number(e.target.value))}
@@ -73,12 +74,17 @@ export default function ProjectedDetailCard({
             />
           </div>
         </div>
-        <input type= "button"
+        {(projectRange.startDate && projectRange.endDate) &&( 
+          <input type= "button"
           value="Applica"
+          disabled={!projectRange.startDate || !projectRange.endDate}
           className="w-full md:w-auto text-base md:text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 md:px-3 py-2 md:py-1 rounded font-medium transition-colors"
           onClick={() => setProjectionRange(projectRange)}
-        />
+        />)}
+       
       </div>
+
+      {/* Sezione schede dati */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="card card-md">
           <p className="text-sm text-neutral-600 mb-1">Entrate Previste</p>
