@@ -1,50 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetApi } from '../api/budgets';
 import { categoryAPI } from '../api/client';
-import type { Budget, Category } from '../types';
+import type { CreateBudgetDTO } from '../types';
 
-/**
- * Hook per gestire stato e operazioni dei budget
- */
 export function useBudgets() {
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
+    queryKey: ['budgets'],
+    queryFn: () => budgetApi.getAll(),
+    staleTime: 3 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [budgetsData, categoriesData] = await Promise.all([
-        budgetApi.getAll(),
-        categoryAPI.getAll({ type: 'EXPENSE' }),
-      ]);
-      setBudgets(budgetsData);
-      setCategories(categoriesData);
-    } catch (error) {
-      console.error('Errore nel caricamento:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refresh = () => {
-    loadData();
-  };
-
-  const handleDelete = async (id: string) => {
-    await budgetApi.delete(id);
-    refresh();
-  };
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories', 'EXPENSE'],
+    queryFn: () => categoryAPI.getAll({ type: 'EXPENSE' }),
+    staleTime: 10 * 60 * 1000,
+  });
 
   return {
     budgets,
     categories,
-    isLoading,
-    refresh,
-    handleDelete,
+    isLoading: budgetsLoading,
+    categoriesLoading,
   };
+}
+
+export function useDeleteBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => budgetApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useCreateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateBudgetDTO) => budgetApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+  });
+}
+
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateBudgetDTO> }) =>
+      budgetApi.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+  });
 }

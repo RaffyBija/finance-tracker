@@ -5,8 +5,8 @@ import FilterNav from '../components/layout/FilterNav';
 import CategoriesModal from '../components/categories/CategoriesModal';
 import CategoriesCard from '../components/categories/CategoriesCard';
 import matchesFilters from '../utils/filters';
-import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { useState } from 'react';
+import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
 
 export default function CategoriesPage() {
   const [showModal, setShowModal] = useState(false);
@@ -41,74 +41,84 @@ export default function CategoriesPage() {
     setEditingCategory(null);
   };
 
-  if (isLoading) {
-    return <LoadingSpinner message="Caricamento Categorie..." />;
-  }
+ return (
+  <>
+    <div className="container-custom">
+      {isLoading ? (
+        <>
+          <SkeletonPageHeader />
+          <SkeletonCardGrid cols={3} rows={2} />
+        </>
+      ) : (
+        <>
+          {/* ── Header responsive ── */}
+          <div className="page-header">
+            <h1 className="page-header-title">Categorie</h1>
+            <button
+              onClick={handleOpenModal}
+              className="btn btn-primary btn-md page-header-btn"
+            >
+              <Plus className="icon-md" />
+              <span>Nuova Categoria</span>
+            </button>
+          </div>
 
-  return (
-    <>
-      <div className="container-custom">
+          {/* Filtri */}
+          <FilterNav
+            filterType={filterType}
+            setFilterType={setFilterType}
+            setSearchFilter={setFilterSearch}
+          />
 
-        {/* ── Header responsive ── */}
-        <div className="page-header">
-          <h1 className="page-header-title">Categorie</h1>
-          <button onClick={handleOpenModal} className="btn btn-primary btn-md page-header-btn">
-            <Plus className="icon-md" />
-            <span>Nuova Categoria</span>
-          </button>
-        </div>
+          {/* Grid categorie */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.length === 0 ? (
+              <div className="empty-state-card col-span-full">
+                <p className="empty-state-title">Nessuna categoria trovata</p>
+                <p className="empty-state-description">
+                  Crea la tua prima categoria per organizzare le transazioni
+                </p>
+                <button
+                  onClick={handleOpenModal}
+                  className="btn btn-primary btn-md"
+                >
+                  <Plus className="icon-md" />
+                  Crea Categoria
+                </button>
+              </div>
+            ) : (
+              categories.map((category) => {
+                if (
+                  !matchesFilters(category, {
+                    typeValue: filterType,
+                    itemType: (t) => t.type,
+                    searchValue: searchFilter,
+                    searchFields: [(t) => t.name],
+                  })
+                )
+                  return null;
 
-        {/* Filtri */}
-        <FilterNav
-          filterType={filterType}
-          setFilterType={setFilterType}
-          setSearchFilter={setFilterSearch}
-        />
+                return (
+                  <CategoriesCard
+                    key={category.id}
+                    category={category}
+                    handleEdit={() => handleEdit(category)}
+                    handleDelete={() => handleDelete(category.id)}
+                  />
+                );
+              })
+            )}
+          </div>
 
-        {/* Grid categorie */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.length === 0 ? (
-            <div className="empty-state-card col-span-full">
-              <p className="empty-state-title">Nessuna categoria trovata</p>
-              <p className="empty-state-description">
-                Crea la tua prima categoria per organizzare le transazioni
-              </p>
-              <button onClick={handleOpenModal} className="btn btn-primary btn-md">
-                <Plus className="icon-md" />
-                Crea Categoria
-              </button>
-            </div>
-          ) : (
-            categories.map((category) => {
-              if (
-                !matchesFilters(category, {
-                  typeValue: filterType,
-                  itemType: (t) => t.type,
-                  searchValue: searchFilter,
-                  searchFields: [(t) => t.name],
-                })
-              )
-                return null;
-
-              return (
-                <CategoriesCard
-                  key={category.id}
-                  category={category}
-                  handleEdit={() => handleEdit(category)}
-                  handleDelete={() => handleDelete(category.id)}
-                />
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      <CategoriesModal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        sentFeed={() => {}}
-        editingCategory={editingCategory}
-      />
-    </>
-  );
+          <CategoriesModal
+            isOpen={showModal}
+            onClose={handleCloseModal}
+            sentFeed={() => {}}
+            editingCategory={editingCategory}
+          />
+        </>
+      )}
+    </div>
+  </>
+);
 }

@@ -1,56 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { recurringApi } from '../api/recurring';
 import { categoryAPI } from '../api/client';
-import type { RecurringTransaction, Category } from '../types';
+import type { CreateRecurringTransactionDTO } from '../types';
 
-/**
- * Hook per gestire stato e operazioni delle transazioni ricorrenti
- */
 export function useRecurringTransactions() {
-  const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: recurring = [], isLoading: recurringLoading } = useQuery({
+    queryKey: ['recurring'],
+    queryFn: () => recurringApi.getAll(),
+    staleTime: 3 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [recurringData, categoriesData] = await Promise.all([
-        recurringApi.getAll(),
-        categoryAPI.getAll(),
-      ]);
-      setRecurring(recurringData);
-      setCategories(categoriesData);
-    } catch (error) {
-      console.error('Errore nel caricamento:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refresh = () => {
-    loadData();
-  };
-
-  const handleDelete = async (id: string) => {
-    await recurringApi.delete(id);
-    refresh();
-  };
-
-  const handleToggle = async (id: string) => {
-    await recurringApi.toggle(id);
-    refresh();
-  };
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoryAPI.getAll(),
+    staleTime: 10 * 60 * 1000,
+  });
 
   return {
     recurring,
     categories,
-    isLoading,
-    refresh,
-    handleDelete,
-    handleToggle,
+    isLoading: recurringLoading,
+    categoriesLoading,
   };
+}
+
+export function useDeleteRecurring() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => recurringApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useToggleRecurring() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => recurringApi.toggle(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+  });
+}
+
+export function useCreateRecurring() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateRecurringTransactionDTO) => recurringApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+  });
+}
+
+export function useUpdateRecurring() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateRecurringTransactionDTO> }) =>
+      recurringApi.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+  });
 }

@@ -1,71 +1,66 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { plannedApi } from '../api/planned';
 import { categoryAPI } from '../api/client';
-import type { PlannedTransaction, Category } from '../types';
+import type { CreatePlannedTransactionDTO } from '../types';
 
 type FilterStatus = 'ALL' | 'UNPAID' | 'PAID';
 
-/**
- * Hook per gestire stato e operazioni delle transazioni pianificate
- */
 export function usePlannedTransactions() {
-  const [planned, setPlanned] = useState<PlannedTransaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('UNPAID');
 
-  useEffect(() => {
-    loadData();
-  }, [filterStatus]);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
+  const { data: planned = [], isLoading: plannedLoading } = useQuery({
+    queryKey: ['planned', filterStatus],
+    queryFn: async () => {
       const params = filterStatus === 'UNPAID' ? { unpaidOnly: true } : {};
-      const [plannedData, categoriesData] = await Promise.all([
-        plannedApi.getAll(params),
-        categoryAPI.getAll(),
-      ]);
+      const data = await plannedApi.getAll(params);
+      if (filterStatus === 'PAID') return data.filter((p) => p.isPaid);
+      if (filterStatus === 'UNPAID') return data.filter((p) => !p.isPaid);
+      return data;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
 
-      // Filtra in base allo stato
-      let filteredData = plannedData;
-      if (filterStatus === 'PAID') {
-        filteredData = plannedData.filter((p) => p.isPaid);
-      } else if (filterStatus === 'UNPAID') {
-        filteredData = plannedData.filter((p) => !p.isPaid);
-      }
-
-      setPlanned(filteredData);
-      setCategories(categoriesData);
-    } catch (error) {
-      console.error('Errore nel caricamento:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refresh = () => {
-    loadData();
-  };
-
-  const handleDelete = async (id: string) => {
-    await plannedApi.delete(id);
-    refresh();
-  };
-
-  const handleMarkAsPaid = async (id: string) => {
-    await plannedApi.markAsPaid(id);
-    refresh();
-  };
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoryAPI.getAll(),
+    staleTime: 10 * 60 * 1000,
+  });
 
   return {
     planned,
     categories,
-    isLoading,
+    isLoading: plannedLoading,
+    categoriesLoading,
     filterStatus,
     setFilterStatus,
-    refresh,
-    handleDelete,
-    handleMarkAsPaid,
   };
+}
+
+export function useDeletePlanned() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => plannedApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planned'] }),
+  });
+}
+
+export function useMarkAsPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => plannedApi.markAsPaid(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planned'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useCreatePlanned() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreatePlannedTransactionDTO) => plannedApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planned'] }),
+  });
 }
