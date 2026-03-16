@@ -1,9 +1,10 @@
 interface SkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const Skeleton = ({ className = '' }: SkeletonProps) => (
-  <div className={`animate-pulse bg-neutral-200 rounded-lg ${className}`} />
+const Skeleton = ({ className = '', style }: SkeletonProps) => (
+  <div className={`animate-pulse bg-neutral-200 rounded-lg ${className}`} style={style} />
 );
 
 // Header pagina (titolo + bottone)
