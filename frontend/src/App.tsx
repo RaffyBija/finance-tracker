@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -21,18 +20,9 @@ import LandingPage from './pages/LandingPage';
 
 inject();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -121,7 +111,6 @@ function App() {
           </Routes>
         </AuthProvider>
       </BrowserRouter>
-    </QueryClientProvider>
   );
 }
 

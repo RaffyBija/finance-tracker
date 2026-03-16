@@ -1,10 +1,9 @@
 import { createRoot } from 'react-dom/client';
+import { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import './styles/index.css';
 import App from './App.tsx';
 
-// Crea QueryClient con configurazione ottimizzata
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -17,11 +16,20 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById('root')!).render(
+// ✅ Lazy load: Vite esclude questo chunk dal bundle di produzione
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import('@tanstack/react-query-devtools').then((mod) => ({
+        default: mod.ReactQueryDevtools,
+      }))
+    )
+  : () => null;
 
-    <QueryClientProvider client={queryClient}>
-      <App />
+createRoot(document.getElementById('root')!).render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+    <Suspense fallback={null}>
       <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  
+    </Suspense>
+  </QueryClientProvider>
 );

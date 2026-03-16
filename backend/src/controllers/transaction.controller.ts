@@ -29,6 +29,9 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const MAX_LIMIT = 200;
+    const parsedLimit = limit ? Math.min(parseInt(limit as string), MAX_LIMIT) : MAX_LIMIT;
+
     const transactions = await prisma.transaction.findMany({
       where,
       include: {
@@ -37,8 +40,8 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       orderBy: {
         date: 'desc',
       },
-      take: limit ? parseInt(limit as string) : undefined,
-      skip: offset ? parseInt(offset as string) : undefined,
+      take: parsedLimit,
+      skip: offset ? parseInt(offset as string) : 0,
     });
 
     res.json(transactions);

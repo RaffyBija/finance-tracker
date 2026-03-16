@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import prisma from '../utils/prisma';
-import { RegisterDTO, LoginDTO, AuthResponse } from '../types';
-import crypto from 'crypto';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
-import {AuthRequest} from '../types'
+import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import prisma from "../utils/prisma";
+import { RegisterDTO, LoginDTO, AuthResponse } from "../types";
+import crypto from "crypto";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
+import { AuthRequest } from "../types";
 
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
@@ -13,21 +13,23 @@ export const register = async (req: Request, res: Response) => {
     const { email, password, name }: RegisterDTO = req.body;
     // Validazione base
     if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Email, password e nome sono obbligatori' });
+      return res
+        .status(400)
+        .json({ error: "Email, password e nome sono obbligatori" });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email già in uso' });
+      return res.status(400).json({ error: "Email già in uso" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     // Genera token di verifica
-    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyToken = crypto.randomBytes(32).toString("hex");
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
 
-     // Invia email di verifica
+    // Invia email di verifica
     await sendVerificationEmail(email, verifyToken);
 
     const user = await prisma.user.create({
@@ -40,18 +42,16 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-   
-
-    res.status(201).json({ 
-      message: 'Registrazione completata! Controlla la tua email per verificare l\'account.',
-      userId: user.id 
+    res.status(201).json({
+      message:
+        "Registrazione completata! Controlla la tua email per verificare l'account.",
+      userId: user.id,
     });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("Register error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
-
 
 // Verifica email
 export const verifyEmail = async (req: Request, res: Response) => {
@@ -60,12 +60,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findFirst({
       where: {
-        emailVerifyToken: token
+        emailVerifyToken: token,
       },
     });
 
     if (!user) {
-      return res.status(400).json({ error: 'Token non valido o scaduto' });
+      return res.status(400).json({ error: "Token non valido o scaduto" });
     }
 
     await prisma.user.update({
@@ -77,10 +77,10 @@ export const verifyEmail = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ message: 'Email verificata con successo!' });
+    res.json({ message: "Email verificata con successo!" });
   } catch (error) {
-    console.error('Verify email error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("Verify email error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
 
@@ -90,13 +90,15 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     const { email } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-    
+
     if (!user) {
       // Non rivelare se l'email esiste per sicurezza
-      return res.json({ message: 'Se l\'email esiste, riceverai un link per il reset' });
+      return res.json({
+        message: "Se l'email esiste, riceverai un link per il reset",
+      });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 ora
 
     await prisma.user.update({
@@ -109,10 +111,10 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     await sendPasswordResetEmail(email, resetToken);
 
-    res.json({ message: 'Se l\'email esiste, riceverai un link per il reset' });
+    res.json({ message: "Se l'email esiste, riceverai un link per il reset" });
   } catch (error) {
-    console.error('Request reset error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("Request reset error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
 
@@ -122,7 +124,9 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { token, newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password deve essere di almeno 6 caratteri' });
+      return res
+        .status(400)
+        .json({ error: "Password deve essere di almeno 6 caratteri" });
     }
 
     const user = await prisma.user.findFirst({
@@ -133,7 +137,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ error: 'Token non valido o scaduto' });
+      return res.status(400).json({ error: "Token non valido o scaduto" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -147,10 +151,10 @@ export const resetPassword = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ message: 'Password reimpostata con successo!' });
+    res.json({ message: "Password reimpostata con successo!" });
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
 
@@ -161,7 +165,9 @@ export const login = async (req: Request, res: Response) => {
 
     // Validazione base
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email e password sono obbligatori' });
+      return res
+        .status(400)
+        .json({ error: "Email e password sono obbligatori" });
     }
 
     // Trova l'utente
@@ -170,26 +176,30 @@ export const login = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Credenziali non valide' });
+      return res.status(401).json({ error: "Credenziali non valide" });
     }
 
     //Verifico che l'email sia verificata
     if (!user.isEmailVerified) {
-      return res.status(401).json({ error: 'Email non verificata. Controlla la tua casella di posta.' });
+      return res
+        .status(401)
+        .json({
+          error: "Email non verificata. Controlla la tua casella di posta.",
+        });
     }
 
     // Verifica password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Credenziali non valide' });
+      return res.status(401).json({ error: "Credenziali non valide" });
     }
 
     // Genera JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET!, // il fail-fast in server.ts garantisce che esista
+      { expiresIn: "7d" },
     );
 
     const response: AuthResponse = {
@@ -203,8 +213,8 @@ export const login = async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
 
@@ -224,12 +234,12 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Utente non trovato' });
+      return res.status(404).json({ error: "Utente non trovato" });
     }
 
     res.json(user);
   } catch (error) {
-    console.error('GetMe error:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error("GetMe error:", error);
+    res.status(500).json({ error: "Errore del server" });
   }
 };
