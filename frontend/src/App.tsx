@@ -1,43 +1,55 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import Layout from './components/layout/Layout';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import TransactionsPage from './pages/TransactionsPage';
-import CategoriesPage from './pages/CategoriesPage';
-import  {Budgets}  from './pages/BudgetsPage';
-import  {RecurringTransactions}  from './pages/RecurringTransactions';
-import { PlannedTransactions } from './pages/PlannedPage';
-import { inject } from '@vercel/analytics';
-import {Privacy} from './pages/Privacy';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import PublicRoute from './components/PublicRoute';
-import LandingPage from './pages/LandingPage';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/layout/Layout";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import DashboardPage from "./pages/DashboardPage";
+import TransactionsPage from "./pages/TransactionsPage";
+import CategoriesPage from "./pages/CategoriesPage";
+import { Budgets } from "./pages/BudgetsPage";
+import { RecurringTransactions } from "./pages/RecurringTransactions";
+import { PlannedTransactions } from "./pages/PlannedPage";
+import { inject } from "@vercel/analytics";
+import { Privacy } from "./pages/Privacy";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import PublicRoute from "./components/PublicRoute";
+import LandingPage from "./pages/LandingPage";
+import { ToastProvider } from "./contexts/ToastContext";
+import NotFoundPage from "./pages/NotFoundPage";
 
 inject();
 
-
 function App() {
   return (
-      <BrowserRouter>
-        <AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
           <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
-            } />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <RegisterPage />
+                </PublicRoute>
+              }
+            />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/privacy" element={<Privacy/>} />
-            <Route index element ={<LandingPage />}/>
+            <Route path="/privacy" element={<Privacy />} />
+            <Route index element={<LandingPage />} />
             {/* Protected Routes */}
             <Route
               path="/dashboard"
@@ -49,7 +61,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-             <Route
+            <Route
               path="/categories"
               element={
                 <ProtectedRoute>
@@ -92,7 +104,7 @@ function App() {
               }
             />
 
-             <Route
+            <Route
               path="/planned"
               element={
                 <ProtectedRoute>
@@ -105,12 +117,13 @@ function App() {
 
             {/* Redirect root to dashboard
             <Route path="/" element={<Navigate to="/dashboard" replace />} /> */}
-            
+
             {/* 404 */}
-            <Route path="*" element={<div>404 - Pagina non trovata</div>} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

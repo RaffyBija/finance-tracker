@@ -1,29 +1,34 @@
+// frontend/src/pages/TransactionsPage.tsx
+
 import { useTransactions, useDeleteTransaction, PAGE_SIZE } from '../hooks/useTransactions';
 import { useCategories } from '../hooks/useCategories';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil, /*TrendingUp, TrendingDown*/ } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
 import FilterNav from '../components/layout/FilterNav';
-import LoadingSpinner from '../components/shared/LoadingSpinner';
+import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 import { useState, useMemo } from 'react';
 
 export default function TransactionsPage() {
-  // Filtri inviati al backend
+  // ── Filtri inviati al backend ──
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
-  // Ricerca testuale client-side (sull'array già paginato)
+  // ── Ricerca testuale client-side (sull'array già paginato) ──
   const [searchFilter, setSearchFilter] = useState('');
 
-  // Paginazione: accumulo di pagine già caricate
+  // ── Paginazione: accumulo di pagine già caricate ──
   const [page, setPage] = useState(0);
   const [prevPages, setPrevPages] = useState<Transaction[]>([]);
 
-  // Modal
+  // ── Modal ──
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  const toast = useToast();
 
   const { data: currentPage = [], isLoading: transactionsLoading, isFetching } = useTransactions({
     type: filterType,
@@ -55,7 +60,11 @@ export default function TransactionsPage() {
 
   const hasMore = currentPage.length === PAGE_SIZE;
 
-  // Reset filtri → azzera paginazione
+  // ── Solo il primissimo caricamento mostra lo skeleton ──
+  const isFirstLoad = (transactionsLoading && page === 0) || categoriesLoading;
+
+  // ── Handlers ──
+
   const handleFilterType = (type: TransactionType | 'ALL') => {
     setFilterType(type);
     setPage(0);
@@ -69,7 +78,7 @@ export default function TransactionsPage() {
   };
 
   const handleLoadMore = () => {
-    setPrevPages(transactions); // snapshot della lista corrente
+    setPrevPages(transactions);
     setPage((p) => p + 1);
   };
 
@@ -79,8 +88,9 @@ export default function TransactionsPage() {
       await deleteTransactionMutation.mutateAsync(id);
       setPage(0);
       setPrevPages([]);
+      toast.success('Transazione eliminata');
     } catch {
-      alert("Errore nell'eliminazione");
+      toast.error("Errore nell'eliminazione");
     }
   };
 
@@ -94,107 +104,107 @@ export default function TransactionsPage() {
     setEditingTransaction(null);
   };
 
-  const isLoading = (transactionsLoading && page === 0) || categoriesLoading;
-
-  if (isLoading) {
-    return <LoadingSpinner message="Caricamento Transazioni..." />;
-  }
-
   return (
     <div className="container-custom">
 
       {/* ── Header ── */}
-      <div className="page-header">
-        <h1 className="page-header-title">Transazioni</h1>
-        <button
-          onClick={() => { setShowModal(true); setEditingTransaction(null); }}
-          className="btn btn-primary btn-md page-header-btn"
-        >
-          <Plus className="icon-md" />
-          <span>Nuova Transazione</span>
-        </button>
-      </div>
+      {isFirstLoad ? (
+        <SkeletonPageHeader />
+      ) : (
+        <div className="page-header">
+          <h1 className="page-header-title">Transazioni</h1>
+          <button
+            onClick={() => { setShowModal(true); setEditingTransaction(null); }}
+            className="btn btn-primary btn-md page-header-btn"
+          >
+            <Plus className="icon-md" />
+            <span>Nuova Transazione</span>
+          </button>
+        </div>
+      )}
 
-      {/* ── Filtri ── */}
-      <FilterNav
-        filterType={filterType}
-        setFilterType={handleFilterType}
-        setSearchFilter={setSearchFilter}
-        dateRange={dateRange}
-        setDateRange={handleDateRange}
-      />
+      {/* ── Filtri — visibili appena i dati sono pronti ── */}
+      {!isFirstLoad && (
+        <FilterNav
+          filterType={filterType}
+          setFilterType={handleFilterType}
+          setSearchFilter={setSearchFilter}
+          dateRange={dateRange}
+          setDateRange={handleDateRange}
+        />
+      )}
 
       {/* ── Lista ── */}
-      <div className="list-card">
-        {filteredTransactions.length === 0 && !isFetching ? (
-          <div className="empty-state-card">
-            <p className="empty-state-title">Nessuna transazione trovata</p>
-            <p className="empty-state-description">
-              {searchFilter || dateRange.startDate || dateRange.endDate
-                ? 'Prova a modificare i filtri applicati'
-                : 'Inizia aggiungendo la tua prima transazione'}
-            </p>
-            {!searchFilter && !dateRange.startDate && !dateRange.endDate && (
-              <button onClick={() => setShowModal(true)} className="btn btn-primary btn-md">
-                <Plus className="icon-md" />
-                Aggiungi Transazione
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredTransactions.map((transaction) => (
-            <div key={transaction.id} className="transaction-card">
-
-              <div className="transaction-card-left min-w-0 flex-1">
-                {/* <div className={
-                  transaction.type === 'INCOME'
-                    ? 'transaction-card-icon-income flex-shrink-0'
-                    : 'transaction-card-icon-expense flex-shrink-0'
-                }>
-                  {transaction.type === 'INCOME'
-                    ? <TrendingUp className="icon-md text-success-600" />
-                    : <TrendingDown className="icon-md text-danger-600" />
-                  }
-                </div> */}
-                <div className="transaction-card-info min-w-0">
-                  <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
-                  <p className="transaction-card-title truncate">
-                    {transaction.description || 'Nessuna descrizione'}
-                  </p>
-                  <p className="transaction-card-subtitle truncate">
-                    {transaction.category?.name || 'Senza categoria'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="transaction-card-right flex-shrink-0">
-                <span className={
-                  transaction.type === 'INCOME'
-                    ? 'transaction-card-amount-income'
-                    : 'transaction-card-amount-expense'
-                }>
-                  {transaction.type === 'INCOME' ? '+' : '-'}€
-                  {Number(transaction.amount).toFixed(2)}
-                </span>
-                <button onClick={() => handleEdit(transaction)} className="btn-icon-primary">
-                  <Pencil className="icon-sm" />
-                </button>
+      {isFirstLoad ? (
+        <SkeletonList rows={8} />
+      ) : (
+        <div className="list-card">
+          {filteredTransactions.length === 0 && !isFetching ? (
+            <div className="empty-state-card">
+              <p className="empty-state-title">Nessuna transazione trovata</p>
+              <p className="empty-state-description">
+                {searchFilter || dateRange.startDate || dateRange.endDate
+                  ? 'Prova a modificare i filtri applicati'
+                  : 'Inizia aggiungendo la tua prima transazione'}
+              </p>
+              {!searchFilter && !dateRange.startDate && !dateRange.endDate && (
                 <button
-                  onClick={() => handleDelete(transaction.id)}
-                  className="btn-icon-danger"
-                  disabled={deleteTransactionMutation.isPending}
+                  onClick={() => setShowModal(true)}
+                  className="btn btn-primary btn-md"
                 >
-                  <Trash2 className="icon-sm" />
+                  <Plus className="icon-md" />
+                  Aggiungi Transazione
                 </button>
-              </div>
-
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            filteredTransactions.map((transaction) => (
+              <div key={transaction.id} className="transaction-card">
+
+                <div className="transaction-card-left min-w-0 flex-1">
+                  <div className="transaction-card-info min-w-0">
+                    <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
+                    <p className="transaction-card-title truncate">
+                      {transaction.description || 'Nessuna descrizione'}
+                    </p>
+                    <p className="transaction-card-subtitle truncate">
+                      {transaction.category?.name || 'Senza categoria'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="transaction-card-right flex-shrink-0">
+                  <span className={
+                    transaction.type === 'INCOME'
+                      ? 'transaction-card-amount-income'
+                      : 'transaction-card-amount-expense'
+                  }>
+                    {transaction.type === 'INCOME' ? '+' : '-'}€
+                    {Number(transaction.amount).toFixed(2)}
+                  </span>
+                  <button
+                    onClick={() => handleEdit(transaction)}
+                    className="btn-icon-primary"
+                  >
+                    <Pencil className="icon-sm" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(transaction.id)}
+                    className="btn-icon-danger"
+                    disabled={deleteTransactionMutation.isPending}
+                  >
+                    <Trash2 className="icon-sm" />
+                  </button>
+                </div>
+
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* ── Carica altro ── */}
-      {hasMore && !searchFilter && (
+      {!isFirstLoad && hasMore && !searchFilter && (
         <div className="flex flex-col items-center gap-2 mt-4 mb-2">
           <button
             onClick={handleLoadMore}
@@ -213,14 +223,15 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Contatore */}
-      {filteredTransactions.length > 0 && (
+      {/* ── Contatore risultati ── */}
+      {!isFirstLoad && filteredTransactions.length > 0 && (
         <p className="text-center text-xs text-neutral-400 mt-2 mb-6">
           {filteredTransactions.length} transazion{filteredTransactions.length === 1 ? 'e' : 'i'} visualizzat{filteredTransactions.length === 1 ? 'a' : 'e'}
           {hasMore && !searchFilter && ' · altri risultati disponibili'}
         </p>
       )}
 
+      {/* ── Modal ── */}
       <TransactionModal
         isOpen={showModal}
         categories={categories}
@@ -228,6 +239,7 @@ export default function TransactionsPage() {
         onClose={handleCloseModal}
         sentFeed={() => {}}
       />
+
     </div>
   );
 }

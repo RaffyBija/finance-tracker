@@ -6,6 +6,7 @@ import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skele
 import BudgetList from '../components/budgets/BudgetList';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
 import type { Budget } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 export const Budgets = () => {
   const { budgets, categories, isLoading } = useBudgets();
@@ -13,10 +14,18 @@ export const Budgets = () => {
   const { isOpen, editingItem, openModal, openEditModal, closeModal } = useFormModal<Budget>();
   const { confirmDelete } = useDeleteConfirm();
 
+  const toast = useToast();
+
+
   const handleDelete = async (id: string) => {
-    if (!confirmDelete('Sei sicuro di voler eliminare questo budget?')) return;
+  if (!confirmDelete('Sei sicuro di voler eliminare questo budget?')) return;
+  try {
     await deleteMutation.mutateAsync(id);
-  };
+    toast.success('Budget eliminato');
+  } catch {
+    toast.error("Errore nell'eliminazione");
+  }
+};
 
   return (
     <div className="container-custom">

@@ -7,6 +7,7 @@ import CategoriesCard from '../components/categories/CategoriesCard';
 import matchesFilters from '../utils/filters';
 import { useState } from 'react';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 export default function CategoriesPage() {
   const [showModal, setShowModal] = useState(false);
@@ -17,14 +18,17 @@ export default function CategoriesPage() {
   const { data: categories = [], isLoading } = useCategories(filterType);
   const deleteCategoryMutation = useDeleteCategory();
 
+  const toast = useToast();
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Sei sicuro? Le transazioni associate non verranno eliminate.')) return;
-    try {
-      await deleteCategoryMutation.mutateAsync(id);
-    } catch (error) {
-      alert("Errore nell'eliminazione");
-    }
-  };
+  if (!confirm('Sei sicuro? Le transazioni associate non verranno eliminate.')) return;
+  try {
+    await deleteCategoryMutation.mutateAsync(id);
+    toast.success('Categoria eliminata');
+  } catch {
+    toast.error("Errore nell'eliminazione");
+  }
+};
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);

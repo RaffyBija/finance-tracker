@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
 import type { Budget, Category, CreateBudgetDTO, BudgetPeriod, AlertPopUp } from '../../types';
-import { budgetApi } from '../../api/budgets';
+import { useCreateBudget, useUpdateBudget } from '../../hooks/useBudgets';
 import { InputDecimal } from '../layout/InputNumberDecimal';
+
 interface BudgetFormModalProps {
   isOpen: boolean;
   editingItem: Budget | null;
@@ -11,10 +12,6 @@ interface BudgetFormModalProps {
   onSuccess: () => void;
 }
 
-/**
- * Modal form per creare/modificare budget
- * Usa BaseModal come wrapper riutilizzabile
- */
 export default function BudgetFormModal({
   isOpen,
   editingItem,
@@ -22,6 +19,9 @@ export default function BudgetFormModal({
   onClose,
   onSuccess,
 }: BudgetFormModalProps) {
+  const createMutation = useCreateBudget();
+  const updateMutation = useUpdateBudget();
+
   const [formData, setFormData] = useState<CreateBudgetDTO>({
     name: '',
     amount: 0,
@@ -37,7 +37,6 @@ export default function BudgetFormModal({
     checked: false,
   });
 
-  // Inizializza form quando si apre in edit mode
   useEffect(() => {
     if (editingItem && isOpen) {
       setFormData({
@@ -49,7 +48,6 @@ export default function BudgetFormModal({
         endDate: editingItem.endDate ? editingItem.endDate.split('T')[0] : '',
       });
     } else if (!editingItem && isOpen) {
-      // Reset form per nuovo item
       setFormData({
         name: '',
         amount: 0,
@@ -61,13 +59,17 @@ export default function BudgetFormModal({
     }
   }, [editingItem, isOpen]);
 
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingItem) {
-        await budgetApi.update(editingItem.id, formData);
+        // ✅ usa il mutation hook — invalida cache automaticamente
+        await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
       } else {
-        await budgetApi.create(formData);
+        // ✅ usa il mutation hook — invalida cache automaticamente
+        await createMutation.mutateAsync(formData);
       }
 
       setAlertConfig({
@@ -113,9 +115,8 @@ export default function BudgetFormModal({
         <InputDecimal
           setFormData={setFormData}
           formData={formData}
-          label={"Importo Budget(€)"}
+          label="Importo Budget (€)"
         />
-        
 
         <div className="form-group">
           <label className="form-label">Categoria (opzionale)</label>
@@ -137,12 +138,7 @@ export default function BudgetFormModal({
           <label className="form-label">Periodo</label>
           <select
             value={formData.period}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                period: e.target.value as BudgetPeriod,
-              })
-            }
+            onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
             className="form-select"
             required
           >
@@ -157,9 +153,7 @@ export default function BudgetFormModal({
           <input
             type="date"
             value={formData.startDate}
-            onChange={(e) =>
-              setFormData({ ...formData, startDate: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
             className="form-input"
             required
           />
@@ -176,13 +170,18 @@ export default function BudgetFormModal({
         </div>
 
         <div className="form-button-group">
-          <button type="submit" className="btn btn-primary flex-1">
-            Salva
+          <button
+            type="submit"
+            className="btn btn-primary flex-1"
+            disabled={isPending}
+          >
+            {isPending ? 'Salvataggio...' : 'Salva'}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="btn btn-secondary flex-1"
+            disabled={isPending}
           >
             Annulla
           </button>
