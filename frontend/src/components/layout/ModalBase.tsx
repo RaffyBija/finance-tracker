@@ -1,6 +1,4 @@
 import "../../styles/Modal.css";
-import MyAlert from "./MyAlert";
-import type { AlertPopUp } from '../../types/index';
 import { X } from 'lucide-react';
 
 interface BaseModalProps {
@@ -8,7 +6,6 @@ interface BaseModalProps {
   title: string;
   onClose: () => void;
   children: React.ReactElement;
-  feedAlert: AlertPopUp;
 }
 
 export default function BaseModal({
@@ -16,23 +13,15 @@ export default function BaseModal({
   title,
   onClose,
   children,
-  feedAlert,
 }: BaseModalProps) {
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-
-      {/* Alert feedback — fixed, sopra tutto, visibile sempre */}
-      <div className="modal-alert-wrapper">
-        <MyAlert AlertConfig={feedAlert} />
-      </div>
-
       <div
         className="modal-container"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header con titolo e pulsante chiudi */}
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
           <button
@@ -49,7 +38,6 @@ export default function BaseModal({
           {children}
         </div>
       </div>
-
     </div>
   );
 }

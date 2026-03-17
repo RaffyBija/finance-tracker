@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
-import type { Budget, Category, CreateBudgetDTO, BudgetPeriod, AlertPopUp } from '../../types';
+import type { Budget, Category, CreateBudgetDTO, BudgetPeriod } from '../../types';
 import { useCreateBudget, useUpdateBudget } from '../../hooks/useBudgets';
+import { useToast } from '../../contexts/ToastContext';
 import { InputDecimal } from '../layout/InputNumberDecimal';
+import { useFormValidation } from '../../hooks/useFormValidation';
+import FieldError from '../shared/FieldError';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -21,6 +24,7 @@ export default function BudgetFormModal({
 }: BudgetFormModalProps) {
   const createMutation = useCreateBudget();
   const updateMutation = useUpdateBudget();
+  const toast = useToast();
 
   const [formData, setFormData] = useState<CreateBudgetDTO>({
     name: '',
@@ -29,12 +33,6 @@ export default function BudgetFormModal({
     period: 'MONTHLY',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
-  });
-
-  const [alertConfig, setAlertConfig] = useState<AlertPopUp>({
-    messaggio: '',
-    tipo: '',
-    checked: false,
   });
 
   useEffect(() => {
@@ -61,33 +59,49 @@ export default function BudgetFormModal({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const { errors, validate, clearError } = useFormValidation<CreateBudgetDTO>({
+  name: (value) => {
+    if (!value?.trim()) return 'Il nome è obbligatorio';
+    if (value.trim().length < 2) return 'Il nome deve avere almeno 2 caratteri';
+    if (value.trim().length > 50) return 'Il nome è troppo lungo (max 50 caratteri)';
+    return null;
+  },
+  amount: (value) => {
+    if (!value || value <= 0) return 'Inserisci un importo valido maggiore di zero';
+    if (value > 999999) return 'Importo troppo elevato';
+    return null;
+  },
+  startDate: (value) => {
+    if (!value) return 'La data di inizio è obbligatoria';
+    return null;
+  },
+  endDate: (value, form) => {
+    if (value && form.startDate && value <= form.startDate) {
+      return 'La data di fine deve essere successiva alla data di inizio';
+    }
+    return null;
+  },
+  categoryId: (value) => {
+    if(!value) return 'La categoria è obbligatoria';
+    return null;
+  }
+});
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate(formData)) return; 
     try {
       if (editingItem) {
-        // ✅ usa il mutation hook — invalida cache automaticamente
         await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
+        toast.success('Budget aggiornato con successo');
       } else {
-        // ✅ usa il mutation hook — invalida cache automaticamente
         await createMutation.mutateAsync(formData);
+        toast.success('Budget creato con successo');
       }
-
-      setAlertConfig({
-        messaggio: editingItem ? 'Budget aggiornato con successo' : 'Budget creato con successo',
-        tipo: 'success',
-        checked: true,
-      });
-
-      setTimeout(() => {
-        onClose();
-        onSuccess();
-      }, 800);
+      onClose();
+      onSuccess();
     } catch (error: any) {
-      setAlertConfig({
-        messaggio: error.response?.data?.error || 'Errore nel salvataggio',
-        tipo: 'error',
-        checked: true,
-      });
+      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
     }
   };
 
@@ -98,7 +112,6 @@ export default function BudgetFormModal({
       isOpen={isOpen}
       title={editingItem ? 'Modifica Budget' : 'Nuovo Budget'}
       onClose={onClose}
-      feedAlert={alertConfig}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-group">
@@ -106,32 +119,40 @@ export default function BudgetFormModal({
           <input
             type="text"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value })
+              clearError('name');
+            }}
             className="form-input"
-            required
           />
+          <FieldError message={errors.name} />
         </div>
 
         <InputDecimal
-          setFormData={setFormData}
+          setFormData={(data) => { setFormData(data); clearError('amount'); }}          
           formData={formData}
           label="Importo Budget (€)"
         />
+        <FieldError message={errors.amount} />
 
         <div className="form-group">
           <label className="form-label">Categoria (opzionale)</label>
           <select
             value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, categoryId: e.target.value })
+              clearError('categoryId');
+            }}
             className="form-select"
           >
-            <option value="">Tutte le spese</option>
+            <option value="">--Seleziona una categoria--</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
               </option>
             ))}
           </select>
+          <FieldError message={errors.categoryId} />
         </div>
 
         <div className="form-group">
@@ -140,7 +161,6 @@ export default function BudgetFormModal({
             value={formData.period}
             onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
             className="form-select"
-            required
           >
             <option value="WEEKLY">Settimanale</option>
             <option value="MONTHLY">Mensile</option>
@@ -153,10 +173,13 @@ export default function BudgetFormModal({
           <input
             type="date"
             value={formData.startDate}
-            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, startDate: e.target.value })
+              clearError('startDate');
+            }}
             className="form-input"
-            required
           />
+          <FieldError message={errors.startDate} />
         </div>
 
         <div className="form-group">
@@ -164,26 +187,21 @@ export default function BudgetFormModal({
           <input
             type="date"
             value={formData.endDate}
-            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, endDate: e.target.value })
+              clearError('endDate');
+            }}
             className="form-input"
           />
+          <FieldError message={errors.endDate} />
         </div>
 
-        <div className="form-button-group">
-          <button
-            type="submit"
-            className="btn btn-primary flex-1"
-            disabled={isPending}
-          >
-            {isPending ? 'Salvataggio...' : 'Salva'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary flex-1"
-            disabled={isPending}
-          >
+        <div className="form-actions">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-md">
             Annulla
+          </button>
+          <button type="submit" disabled={isPending} className="btn btn-primary btn-md">
+            {isPending ? 'Salvataggio...' : editingItem ? 'Aggiorna' : 'Crea'}
           </button>
         </div>
       </form>

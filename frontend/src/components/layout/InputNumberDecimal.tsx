@@ -60,7 +60,6 @@ export const InputDecimal = ({ setFormData, formData, label }: InputDecimalProps
         className="form-input"
         pattern="[0-9]*[.,]?[0-9]*"
         inputMode="decimal"
-        required
       />
     </div>
   );
