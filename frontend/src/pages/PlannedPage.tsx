@@ -28,7 +28,7 @@ export const PlannedTransactions = () => {
   const toast = useToast();
 
   const handleDelete = async (id: string) => {
-    if (!confirmDelete("...")) return;
+    if (!confirmDelete("Sei sicuro di voler eliminare questa spesa pianificata?")) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Spesa pianificata eliminata");
@@ -38,7 +38,7 @@ export const PlannedTransactions = () => {
   };
 
   const handleMarkAsPaid = async (id: string) => {
-    if (!confirmDelete("...")) return;
+    if (!confirmDelete("Sei sicuro di voler segnare questa spesa come pagata?")) return;
     try {
       await markAsPaidMutation.mutateAsync(id);
       toast.success("Segnata come pagata");

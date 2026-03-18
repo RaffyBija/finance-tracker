@@ -87,3 +87,57 @@ export const resetPasswordEmailTemplate = (resetUrl: string) => `
   </body>
 </html>
 `;
+
+export const emailChangeTemplate = (verificationUrl: string, newEmail: string) => `
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conferma cambio email</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f4f4f7; margin: 0; padding: 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 40px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; padding: 40px;">
+            <tr>
+              <td align="center" style="padding-bottom: 20px;">
+                <h1 style="color: #2c3e50; font-size: 28px; margin: 0;">Conferma il nuovo indirizzo email</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #555555; font-size: 16px; line-height: 24px; text-align: center; padding-bottom: 10px;">
+                Hai richiesto di cambiare il tuo indirizzo email su Finance Tracker.
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #555555; font-size: 16px; line-height: 24px; text-align: center; padding-bottom: 30px;">
+                Il nuovo indirizzo sarà: <strong>${newEmail}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding-bottom: 30px;">
+                <a href="${verificationUrl}" style="background-color: #2563eb; color: white; text-decoration: none; padding: 15px 25px; border-radius: 5px; display: inline-block; font-weight: bold;">
+                  Conferma nuovo indirizzo email
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #888888; font-size: 14px; line-height: 20px; text-align: center;">
+                Il link è valido per 24 ore.<br>
+                Se non hai richiesto tu questa modifica, la tua email attuale rimane invariata e puoi ignorare questo messaggio.
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding-top: 30px; font-size: 12px; color: #aaaaaa;">
+                &copy; ${new Date().getFullYear()} Finance Tracker. Tutti i diritti riservati.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+`;

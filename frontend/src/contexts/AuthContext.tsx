@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
 import { authAPI } from '../api/client';
 import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
 
@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<AuthResponse>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,8 +74,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
   };
 
+  const updateUser = useCallback((updatedData: Partial<User>) => {
+  setUser((prev) => prev ? { ...prev, ...updatedData } : prev);
+}, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

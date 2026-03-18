@@ -19,6 +19,8 @@ import PublicRoute from "./components/PublicRoute";
 import LandingPage from "./pages/LandingPage";
 import { ToastProvider } from "./contexts/ToastContext";
 import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
+import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
 
 inject();
 
@@ -45,6 +47,17 @@ function App() {
                 </PublicRoute>
               }
             />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ProfilePage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -1,5 +1,8 @@
 import {Resend} from 'resend';
-import {verificationEmailTemplate, resetPasswordEmailTemplate} from './emailTemplates'
+import {
+  verificationEmailTemplate, 
+  resetPasswordEmailTemplate,
+  emailChangeTemplate} from './emailTemplates'
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 
@@ -22,5 +25,16 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
     to: email,
     subject: 'Reset Password',
       html: resetPasswordEmailTemplate(resetUrl),
+  });
+};
+
+export const sendEmailChangeVerification = async (newEmail: string, token: string) => {
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email-change?token=${token}`;
+
+  await resend.emails.send({
+    from: process.env.SMTP_FROM || '',
+    to: newEmail,
+    subject: 'Conferma il tuo nuovo indirizzo email — Finance Tracker',
+    html: emailChangeTemplate(verificationUrl, newEmail),
   });
 };

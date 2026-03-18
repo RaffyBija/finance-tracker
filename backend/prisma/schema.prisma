@@ -17,6 +17,7 @@ model User {
   emailVerifyExpires DateTime?
   passwordResetToken String?
   passwordResetExpires DateTime?
+  pendingEmail         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

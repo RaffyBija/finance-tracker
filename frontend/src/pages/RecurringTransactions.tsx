@@ -26,7 +26,7 @@ export const RecurringTransactions = () => {
   const toast = useToast();
 
   const handleDelete = async (id: string) => {
-    if (!confirmDelete("...")) return;
+    if (!confirmDelete("Sei sicuro di voler eliminare questa spesa ricorrente?")) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Spesa ricorrente eliminata");
