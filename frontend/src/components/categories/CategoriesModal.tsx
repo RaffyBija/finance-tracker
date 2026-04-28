@@ -7,11 +7,50 @@ import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError'
 
 const COLORS = [
-  '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#84CC16',
+  '#EF4444', // rosso
+  '#F97316', // arancione
+  '#F59E0B', // ambra
+  '#EAB308', // giallo
+  '#84CC16', // lime
+  '#22C55E', // verde
+  '#10B981', // emerald
+  '#14B8A6', // teal
+  '#06B6D4', // cyan
+  '#3B82F6', // blu
+  '#6366F1', // indaco
+  '#8B5CF6', // viola
+  '#A855F7', // purple
+  '#EC4899', // rosa
+  '#F43F5E', // rose
+  '#6B7280', // grigio
+  '#374151', // grigio scuro
 ];
 
-const ICONS = ['💰', '🏠', '🍔', '🚗', '🎮', '💼', '🏥', '🎓', '✈️', '🛒'];
+const ICONS = [
+  '💰', // soldi / stipendio
+  '🏠', // casa
+  '🛒', // spesa
+  '🍽️', // ristorante
+  '☕', // bar
+  '🚗', // auto 
+  '⛽', // benzina
+  '✈️', // viaggi / trasporti
+  '🛍️', // shopping
+  '👕', // abbigliamento
+  '🎁', // regali
+  '🎮', // svago
+  '📱', // telefonia / tech
+  '💻', // lavoro / tech
+  '🏥', // salute
+  '💊', // farmaci
+  '🎓', // istruzione
+  '🐶', // animali
+  '💼', // lavoro
+  '🧾', // bollette / utenze
+  '🔁', // giroconto
+  '📦', // acquisti online
+  '❓'  // altro
+];
 
 interface CategoriesModalProps {
   isOpen: boolean;
