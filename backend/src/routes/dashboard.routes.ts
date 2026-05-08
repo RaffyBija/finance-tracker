@@ -4,8 +4,7 @@ import {
   getCategoryStats,
   getRecentTransactions,
   getMonthlyTrend,
-  getProjectedBalance,
-  getProjectedBalanceByDate
+  getProjectedBalance
 } from '../controllers/dashboard.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -28,7 +27,4 @@ router.get('/monthly-trend', getMonthlyTrend);
 
 // GET /api/dashboard/projected-balance - Saldo previsto con spese ricorrenti
 router.get('/projected-balance', getProjectedBalance);
-
-//GET /api/dashborad/projected-balance/custom-range
-router.get('/projected-balance/custom-range', getProjectedBalanceByDate);
 export default router;

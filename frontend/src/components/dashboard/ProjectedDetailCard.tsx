@@ -1,9 +1,11 @@
-import { Calendar } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Wallet, X } from 'lucide-react';
 import { useState } from 'react';
-import { useProjectedBalance, useProjectedBalanceByDate } from '../../hooks/useDashboard';
+import { useProjectedBalance } from '../../hooks/useDashboard';
 
+type Mode = 'months' | 'custom';
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
+
 function ProjectedSkeleton() {
   return (
     <div className="card-gradient-purple card-lg mb-8 animate-pulse">
@@ -25,105 +27,143 @@ function ProjectedSkeleton() {
 }
 
 // ── Componente principale ─────────────────────────────────────────────────────
+
 export default function ProjectedDetailCard() {
-  const [projectionMonths, setProjectionMonths] = useState(1);
-  
-  const [projectRange, setProjectRange] = useState({ startDate: '', endDate: '' });
+  const [mode, setMode] = useState<Mode>('months');
+  const [selectedMonths, setSelectedMonths] = useState(1);
+  const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });
+  const [pendingRange, setPendingRange] = useState({ startDate: '', endDate: '' });
 
-  const isCustomRange = projectionMonths === 0;
+  // Parametri derivati dalla modalità attiva
+  const queryParams =
+    mode === 'months'
+      ? { months: selectedMonths }
+      : { startDate: customRange.startDate, endDate: customRange.endDate };
 
-  //query
-  const { data: projectedBalance, isFetching: fetchingMonths } = useProjectedBalance(
-    projectionMonths,
-    projectionMonths > 0
-  );
+  const isCustomValid =
+    mode === 'custom' && !!customRange.startDate && !!customRange.endDate;
+  const enabled = mode === 'months' || isCustomValid;
 
-  const { data: projectedBalanceByDate, isFetching: fetchingByDate } = useProjectedBalanceByDate(
-    projectRange.startDate,
-    projectRange.endDate,
-    isCustomRange && !!projectRange.startDate && !!projectRange.endDate
-  );
+  const { data, isFetching } = useProjectedBalance(queryParams, enabled);
 
-  const isFetching = fetchingMonths || fetchingByDate;
-  const activeData = isCustomRange ? projectedBalanceByDate : projectedBalance;
+  // ── Handlers ──
 
-  if (isFetching && !activeData) {
+  const handleMonthsChange = (months: number) => {
+    setSelectedMonths(months);
+    setMode('months');
+    setPendingRange({ startDate: '', endDate: '' });
+    setCustomRange({ startDate: '', endDate: '' });
+  };
+
+  const handleApplyCustom = () => {
+    if (!pendingRange.startDate || !pendingRange.endDate) return;
+    if (pendingRange.startDate >= pendingRange.endDate) return;
+    setCustomRange(pendingRange);
+    setMode('custom');
+  };
+
+  const handleClearCustom = () => {
+    setPendingRange({ startDate: '', endDate: '' });
+    setCustomRange({ startDate: '', endDate: '' });
+    setMode('months');
+  };
+
+  const isPendingValid =
+    !!pendingRange.startDate &&
+    !!pendingRange.endDate &&
+    pendingRange.startDate < pendingRange.endDate;
+
+  const delta = (data?.projectedBalance ?? 0) - (data?.currentBalance ?? 0);
+  const isPositiveDelta = delta >= 0;
+
+  // Primo caricamento — skeleton completo
+  if (isFetching && !data) {
     return <ProjectedSkeleton />;
   }
-
-  const delta = ((activeData?.projectedBalance ?? 0) - (activeData?.currentBalance ?? 0));
 
   return (
     <div className="card-gradient-purple card-lg mb-8">
 
-      {/* ── Header con selettore ── */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-2 mb-4">
-        <div className="flex items-center gap-2">
+      {/* ── Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-5">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Calendar className="icon-md text-primary-600" />
-          <h2 className="text-2xl md:text-3xl font-semibold text-neutral-900">
-            Proiezione
-          </h2>
+          <h2 className="text-2xl font-semibold text-neutral-900">Proiezione</h2>
         </div>
 
+        {/* Selettore mesi */}
         <select
-          value={projectionMonths}
-          onChange={(e) => {
-            setProjectionMonths(Number(e.target.value));
-            setProjectRange({startDate: '', endDate: ''});
-          }}
-          className="w-full md:w-auto text-base md:text-lg bg-white/20 rounded px-3 md:px-2 py-2 md:py-1 border-0 cursor-pointer font-medium shadow-md"
+          value={mode === 'months' ? selectedMonths : ''}
+          onChange={(e) => handleMonthsChange(Number(e.target.value))}
+          className="w-full md:w-auto text-base bg-white/60 rounded-lg px-3 py-2 border border-white/40 cursor-pointer font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
         >
-          <option value="1">1 Mese</option>
-          <option value="3">3 Mesi</option>
-          <option value="6">6 Mesi</option>
-          <option value="12">12 Mesi</option>
+          <option value={1}>1 Mese</option>
+          <option value={3}>3 Mesi</option>
+          <option value={6}>6 Mesi</option>
+          <option value={12}>12 Mesi</option>
         </select>
-      </div>
 
-      {/* ── Filtro range personalizzato ── */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-        <p className="text-sm text-neutral-600 md:whitespace-nowrap">
-          Seleziona il periodo di proiezione
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto md:gap-2">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
-            <p className="text-sm text-neutral-600 hidden sm:block">da</p>
-            <input
-              type="date"
-              value={projectRange.startDate}
-              className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer shadow-md"
-              onChange={(e) =>
-                setProjectRange({ ...projectRange, startDate: e.target.value })
-              }
-            />
+        {/* Badge modalità attiva */}
+        {mode === 'custom' && (
+          <div className="flex items-center gap-2 bg-primary-100 text-primary-700 text-sm font-medium px-3 py-1.5 rounded-full">
+            <span>
+              {customRange.startDate} → {customRange.endDate}
+            </span>
+            <button
+              onClick={handleClearCustom}
+              className="hover:text-primary-900 transition-colors"
+              title="Rimuovi intervallo personalizzato"
+            >
+              <X className="icon-sm" />
+            </button>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
-            <p className="text-sm text-neutral-600 hidden sm:block">a</p>
-            <input
-              type="date"
-              value={projectRange.endDate}
-              className="w-full sm:flex-1 md:w-auto text-base bg-white/20 rounded px-3 py-2 border-0 cursor-pointer shadow-md"
-              onChange={(e) =>
-                setProjectRange({ ...projectRange, endDate: e.target.value })
-              }
-            />
-          </div>
-        </div>
-
-        {projectRange.startDate && projectRange.endDate && (
-          <button
-            className="w-full md:w-auto text-base md:text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 md:px-3 py-2 md:py-1 rounded font-medium transition-colors"
-            onClick={() => {
-              setProjectionMonths(0);
-              setProjectRange(projectRange);
-            }}
-          >
-            Applica
-          </button>
         )}
       </div>
 
-      {/* ── Dati con skeleton inline al cambio filtro ── */}
+      {/* ── Filtro range personalizzato ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-6 p-4 bg-white/30 rounded-xl border border-white/40">
+        <p className="text-sm font-medium text-neutral-600 sm:self-center sm:whitespace-nowrap">
+          Intervallo personalizzato:
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="flex flex-col gap-1 flex-1">
+            <label className="text-xs text-neutral-500">Da</label>
+            <input
+              type="date"
+              value={pendingRange.startDate}
+              max={pendingRange.endDate || undefined}
+              className="w-full text-sm bg-white/70 rounded-lg px-3 py-2 border border-white/50 cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              onChange={(e) =>
+                setPendingRange((prev) => ({ ...prev, startDate: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 flex-1">
+            <label className="text-xs text-neutral-500">A</label>
+            <input
+              type="date"
+              value={pendingRange.endDate}
+              min={pendingRange.startDate || undefined}
+              className="w-full text-sm bg-white/70 rounded-lg px-3 py-2 border border-white/50 cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              onChange={(e) =>
+                setPendingRange((prev) => ({ ...prev, endDate: e.target.value }))
+              }
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleApplyCustom}
+          disabled={!isPendingValid}
+          className="btn btn-primary btn-sm flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Applica
+        </button>
+      </div>
+
+      {/* ── Dati — skeleton inline al cambio filtro ── */}
       {isFetching ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-pulse">
           {[0, 1, 2].map((i) => (
@@ -133,34 +173,50 @@ export default function ProjectedDetailCard() {
             </div>
           ))}
         </div>
-      ) : !activeData ? (
-        <p className="text-sm text-neutral-500">
-          Nessun dato disponibile per il periodo selezionato.
-        </p>
+      ) : !data ? (
+        <div className="text-center py-6 text-neutral-500 text-sm">
+          {mode === 'custom' && !isCustomValid
+            ? 'Seleziona un intervallo di date valido e premi Applica.'
+            : 'Nessun dato disponibile per il periodo selezionato.'}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Entrate previste */}
           <div className="card card-md">
-            <p className="text-sm text-neutral-600 mb-1">Entrate Previste</p>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="icon-sm text-success-500" />
+              <p className="text-sm text-neutral-600">Entrate Previste</p>
+            </div>
             <p className="text-xl font-bold text-success-600">
-              +€{activeData.projectedIncome.toFixed(2)}
+              +€{data.projectedIncome.toFixed(2)}
             </p>
           </div>
+
+          {/* Uscite previste */}
           <div className="card card-md">
-            <p className="text-sm text-neutral-600 mb-1">Uscite Previste</p>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingDown className="icon-sm text-danger-500" />
+              <p className="text-sm text-neutral-600">Uscite Previste</p>
+            </div>
             <p className="text-xl font-bold text-danger-600">
-              -€{activeData.projectedExpense.toFixed(2)}
+              -€{data.projectedExpense.toFixed(2)}
             </p>
           </div>
-          <div className="gradient-primary card-md">
-            <p className="text-sm text-white/90 mb-1">Saldo Previsto Finale</p>
+
+          {/* Saldo finale */}
+          <div className="gradient-primary card-md rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet className="icon-sm text-white/80" />
+              <p className="text-sm text-white/90">Saldo Previsto Finale</p>
+            </div>
             <p className="text-xl font-bold text-white">
-              €{activeData.projectedBalance.toFixed(2)}
+              €{data.projectedBalance.toFixed(2)}
             </p>
             <p className="text-xs text-white/75 mt-1">
-              {delta >= 0 ? '+' : ''}€{delta.toFixed(2)} rispetto ad oggi
+              {isPositiveDelta ? '+' : ''}€{delta.toFixed(2)} rispetto ad oggi
             </p>
-            <p className="text-xs text-white/75 mt-1">
-              {activeData.recurringCount} fisse + {activeData.plannedCount} pianificate
+            <p className="text-xs text-white/60 mt-0.5">
+              {data.recurringCount} fisse · {data.plannedCount} pianificate
             </p>
           </div>
         </div>

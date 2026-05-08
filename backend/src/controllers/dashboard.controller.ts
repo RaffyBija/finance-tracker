@@ -2,65 +2,37 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 
-// Ottieni il sommario finanziario
+// ── Ottieni il sommario finanziario ───────────────────────────────────────────
+
 export const getSummary = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const { startDate, endDate } = req.query;
 
-    // Build date filter
     const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      dateFilter.lte = new Date(endDate as string);
-    }
+    if (startDate) dateFilter.gte = new Date(startDate as string);
+    if (endDate)   dateFilter.lte = new Date(endDate as string);
 
     const where: any = { userId };
-    if (Object.keys(dateFilter).length > 0) {
-      where.date = dateFilter;
-    }
+    if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
 
-    // Calcola totale entrate
-    const totalIncome = await prisma.transaction.aggregate({
-      where: {
-        ...where,
-        type: 'INCOME',
-      },
-      _sum: {
-        amount: true,
-      },
-    });
+    const [totalIncome, totalExpense, transactionCount] = await Promise.all([
+      prisma.transaction.aggregate({ where: { ...where, type: 'INCOME' }, _sum: { amount: true } }),
+      prisma.transaction.aggregate({ where: { ...where, type: 'EXPENSE' }, _sum: { amount: true } }),
+      prisma.transaction.count({ where }),
+    ]);
 
-    // Calcola totale uscite
-    const totalExpense = await prisma.transaction.aggregate({
-      where: {
-        ...where,
-        type: 'EXPENSE',
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const income = totalIncome._sum.amount || 0;
-    const expense = totalExpense._sum.amount || 0;
-    const balance = Number(income) - Number(expense);
-
-    // Conta transazioni
-    const transactionCount = await prisma.transaction.count({
-      where,
-    });
+    const income  = Number(totalIncome._sum.amount  || 0);
+    const expense = Number(totalExpense._sum.amount || 0);
 
     res.json({
-      income: Number(income),
-      expense: Number(expense),
-      balance,
+      income,
+      expense,
+      balance: income - expense,
       transactionCount,
       period: {
         startDate: startDate || null,
-        endDate: endDate || null,
+        endDate:   endDate   || null,
       },
     });
   } catch (error) {
@@ -69,83 +41,60 @@ export const getSummary = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Ottieni statistiche per categoria
+// ── Statistiche per categoria ─────────────────────────────────────────────────
+
 export const getCategoryStats = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const { startDate, endDate, type } = req.query;
 
     const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      dateFilter.lte = new Date(endDate as string);
-    }
+    if (startDate) dateFilter.gte = new Date(startDate as string);
+    if (endDate)   dateFilter.lte = new Date(endDate as string);
 
     const where: any = { userId };
-    if (Object.keys(dateFilter).length > 0) {
-      where.date = dateFilter;
-    }
-    if (type && (type === 'INCOME' || type === 'EXPENSE')) {
-      where.type = type;
-    }
+    if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
+    if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
 
-    // Raggruppa per categoria
     const transactions = await prisma.transaction.findMany({
       where,
-      include: {
-        category: true,
-      },
+      include: { category: true },
     });
 
-    // Aggrega per categoria
     const categoryMap = new Map<string, any>();
 
-    transactions.forEach((transaction) => {
-      const categoryKey = transaction.categoryId || 'uncategorized';
-      const categoryName = transaction.category?.name || 'Senza categoria';
-      const categoryColor = transaction.category?.color || '#gray';
+    transactions.forEach((t) => {
+      const key  = t.categoryId || 'uncategorized';
+      const name  = t.category?.name  || 'Senza categoria';
+      const color = t.category?.color || '#gray';
 
-      if (!categoryMap.has(categoryKey)) {
-        categoryMap.set(categoryKey, {
-          categoryId: transaction.categoryId,
-          categoryName,
-          categoryColor,
-          type: transaction.type,
-          total: 0,
-          count: 0,
-        });
+      if (!categoryMap.has(key)) {
+        categoryMap.set(key, { categoryId: t.categoryId, categoryName: name, categoryColor: color, type: t.type, total: 0, count: 0 });
       }
 
-      const stat = categoryMap.get(categoryKey);
-      stat.total += Number(transaction.amount);
+      const stat = categoryMap.get(key);
+      stat.total += Number(t.amount);
       stat.count += 1;
     });
 
-    const stats = Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
-
-    res.json(stats);
+    res.json(Array.from(categoryMap.values()).sort((a, b) => b.total - a.total));
   } catch (error) {
     console.error('Get category stats error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };
 
-// Ottieni transazioni recenti
+// ── Transazioni recenti ───────────────────────────────────────────────────────
+
 export const getRecentTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const limit  = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
     const transactions = await prisma.transaction.findMany({
       where: { userId },
-      include: {
-        category: true,
-      },
-      orderBy: {
-        date: 'desc',
-      },
+      include: { category: true },
+      orderBy: { date: 'desc' },
       take: limit,
     });
 
@@ -156,164 +105,253 @@ export const getRecentTransactions = async (req: AuthRequest, res: Response) => 
   }
 };
 
-// Ottieni trend mensile
+// ── Trend mensile ─────────────────────────────────────────────────────────────
+
 export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
-    const { months = 6 } = req.query;
+    const userId      = req.userId!;
+    const monthsCount = parseInt((req.query.months as string) || '6');
 
-    const monthsCount = parseInt(months as string);
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - monthsCount);
 
     const transactions = await prisma.transaction.findMany({
-      where: {
-        userId,
-        date: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        date: 'asc',
-      },
+      where: { userId, date: { gte: startDate } },
+      orderBy: { date: 'asc' },
     });
 
-    // Raggruppa per mese
     const monthlyData = new Map<string, any>();
 
-    transactions.forEach((transaction) => {
-      const date = new Date(transaction.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    transactions.forEach((t) => {
+      const d        = new Date(t.date);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, {
-          month: monthKey,
-          income: 0,
-          expense: 0,
-          balance: 0,
-        });
+        monthlyData.set(monthKey, { month: monthKey, income: 0, expense: 0, balance: 0 });
       }
 
-      const data = monthlyData.get(monthKey);
-      const amount = Number(transaction.amount);
+      const data   = monthlyData.get(monthKey);
+      const amount = Number(t.amount);
 
-      if (transaction.type === 'INCOME') {
-        data.income += amount;
-      } else {
-        data.expense += amount;
-      }
+      if (t.type === 'INCOME') data.income  += amount;
+      else                     data.expense += amount;
+
       data.balance = data.income - data.expense;
     });
 
-    const trend = Array.from(monthlyData.values());
-
-    res.json(trend);
+    res.json(Array.from(monthlyData.values()));
   } catch (error) {
     console.error('Get monthly trend error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };
 
-// Ottieni saldo previsto con spese ricorrenti
+// ── Helper: conta le occorrenze reali di una ricorrente in un range ───────────
+//
+//   Logica:
+//   - WEEKLY  → conta quanti lunedì (o qualsiasi giorno settimanale) cadono tra start ed end
+//               Semplificato: floor(diffGiorni / 7), con +1 se il giorno di partenza
+//               della ricorrente non è stato ancora contato.
+//   - MONTHLY → conta i mesi in cui il dayOfMonth cade all'interno di [start, end].
+//               Itera mese per mese e verifica se la data costruita è nel range.
+//   - YEARLY  → conta gli anni in cui la data anniversario (mese+giorno di startDate
+//               della ricorrente) cade all'interno di [start, end].
+//
+//   Ritorna { occurrences, effectiveAmount } dove effectiveAmount tiene già conto
+//   dell'importo unitario × occorrenze.
+
+function countOccurrences(
+  rec: {
+    frequency: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+    dayOfMonth: number | null;
+    startDate: Date;
+    endDate: Date | null;
+    amount: any;
+  },
+  rangeStart: Date,
+  rangeEnd: Date,
+): number {
+  // La ricorrente deve essere attiva almeno in parte nel range
+  const recStart = rec.startDate > rangeStart ? rec.startDate : rangeStart;
+  const recEnd   = rec.endDate && rec.endDate < rangeEnd ? rec.endDate : rangeEnd;
+
+  if (recStart > recEnd) return 0;
+
+  let occurrences = 0;
+
+  switch (rec.frequency) {
+    case 'WEEKLY': {
+      // Ogni 7 giorni a partire da rec.startDate originale
+      // Troviamo la prima occorrenza >= recStart
+      const msPerWeek  = 7 * 24 * 60 * 60 * 1000;
+      const originTime = rec.startDate.getTime();
+      const startTime  = recStart.getTime();
+      const endTime    = recEnd.getTime();
+
+      // Quante settimane intere dall'origine fino a recStart
+      const weeksToStart = Math.ceil((startTime - originTime) / msPerWeek);
+      let   current      = new Date(originTime + weeksToStart * msPerWeek);
+
+      while (current.getTime() <= endTime) {
+        occurrences++;
+        current = new Date(current.getTime() + msPerWeek);
+      }
+      break;
+    }
+
+    case 'MONTHLY': {
+      // Il giorno del mese è dayOfMonth (es. 5, 10, 20, 30)
+      // Itera mese per mese tra recStart e recEnd
+      const day = rec.dayOfMonth ?? rec.startDate.getDate();
+
+      const cursor = new Date(recStart.getFullYear(), recStart.getMonth(), 1);
+      const endMonth = new Date(recEnd.getFullYear(), recEnd.getMonth(), 1);
+
+      while (cursor <= endMonth) {
+        // Gestisce mesi con meno giorni (es. 30 febbraio → ultimo giorno del mese)
+        const daysInMonth   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        const effectiveDay  = Math.min(day, daysInMonth);
+        const occurrence    = new Date(cursor.getFullYear(), cursor.getMonth(), effectiveDay);
+
+        if (occurrence >= recStart && occurrence <= recEnd) {
+          occurrences++;
+        }
+
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+      break;
+    }
+
+    case 'YEARLY': {
+      // La data anniversario è il mese e giorno di rec.startDate
+      const originMonth = rec.startDate.getMonth();
+      const originDay   = rec.startDate.getDate();
+
+      const startYear = recStart.getFullYear();
+      const endYear   = recEnd.getFullYear();
+
+      for (let year = startYear; year <= endYear; year++) {
+        const daysInMonth  = new Date(year, originMonth + 1, 0).getDate();
+        const effectiveDay = Math.min(originDay, daysInMonth);
+        const occurrence   = new Date(year, originMonth, effectiveDay);
+
+        if (occurrence >= recStart && occurrence <= recEnd) {
+          occurrences++;
+        }
+      }
+      break;
+    }
+  }
+
+  return occurrences;
+}
+
+// ── Proiezione saldo (endpoint unificato) ─────────────────────────────────────
+//
+//   Accetta:
+//     ?months=3                                   → da oggi ai prossimi N mesi
+//     ?startDate=2025-01-01&endDate=2025-03-31    → range personalizzato
+
 export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { months = 3 } = req.query; // Proiezione per i prossimi 3 mesi di default
+    const { months, startDate, endDate } = req.query;
 
-    // Calcola saldo corrente
-    const totalIncome = await prisma.transaction.aggregate({
-      where: { userId, type: 'INCOME' },
-      _sum: { amount: true },
-    });
+    // ── Calcola il range temporale ──
+    const now   = new Date();
+    let rangeStart: Date;
+    let rangeEnd: Date;
 
-    const totalExpense = await prisma.transaction.aggregate({
-      where: { userId, type: 'EXPENSE' },
-      _sum: { amount: true },
-    });
+    if (startDate && endDate) {
+      rangeStart = new Date(startDate as string);
+      rangeEnd   = new Date(endDate as string);
+    } else if (months) {
+      rangeStart = new Date(now);
+      rangeEnd   = new Date(now);
+      rangeEnd.setMonth(rangeEnd.getMonth() + parseInt(months as string));
+    } else {
+      return res.status(400).json({ error: 'Fornire months oppure startDate e endDate' });
+    }
 
-    const currentBalance = Number(totalIncome._sum.amount || 0) - Number(totalExpense._sum.amount || 0);
+    // Normalizza a inizio/fine giornata per evitare problemi di orario
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeEnd.setHours(23, 59, 59, 999);
 
-    // Ottieni transazioni ricorrenti attive
+    if (rangeStart >= rangeEnd) {
+      return res.status(400).json({ error: 'La data di inizio deve essere precedente a quella di fine' });
+    }
+
+    // ── Saldo corrente (tutte le transazioni registrate fino ad oggi) ──
+    const [incomeAgg, expenseAgg] = await Promise.all([
+      prisma.transaction.aggregate({ where: { userId, type: 'INCOME' }, _sum: { amount: true } }),
+      prisma.transaction.aggregate({ where: { userId, type: 'EXPENSE' }, _sum: { amount: true } }),
+    ]);
+
+    const currentBalance =
+      Number(incomeAgg._sum.amount || 0) - Number(expenseAgg._sum.amount || 0);
+
+    // ── Ricorrenti attive che si sovrappongono al range ──
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
         userId,
         isActive: true,
+        startDate: { lte: rangeEnd },          // iniziate prima della fine del range
         OR: [
           { endDate: null },
-          { endDate: { gte: new Date() } },
+          { endDate: { gte: rangeStart } },    // non ancora terminate all'inizio del range
         ],
       },
     });
 
-    // Calcola impatto delle spese ricorrenti per i prossimi mesi
-    const monthsCount = parseInt(months as string);
-    let projectedIncome = 0;
+    let projectedIncome  = 0;
     let projectedExpense = 0;
+    let recurringCount   = 0;  // conta le occorrenze reali, non le ricorrenti
 
-    recurringTransactions.forEach((rec) => {
-      const amount = Number(rec.amount);
-      let occurrences = 0;
+    for (const rec of recurringTransactions) {
+      const occurrences = countOccurrences(
+        {
+          frequency:  rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+          dayOfMonth: rec.dayOfMonth,
+          startDate:  rec.startDate,
+          endDate:    rec.endDate,
+          amount:     rec.amount,
+        },
+        rangeStart,
+        rangeEnd,
+      );
 
-      switch (rec.frequency) {
-        case 'WEEKLY':
-          occurrences = monthsCount * 4; // Circa 4 settimane al mese
-          break;
-        case 'MONTHLY':
-          occurrences = monthsCount;
-          break;
-        case 'YEARLY':
-          occurrences = monthsCount / 12;
-          break;
-      }
+      if (occurrences === 0) continue;  // nessuna occorrenza nel range → ignora
 
-      if (rec.type === 'INCOME') {
-        projectedIncome += amount * occurrences;
-      } else {
-        projectedExpense += amount * occurrences;
-      }
-    });
+      recurringCount += occurrences;
+      const total = Number(rec.amount) * occurrences;
 
-    // Ottieni transazioni pianificate non pagate nei prossimi mesi
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + monthsCount);
+      if (rec.type === 'INCOME') projectedIncome  += total;
+      else                       projectedExpense += total;
+    }
 
+    // ── Transazioni pianificate non pagate nel range ──
     const plannedTransactions = await prisma.plannedTransaction.findMany({
       where: {
         userId,
         isPaid: false,
-        plannedDate: {
-          gte: new Date(),
-          lte: endDate,
-        },
+        plannedDate: { gte: rangeStart, lte: rangeEnd },
       },
     });
 
-    // Aggiungi le transazioni pianificate alla proiezione
-    let plannedIncome = 0;
-    let plannedExpense = 0;
+    let plannedCount = plannedTransactions.length;
 
-    plannedTransactions.forEach((planned) => {
-      const amount = Number(planned.amount);
-      if (planned.type === 'INCOME') {
-        plannedIncome += amount;
-      } else {
-        plannedExpense += amount;
-      }
-    });
-
-    projectedIncome += plannedIncome;
-    projectedExpense += plannedExpense;
-
-    const projectedBalance = currentBalance + projectedIncome - projectedExpense;
+    for (const p of plannedTransactions) {
+      if (p.type === 'INCOME') projectedIncome  += Number(p.amount);
+      else                     projectedExpense += Number(p.amount);
+    }
 
     res.json({
       currentBalance,
       projectedIncome,
       projectedExpense,
-      projectedBalance,
-      projectionMonths: monthsCount,
-      recurringCount: recurringTransactions.length,
-      plannedCount: plannedTransactions.length,
+      projectedBalance: currentBalance + projectedIncome - projectedExpense,
+      recurringCount,   // occorrenze reali nel range
+      plannedCount,     // pianificate nel range
     });
   } catch (error) {
     console.error('Get projected balance error:', error);
@@ -321,113 +359,3 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
   }
 };
 
-//Ottieni saldo previsto con spese ricorrenti e pianificate in un intervallo di date personalizzato
-export const getProjectedBalanceByDate = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const { startDate, endDate } = req.query;
-    console.log('Received dates:', startDate, endDate);
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'startDate e endDate sono obbligatori' });
-    }
-
-    const start = new Date(startDate as string);
-    const end = new Date(endDate as string);
-
-    // Calcola saldo corrente
-    const totalIncome = await prisma.transaction.aggregate({
-      where: { userId, type: 'INCOME' },
-      _sum: { amount: true },
-    });
-
-    const totalExpense = await prisma.transaction.aggregate({
-      where: { userId, type: 'EXPENSE' },
-      _sum: { amount: true },
-    });
-
-    const currentBalance = Number(totalIncome._sum.amount || 0) - Number(totalExpense._sum.amount || 0);
-
-    // Ottieni transazioni ricorrenti attive che impattano nell'intervallo
-    const recurringTransactions = await prisma.recurringTransaction.findMany({
-      where: {
-        userId,
-        isActive: true,
-        OR: [
-          { endDate: null },
-          { endDate: { gte: start } },
-        ],
-      },
-    });
-
-    let projectedIncome = 0;
-    let projectedExpense = 0;
-
-    recurringTransactions.forEach((rec) => {
-      const amount = Number(rec.amount);
-      let occurrences = 0;
-
-      switch (rec.frequency) {
-        case 'WEEKLY':
-          occurrences = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
-          break;
-        case 'MONTHLY':
-          occurrences = Math.ceil((end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
-          break;
-        case 'YEARLY':
-          occurrences = Math.ceil(end.getFullYear() - start.getFullYear());
-          break;
-      }
-
-      if (rec.type === 'INCOME') {
-        projectedIncome += amount * occurrences;
-      } else {
-        projectedExpense += amount * occurrences;
-      }
-    });
-
-    // Ottieni transazioni pianificate non pagate nell'intervallo
-    const plannedTransactions = await prisma.plannedTransaction.findMany({
-      where: {
-        userId,
-        isPaid: false,
-        plannedDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-    });
-
-    let plannedIncome = 0;
-    let plannedExpense = 0;
-
-    plannedTransactions.forEach((planned) => {
-      const amount = Number(planned.amount);
-      if (planned.type === 'INCOME') {
-        plannedIncome += amount;
-      } else {
-        plannedExpense += amount;
-      }
-    });
-
-    projectedIncome += plannedIncome;
-    projectedExpense += plannedExpense;
-
-    const projectedBalance = currentBalance + projectedIncome - projectedExpense;
-
-    res.json({
-      currentBalance,
-      projectedIncome,
-      projectedExpense,
-      projectedBalance,
-      projectionPeriod: {
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-      },
-      recurringCount: recurringTransactions.length,
-      plannedCount: plannedTransactions.length,
-    });
-  } catch (error) {
-    console.error('Get projected balance by date error:', error);
-    res.status(500).json({ error: 'Errore del server' });
-  }
-};

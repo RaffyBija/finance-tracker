@@ -6,6 +6,12 @@ interface DateRange {
   endDate: string;
 }
 
+interface ProjectedBalanceParams {
+  months?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
 export const useSummary = (dateRange?: DateRange) => {
   return useQuery({
     queryKey: ['dashboard', 'summary', dateRange],
@@ -38,19 +44,10 @@ export const useRecentTransactions = (limit: number = 5) => {
   });
 };
 
-export const useProjectedBalance = (months: number = 3, enabled: boolean = true) => {
+export const useProjectedBalance = (params: ProjectedBalanceParams, enabled = true) => {
   return useQuery({
-    queryKey: ['dashboard', 'projected-balance', months],
-    queryFn: () => dashboardAPI.getProjectedBalance(months),
-    staleTime: 2 * 60 * 1000,
-    enabled,
-  });
-};
-
-export const useProjectedBalanceByDate = (startDate: string, endDate: string, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ['dashboard', 'projected-balance', 'custom-range', startDate, endDate],
-    queryFn: () => dashboardAPI.getProjectedBalanceByDate(startDate, endDate),
+    queryKey: ['dashboard', 'projected-balance', params],
+    queryFn: () => dashboardAPI.getProjectedBalance(params),
     staleTime: 2 * 60 * 1000,
     enabled,
   });

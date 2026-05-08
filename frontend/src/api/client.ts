@@ -204,30 +204,12 @@ export const dashboardAPI = {
     return data;
   },
 
-  getProjectedBalance: async (
-    months: number = 3,
-  ): Promise<ProjectedBalance> => {
-    const response = await api.get<ProjectedBalance>(
-      "/dashboard/projected-balance",
-      {
-        params: { months },
-      },
-    );
-    return response.data;
-  },
+  getProjectedBalance: async (params: { months?: number; startDate?: string; endDate?: string }) => {
+  const response = await api.get<ProjectedBalance>('/dashboard/projected-balance', { params });
+  return response.data;
+},
 
-  getProjectedBalanceByDate: async (
-    startDate: string,
-    endDate: string,
-  ): Promise<ProjectedBalance> => {
-    const response = await api.get<ProjectedBalance>(
-      "/dashboard/projected-balance/custom-range",
-      {
-        params: { startDate, endDate },
-      },
-    );
-    return response.data;
-  },
+
 };
 
 export default api;
