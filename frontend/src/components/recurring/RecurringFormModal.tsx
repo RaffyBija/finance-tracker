@@ -125,7 +125,7 @@ export default function RecurringFormModal({
       title={editingItem ? 'Modifica Spesa Ricorrente' : 'Nuova Spesa Ricorrente'}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
@@ -140,12 +140,26 @@ export default function RecurringFormModal({
           </div>
         </div>
 
-          <InputDecimal 
-          setFormData={(data) => { setFormData(data); clearError('amount'); }} 
-          formData={formData} 
-          label="Importo (€)" />
-          <FieldError message={errors.amount} />
-
+        <div className="modal-form-row">
+          <div>
+            <InputDecimal
+              setFormData={(data) => { setFormData(data); clearError('amount'); }}
+              formData={formData}
+              label="Importo (€)"
+            />
+            <FieldError message={errors.amount} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Frequenza</label>
+            <select value={formData.frequency}
+              onChange={(e) => setFormData({ ...formData, frequency: e.target.value as Frequency })}
+              className="form-select">
+              <option value="WEEKLY">Settimanale</option>
+              <option value="MONTHLY">Mensile</option>
+              <option value="YEARLY">Annuale</option>
+            </select>
+          </div>
+        </div>
 
         <div className="form-group">
           <label className="form-label">Descrizione</label>
@@ -155,7 +169,7 @@ export default function RecurringFormModal({
               clearError('description');
             }}
             className="form-input" />
-            <FieldError message={errors.description} />
+          <FieldError message={errors.description} />
         </div>
 
         <div className="form-group">
@@ -166,23 +180,12 @@ export default function RecurringFormModal({
               clearError('categoryId');
             }}
             className="form-select">
-            <option value="">Senza categoria</option>
+            <option value="">--Seleziona una categoria--</option>
             {filteredCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
             ))}
           </select>
           <FieldError message={errors.categoryId} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Frequenza</label>
-          <select value={formData.frequency}
-            onChange={(e) => setFormData({ ...formData, frequency: e.target.value as Frequency })}
-            className="form-select">
-            <option value="WEEKLY">Settimanale</option>
-            <option value="MONTHLY">Mensile</option>
-            <option value="YEARLY">Annuale</option>
-          </select>
         </div>
 
         {formData.frequency === 'MONTHLY' && (
@@ -194,31 +197,31 @@ export default function RecurringFormModal({
                 clearError('dayOfMonth');
               }}
               className="form-input" />
-              <FieldError message={errors.dayOfMonth} />
+            <FieldError message={errors.dayOfMonth} />
           </div>
         )}
 
-        <div className="form-group">
-          <label className="form-label">Data inizio</label>
-          <input type="date" value={formData.startDate}
-            onChange={(e) => {
-              setFormData({ ...formData, startDate: e.target.value })
-              clearError('startDate');
-            }}
-            className="form-input" 
-            />
-          <FieldError message={errors.startDate} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Data fine (opzionale)</label>
-          <input type="date" value={formData.endDate}
-            onChange={(e) => {
-              setFormData({ ...formData, endDate: e.target.value })
-              clearError('endDate');
-            }}
-            className="form-input" />
+        <div className="modal-form-row">
+          <div className="form-group">
+            <label className="form-label">Data inizio</label>
+            <input type="date" value={formData.startDate}
+              onChange={(e) => {
+                setFormData({ ...formData, startDate: e.target.value })
+                clearError('startDate');
+              }}
+              className="form-input" />
+            <FieldError message={errors.startDate} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Data fine (opzionale)</label>
+            <input type="date" value={formData.endDate}
+              onChange={(e) => {
+                setFormData({ ...formData, endDate: e.target.value })
+                clearError('endDate');
+              }}
+              className="form-input" />
             <FieldError message={errors.endDate} />
+          </div>
         </div>
 
         <div className="form-actions">

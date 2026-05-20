@@ -113,7 +113,7 @@ export default function PlannedFormModal({
       title={editingItem ? 'Modifica Spesa Pianificata' : 'Nuova Spesa Pianificata'}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
@@ -128,15 +128,26 @@ export default function PlannedFormModal({
           </div>
         </div>
 
-        <InputDecimal 
-          setFormData={(value)=>{
-            setFormData(value);
-            clearError('amount');
-          }} 
-          formData={formData} 
-          label="Importo (€)" 
-          />
-        <FieldError message={errors.amount} />
+        <div className="modal-form-row">
+          <div>
+            <InputDecimal
+              setFormData={(value) => { setFormData(value); clearError('amount'); }}
+              formData={formData}
+              label="Importo (€)"
+            />
+            <FieldError message={errors.amount} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Data pianificata</label>
+            <input type="date" value={formData.plannedDate}
+              onChange={(e) => {
+                setFormData({ ...formData, plannedDate: e.target.value })
+                clearError('plannedDate');
+              }}
+              className="form-input" />
+            <FieldError message={errors.plannedDate} />
+          </div>
+        </div>
 
         <div className="form-group">
           <label className="form-label">Descrizione</label>
@@ -166,17 +177,6 @@ export default function PlannedFormModal({
         </div>
 
         <div className="form-group">
-          <label className="form-label">Data pianificata</label>
-          <input type="date" value={formData.plannedDate}
-            onChange={(e) => {
-              setFormData({ ...formData, plannedDate: e.target.value })
-              clearError('plannedDate');
-              }}
-            className="form-input" />
-            <FieldError message={errors.plannedDate} />
-        </div>
-
-        <div className="form-group">
           <label className="form-label">Note (opzionale)</label>
           <textarea value={formData.notes}
             onChange={(e) => {
@@ -185,7 +185,7 @@ export default function PlannedFormModal({
             }}
             className="form-input resize-none" rows={2}
             placeholder="Eventuali note..." />
-            <FieldError message={errors.notes} />
+          <FieldError message={errors.notes} />
         </div>
 
         <div className="form-actions">

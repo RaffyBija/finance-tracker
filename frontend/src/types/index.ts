@@ -160,10 +160,26 @@ export interface RecurringTransaction {
   startDate: string;
   endDate?: string;
   isActive: boolean;
+  lastExecutedDate?: string | null;
   userId: string;
   createdAt: string;
   updatedAt: string;
   category?: Category;
+}
+
+export interface RecurringDueItem extends RecurringTransaction {
+  nextDueDate: string;
+  daysOverdue: number;
+}
+
+export interface RecurringDueResponse {
+  dueToday: RecurringDueItem[];
+  overdue: RecurringDueItem[];
+}
+
+export interface ExecuteRecurringResult {
+  created: Transaction[];
+  count: number;
 }
 
 export interface CreateRecurringTransactionDTO {

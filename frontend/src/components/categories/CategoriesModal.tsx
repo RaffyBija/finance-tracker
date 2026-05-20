@@ -125,7 +125,7 @@ export default function CategoriesModal({
       title={editingCategory ? 'Modifica Categoria' : 'Nuova Categoria'}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-group">
           <label className="form-label">Nome</label>
           <input

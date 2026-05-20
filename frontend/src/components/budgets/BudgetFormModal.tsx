@@ -113,7 +113,7 @@ export default function BudgetFormModal({
       title={editingItem ? 'Modifica Budget' : 'Nuovo Budget'}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-group">
           <label className="form-label">Nome</label>
           <input
@@ -128,58 +128,62 @@ export default function BudgetFormModal({
           <FieldError message={errors.name} />
         </div>
 
-        <InputDecimal
-          setFormData={(data) => { setFormData(data); clearError('amount'); }}          
-          formData={formData}
-          label="Importo Budget (€)"
-        />
-        <FieldError message={errors.amount} />
-
-        <div className="form-group">
-          <label className="form-label">Categoria (opzionale)</label>
-          <select
-            value={formData.categoryId}
-            onChange={(e) => {
-              setFormData({ ...formData, categoryId: e.target.value })
-              clearError('categoryId');
-            }}
-            className="form-select"
-          >
-            <option value="">--Seleziona una categoria--</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <FieldError message={errors.categoryId} />
+        <div className="modal-form-row">
+          <div>
+            <InputDecimal
+              setFormData={(data) => { setFormData(data); clearError('amount'); }}
+              formData={formData}
+              label="Importo Budget (€)"
+            />
+            <FieldError message={errors.amount} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Categoria (opzionale)</label>
+            <select
+              value={formData.categoryId}
+              onChange={(e) => {
+                setFormData({ ...formData, categoryId: e.target.value })
+                clearError('categoryId');
+              }}
+              className="form-select"
+            >
+              <option value="">--Seleziona--</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <FieldError message={errors.categoryId} />
+          </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Periodo</label>
-          <select
-            value={formData.period}
-            onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
-            className="form-select"
-          >
-            <option value="WEEKLY">Settimanale</option>
-            <option value="MONTHLY">Mensile</option>
-            <option value="YEARLY">Annuale</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Data Inizio</label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => {
-              setFormData({ ...formData, startDate: e.target.value })
-              clearError('startDate');
-            }}
-            className="form-input"
-          />
-          <FieldError message={errors.startDate} />
+        <div className="modal-form-row">
+          <div className="form-group">
+            <label className="form-label">Periodo</label>
+            <select
+              value={formData.period}
+              onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
+              className="form-select"
+            >
+              <option value="WEEKLY">Settimanale</option>
+              <option value="MONTHLY">Mensile</option>
+              <option value="YEARLY">Annuale</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Data Inizio</label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => {
+                setFormData({ ...formData, startDate: e.target.value })
+                clearError('startDate');
+              }}
+              className="form-input"
+            />
+            <FieldError message={errors.startDate} />
+          </div>
         </div>
 
         <div className="form-group">

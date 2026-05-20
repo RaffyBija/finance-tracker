@@ -122,12 +122,30 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
           </div>
         </div>
         
-          <InputDecimal
-            setFormData={(data) => { setFormData(data); clearError('amount'); }}
-            formData={formData}
-            label="Importo (€)"
-          />
-          <FieldError message={errors.amount} />
+        <div className="modal-form-row">
+          <div>
+            <InputDecimal
+              setFormData={(data) => { setFormData(data); clearError('amount'); }}
+              formData={formData}
+              label="Importo (€)"
+            />
+            <FieldError message={errors.amount} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Data</label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => {
+                setFormData({ ...formData, date: e.target.value })
+                clearError('date');
+              }}
+              className="form-input"
+              required
+            />
+            <FieldError message={errors.date} />
+          </div>
+        </div>
 
         <div className="form-group">
           <label className="form-label">Descrizione</label>
@@ -142,21 +160,6 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
             placeholder="Es. Spesa supermercato"
           />
           <FieldError message={errors.description} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Data</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => {
-              setFormData({ ...formData, date: e.target.value })
-              clearError('date');
-            }}
-            className="form-input"
-            required
-          />
-          <FieldError message={errors.date} />
         </div>
 
         <div className="form-group">
