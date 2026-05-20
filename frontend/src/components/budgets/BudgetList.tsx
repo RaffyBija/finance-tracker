@@ -47,7 +47,7 @@ export default function BudgetList({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="card-grid-2">
       {budgets.map((budget) => (
         <div key={budget.id} className="budget-card">
           <div className="budget-card-header">

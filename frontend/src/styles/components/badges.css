@@ -159,7 +159,7 @@
 
   .badge-remove-btn {
     @apply ml-1 -mr-1 p-0.5 rounded-full;
-    @apply hover:bg-black/10;
+    @apply hover:bg-neutral-900/10;
     @apply transition-colors duration-200;
   }
 
@@ -336,6 +336,6 @@
   }
 
   .badge-bounce {
-    @apply animate-bounce-subtle;
+    @apply animate-pulse-subtle;
   }
 }

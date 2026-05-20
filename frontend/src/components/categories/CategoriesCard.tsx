@@ -14,7 +14,7 @@ export default function CategoriesCard({
 }:CategoriesCardProps){
 
   return (
-    <div className="category-card card-border-left" style={{ borderLeftColor: category.color }}>
+    <div className="category-card">
       <div className="category-card-main">
         <div className="category-card-content">
           <div

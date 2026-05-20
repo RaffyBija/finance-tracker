@@ -3,7 +3,7 @@
 import { useTransactions, useDeleteTransaction, PAGE_SIZE } from '../hooks/useTransactions';
 import { useCategories } from '../hooks/useCategories';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
@@ -162,6 +162,12 @@ export default function TransactionsPage() {
               <div key={transaction.id} className="transaction-card">
 
                 <div className="transaction-card-left min-w-0 flex-1">
+                  <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+                    {transaction.type === 'INCOME'
+                      ? <TrendingUp className="icon-md text-success-600" />
+                      : <TrendingDown className="icon-md text-danger-600" />
+                    }
+                  </div>
                   <div className="transaction-card-info min-w-0">
                     <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
                     <p className="transaction-card-title truncate">
@@ -205,7 +211,7 @@ export default function TransactionsPage() {
 
       {/* ── Carica altro ── */}
       {!isFirstLoad && hasMore && !searchFilter && (
-        <div className="flex flex-col items-center gap-2 mt-4 mb-2">
+        <div className="list-pagination">
           <button
             onClick={handleLoadMore}
             disabled={isFetching}
@@ -225,7 +231,7 @@ export default function TransactionsPage() {
 
       {/* ── Contatore risultati ── */}
       {!isFirstLoad && filteredTransactions.length > 0 && (
-        <p className="text-center text-xs text-neutral-400 mt-2 mb-6">
+        <p className="list-result-count">
           {filteredTransactions.length} transazion{filteredTransactions.length === 1 ? 'e' : 'i'} visualizzat{filteredTransactions.length === 1 ? 'a' : 'e'}
           {hasMore && !searchFilter && ' · altri risultati disponibili'}
         </p>

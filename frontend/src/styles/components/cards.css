@@ -91,29 +91,6 @@
   }
 
   /* ============================
-     CARD WITH BORDER ACCENT
-     ============================ */
-  .card-border-left {
-    @apply card border-l-4;
-  }
-
-  .card-border-left-primary {
-    @apply card-border-left border-l-primary-600;
-  }
-
-  .card-border-left-success {
-    @apply card-border-left border-l-success-600;
-  }
-
-  .card-border-left-danger {
-    @apply card-border-left border-l-danger-600;
-  }
-
-  .card-border-left-warning {
-    @apply card-border-left border-l-warning-600;
-  }
-
-  /* ============================
      CARD COLORS/VARIANTS
      ============================ */
   .card-primary {
@@ -984,5 +961,51 @@
 
   .projection-meta {
     gap: 0.75rem;
+  }
+}
+
+/* ============================================================
+   CARD GRIDS — semantic grid classes replacing inline Tailwind
+   ============================================================ */
+.card-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.card-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Empty state spans all columns inside a card grid */
+.card-grid-2 > .empty-state-card,
+.card-grid-3 > .empty-state-card {
+  grid-column: 1 / -1;
+}
+
+/* ============================================================
+   DASHBOARD CHARTS GRID
+   ============================================================ */
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 3fr 2fr;
   }
 }

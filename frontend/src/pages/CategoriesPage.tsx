@@ -75,9 +75,9 @@ export default function CategoriesPage() {
           />
 
           {/* Grid categorie */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="card-grid-3">
             {categories.length === 0 ? (
-              <div className="empty-state-card col-span-full">
+              <div className="empty-state-card">
                 <p className="empty-state-title">Nessuna categoria trovata</p>
                 <p className="empty-state-description">
                   Crea la tua prima categoria per organizzare le transazioni
