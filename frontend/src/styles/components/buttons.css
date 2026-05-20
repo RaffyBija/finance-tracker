@@ -15,6 +15,16 @@
     @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
   }
 
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+    transition-duration: 75ms;
+  }
+
+  .btn-icon:active:not(:disabled) {
+    transform: scale(0.9);
+    transition-duration: 75ms;
+  }
+
   /* ============================
      SIZES
      ============================ */

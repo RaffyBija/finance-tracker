@@ -1,4 +1,6 @@
 @import './components/buttons.css';
+@import './components/navbar.css';
+@import './components/landing.css';
 @import './components/cards.css';
 @import './components/forms.css';
 @import './components/badges.css';
@@ -16,14 +18,21 @@
    BASE STYLES
    ============================================ */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-optical-sizing: auto;
+  font-kerning: normal;
+
   /* CSS Custom Properties per temi futuri */
   --color-primary: theme('colors.primary.600');
   --color-success: theme('colors.success.600');
   --color-danger: theme('colors.danger.600');
   --color-warning: theme('colors.warning.600');
-  
+
+  /* Easing curves */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+
   /* Smooth scrolling */
   scroll-behavior: smooth;
 }
@@ -42,6 +51,10 @@ body {
 /* ============================================
    GLOBAL IMPROVEMENTS
    ============================================ */
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
 
 /* Focus visible migliore */
 *:focus-visible {

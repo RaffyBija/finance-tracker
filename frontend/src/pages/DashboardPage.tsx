@@ -7,7 +7,7 @@ import {
   useMonthlyTrend,
   useRecentTransactions,
 } from '../hooks/useDashboard';
-import { TrendingUp, TrendingDown, Wallet, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -16,7 +16,6 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns
 import { it } from 'date-fns/locale';
 import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard';
 import {
-  SkeletonStatCard,
   SkeletonChart,
   SkeletonPieChart,
   SkeletonList,
@@ -78,19 +77,6 @@ const CustomPieLegend = ({ data }: { data: any[] }) => (
   </div>
 );
 
-// ── Skeleton saldo hero ───────────────────────────────────────────────────────
-
-const SkeletonBalanceHero = () => (
-  <div className="balance-hero mb-6 animate-pulse">
-    <div className="space-y-2">
-      <div className="h-3 w-24 bg-white/20 rounded" />
-      <div className="h-10 w-48 bg-white/30 rounded" />
-      <div className="h-3 w-40 bg-white/15 rounded" />
-    </div>
-    <div className="h-12 w-12 bg-white/20 rounded-full" />
-  </div>
-);
-
 // ── Componente principale ─────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -135,120 +121,69 @@ export default function DashboardPage() {
   return (
     <div className="container-custom">
 
-      {/* ── Header navigazione mese — sempre visibile ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-          {/* <p className="text-sm text-neutral-500 mt-1">
-            Analisi di{' '}
-            <span className="font-semibold text-neutral-700">
+      {/* ── Hero: Saldo Complessivo ── */}
+      <div className="dashboard-hero mb-6">
+        <div className="dashboard-hero-top">
+          <div>
+            <p className="dashboard-hero-label">Saldo Complessivo</p>
+            {totalSummaryLoading ? (
+              <div className="dashboard-hero-value-skeleton animate-pulse" />
+            ) : (
+              <p className={`dashboard-hero-value${!isPositive ? ' is-negative' : ''}`}>
+                {isPositive ? '+' : '−'}€{Math.abs(totalBalance).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
+          <div className="dashboard-hero-nav">
+            <button onClick={() => setCurrentMonth((d) => subMonths(d, 1))} className="dashboard-nav-btn">
+              <ChevronLeft size={15} />
+            </button>
+            <span className="dashboard-month-pill">
               {format(currentMonth, 'MMMM yyyy', { locale: it })}
             </span>
-          </p> */}
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={() => setCurrentMonth((d) => subMonths(d, 1))}
-            className="btn btn-ghost btn-sm"
-          >
-            <ChevronLeft className="icon-sm" />
-          </button>
-          <span className="px-4 py-1.5 rounded-lg bg-neutral-100 text-sm font-semibold text-neutral-700 min-w-[130px] text-center capitalize">
-            {format(currentMonth, 'MMMM yyyy', { locale: it })}
-          </span>
-          <button
-            onClick={() => setCurrentMonth((d) => addMonths(d, 1))}
-            disabled={isCurrentMonth}
-            className="btn btn-ghost btn-sm disabled:opacity-40"
-          >
-            <ChevronRight className="icon-sm" />
-          </button>
-          {!isCurrentMonth && (
-            <button
-              onClick={() => setCurrentMonth(new Date())}
-              className="btn btn-outline-primary btn-sm"
-            >
-              Oggi
+            <button onClick={() => setCurrentMonth((d) => addMonths(d, 1))} disabled={isCurrentMonth} className="dashboard-nav-btn">
+              <ChevronRight size={15} />
             </button>
+            {!isCurrentMonth && (
+              <button onClick={() => setCurrentMonth(new Date())} className="dashboard-today-btn">
+                Oggi
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div key={format(currentMonth, 'yyyy-MM')} className="dashboard-hero-stats dashboard-stats-reveal">
+          {summaryLoading ? (
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className="dashboard-hero-stat animate-pulse">
+                <div style={{ height: '0.625rem', width: '3rem', background: 'rgba(255,255,255,0.2)', borderRadius: '0.25rem', marginBottom: '0.375rem' }} />
+                <div style={{ height: '1.125rem', width: '5rem', background: 'rgba(255,255,255,0.25)', borderRadius: '0.25rem' }} />
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="dashboard-hero-stat">
+                <p className="dashboard-hero-stat-label">Entrate</p>
+                <p className="dashboard-hero-stat-value dashboard-hero-stat-income">+€{summary?.income.toFixed(2)}</p>
+              </div>
+              <div className="dashboard-hero-stat">
+                <p className="dashboard-hero-stat-label">Uscite</p>
+                <p className="dashboard-hero-stat-value dashboard-hero-stat-expense">−€{summary?.expense.toFixed(2)}</p>
+              </div>
+              <div className="dashboard-hero-stat">
+                <p className="dashboard-hero-stat-label">Netto del mese</p>
+                <p className={`dashboard-hero-stat-value${summary && summary.balance >= 0 ? ' dashboard-hero-stat-income' : ' dashboard-hero-stat-expense'}`}>
+                  {summary && summary.balance >= 0 ? '+' : '−'}€{Math.abs(summary?.balance ?? 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="dashboard-hero-stat">
+                <p className="dashboard-hero-stat-label">Transazioni</p>
+                <p className="dashboard-hero-stat-value">{summary?.transactionCount}</p>
+              </div>
+            </>
           )}
         </div>
       </div>
-
-      {/* ── Banner saldo attuale ── */}
-      {totalSummaryLoading ? (
-        <SkeletonBalanceHero />
-      ) : (
-        <div className="balance-hero mb-6">
-          <div>
-            <p className="balance-hero-label">Saldo attuale</p>
-            <p className={`balance-hero-amount ${isPositive ? 'balance-hero-amount--positive' : 'balance-hero-amount--negative'}`}>
-              {isPositive ? '+' : ''}€{totalBalance.toLocaleString('it-IT', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
-            <p className="balance-hero-sub">Su tutte le transazioni registrate</p>
-          </div>
-          <Wallet className="balance-hero-icon" />
-        </div>
-      )}
-
-      {/* ── Stat cards mensili ── */}
-      {summaryLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="stat-card">
-            <div className="flex-between">
-              <div>
-                <p className="stat-card-label">Entrate</p>
-                <p className="stat-card-value text-success-600">
-                  +€{summary?.income.toFixed(2)}
-                </p>
-              </div>
-              <TrendingUp className="icon-2xl text-success-600" />
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="flex-between">
-              <div>
-                <p className="stat-card-label">Uscite</p>
-                <p className="stat-card-value text-danger-600">
-                  -€{summary?.expense.toFixed(2)}
-                </p>
-              </div>
-              <TrendingDown className="icon-2xl text-danger-600" />
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="flex-between">
-              <div>
-                <p className="stat-card-label">Saldo del mese</p>
-                <p className={`stat-card-value ${summary && summary.balance >= 0 ? 'text-primary-600' : 'text-danger-600'}`}>
-                  {summary && summary.balance >= 0 ? '+' : ''}€{summary?.balance.toFixed(2)}
-                </p>
-              </div>
-              <Wallet className="icon-2xl text-primary-600" />
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="flex-between">
-              <div>
-                <p className="stat-card-label">Transazioni</p>
-                <p className="stat-card-value text-neutral-900">
-                  {summary?.transactionCount}
-                </p>
-              </div>
-              <Activity className="icon-2xl text-neutral-600" />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Proiezione — gestisce il proprio skeleton internamente ── */}
       <ProjectedDetailCard />

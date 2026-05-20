@@ -54,8 +54,8 @@ export const RecurringTransactions = () => {
       ) : (
         <>
           <PageHeader
-            title="Spese Ricorrenti"
-            actionLabel="Nuova Spesa Ricorrente"
+            title="Ricorrenti"
+            actionLabel="Nuova voce ricorrente"
             onAction={openModal}
           />
           <RecurringList

@@ -57,8 +57,8 @@ export const PlannedTransactions = () => {
       ) : (
         <>
           <PageHeader
-            title="Spese Pianificate"
-            actionLabel="Nuova Spesa Pianificata"
+            title="Pianificati"
+            actionLabel="Nuova voce pianificata"
             onAction={openModal}
           />
           <PlannedFilters
