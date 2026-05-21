@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePending } from '../../contexts/PendingContext';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
   Repeat, Calendar, Settings2, ChevronDown,
@@ -107,6 +108,7 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
 
 export default function Navbar() {
   const { user } = useAuth();
+  const { recurringDueCount, plannedDueCount } = usePending();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -182,16 +184,20 @@ export default function Navbar() {
               {dropdownOpen && (
                 <div className="navbar-dropdown-panel">
                   <p className="navbar-dropdown-section">Configura</p>
-                  {GESTIONE.map(({ path, label, icon: Icon }) => (
-                    <Link
-                      key={path}
-                      to={path}
-                      className={`navbar-dropdown-item${location.pathname === path ? ' is-active' : ''}`}
-                    >
-                      <Icon size={15} className="navbar-dropdown-item-icon" />
-                      {label}
-                    </Link>
-                  ))}
+                  {GESTIONE.map(({ path, label, icon: Icon }) => {
+                    const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
+                    return (
+                      <Link
+                        key={path}
+                        to={path}
+                        className={`navbar-dropdown-item${location.pathname === path ? ' is-active' : ''}`}
+                      >
+                        <Icon size={15} className="navbar-dropdown-item-icon" />
+                        {label}
+                        {count > 0 && <span className="navbar-inline-badge">{count > 99 ? '99+' : count}</span>}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -233,7 +239,14 @@ export default function Navbar() {
           onClick={() => setTrayOpen((v) => !v)}
           className={`navbar-mobile-tab${isGestioneActive ? ' is-active' : ''}`}
         >
-          <Settings2 size={21} />
+          <span className="navbar-badge-wrap">
+            <Settings2 size={21} />
+            {(recurringDueCount + plannedDueCount) > 0 && (
+              <span className="navbar-badge">
+                {(recurringDueCount + plannedDueCount) > 99 ? '99+' : recurringDueCount + plannedDueCount}
+              </span>
+            )}
+          </span>
           <span className="navbar-mobile-tab-label">Gestione</span>
         </button>
       </div>
@@ -245,16 +258,20 @@ export default function Navbar() {
           <div className="navbar-tray">
             <div className="navbar-tray-handle" />
             <p className="navbar-tray-title">Gestione</p>
-            {GESTIONE.map(({ path, label, icon: Icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`navbar-tray-item${location.pathname === path ? ' is-active' : ''}`}
-              >
-                <Icon size={19} className="navbar-tray-item-icon" />
-                {label}
-              </Link>
-            ))}
+            {GESTIONE.map(({ path, label, icon: Icon }) => {
+              const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`navbar-tray-item${location.pathname === path ? ' is-active' : ''}`}
+                >
+                  <Icon size={19} className="navbar-tray-item-icon" />
+                  {label}
+                  {count > 0 && <span className="navbar-inline-badge">{count > 99 ? '99+' : count}</span>}
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

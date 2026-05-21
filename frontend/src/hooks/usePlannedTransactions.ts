@@ -41,7 +41,11 @@ export function useDeletePlanned() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => plannedApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planned'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planned'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
+    },
   });
 }
 
@@ -53,6 +57,7 @@ export function useMarkAsPaid() {
       queryClient.invalidateQueries({ queryKey: ['planned'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
     },
   });
 }
@@ -61,6 +66,9 @@ export function useCreatePlanned() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreatePlannedTransactionDTO) => plannedApi.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planned'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planned'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 }

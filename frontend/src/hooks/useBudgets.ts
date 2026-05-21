@@ -39,7 +39,10 @@ export function useCreateBudget() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateBudgetDTO) => budgetApi.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 }
 
@@ -48,6 +51,9 @@ export function useUpdateBudget() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateBudgetDTO> }) =>
       budgetApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 }

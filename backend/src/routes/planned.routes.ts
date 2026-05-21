@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getPlannedTransactions,
   getPlannedTransaction,
+  getPlannedDue,
   createPlannedTransaction,
   updatePlannedTransaction,
   deletePlannedTransaction,
@@ -14,6 +15,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', getPlannedTransactions);
+router.get('/due', getPlannedDue);
 router.get('/:id', getPlannedTransaction);
 router.post('/', createPlannedTransaction);
 router.put('/:id', updatePlannedTransaction);

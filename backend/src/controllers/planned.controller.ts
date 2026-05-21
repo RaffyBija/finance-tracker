@@ -2,6 +2,26 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreatePlannedTransactionDTO } from '../types';
 
+// Ottieni pianificate scadute non pagate (data <= oggi)
+export const getPlannedDue = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const planned = await prisma.plannedTransaction.findMany({
+      where: { userId, isPaid: false, plannedDate: { lte: endOfToday } },
+      include: { category: true },
+      orderBy: { plannedDate: 'asc' },
+    });
+
+    res.json(planned);
+  } catch (error) {
+    console.error('Get planned due error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
 // Ottieni tutte le transazioni pianificate
 export const getPlannedTransactions = async (req: AuthRequest, res: Response) => {
   try {

@@ -26,6 +26,11 @@ export const plannedApi = {
     await apiClient.delete(`/planned/${id}`);
   },
 
+  getDue: async (): Promise<PlannedTransaction[]> => {
+    const response = await apiClient.get<PlannedTransaction[]>('/planned/due');
+    return response.data;
+  },
+
   markAsPaid: async (id: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
     const response = await apiClient.patch(`/planned/${id}/mark-paid`);
     return response.data;

@@ -46,6 +46,7 @@ export function useExecuteRecurring() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['recurring-due'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
     },
   });
 }
@@ -78,6 +79,7 @@ export function useDeleteRecurring() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
     },
   });
 }
@@ -86,7 +88,11 @@ export function useToggleRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => recurringApi.toggle(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+    },
   });
 }
 
@@ -94,7 +100,11 @@ export function useCreateRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateRecurringTransactionDTO) => recurringApi.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+    },
   });
 }
 
@@ -103,6 +113,10 @@ export function useUpdateRecurring() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateRecurringTransactionDTO> }) =>
       recurringApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+    },
   });
 }

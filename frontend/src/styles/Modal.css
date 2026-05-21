@@ -362,6 +362,46 @@
   }
 }
 
+/* ── Banner compatto "Da eseguire" (ricorrenti) ── */
+.pending-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid #fbbf24;
+  background: oklch(0.97 0.04 90);
+  margin-bottom: 1.25rem;
+}
+
+.pending-banner-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+/* ── Indicatore "da eseguire" su singolo item ricorrente ── */
+.recurring-due-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: oklch(0.94 0.04 174);
+  color: #0f766e;
+}
+
+.recurring-due-indicator-overdue {
+  background: oklch(0.95 0.05 60);
+  color: #92400e;
+}
+
 /* ── Animazioni ── */
 @keyframes modal-overlay-in {
   from { background-color: rgba(0, 0, 0, 0); }
