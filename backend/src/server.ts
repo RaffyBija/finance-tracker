@@ -63,6 +63,7 @@ import budgetRoutes from './routes/budget.routes';
 import recurringRoutes from './routes/recurring.routes';
 import plannedRoutes from './routes/planned.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import calendarRoutes from './routes/calendar.routes';
 
 // Health check (fuori dal rate limiter)
 app.get('/health', (req, res) => {
@@ -83,6 +84,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/recurring', recurringRoutes);
 app.use('/api/planned', plannedRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // ✅ Error handler globale (evita che Express esponga stack trace in produzione)
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

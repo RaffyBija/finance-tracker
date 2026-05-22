@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePending } from '../../contexts/PendingContext';
+import { useTheme } from '../../hooks/useTheme';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
-  Repeat, Calendar, Settings2, ChevronDown,
-  User, Shield, FileText, LogOut,
+  Repeat, Calendar, CalendarDays, Settings2, ChevronDown,
+  User, Shield, FileText, LogOut, Sun, Moon,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -19,14 +20,15 @@ interface NavItem {
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
 const PRIMARY: NavItem[] = [
-  { path: '/dashboard',    label: 'Dashboard',   icon: LayoutDashboard },
-  { path: '/transactions', label: 'Transazioni',  icon: ArrowLeftRight  },
-  { path: '/budgets',      label: 'Budget',       icon: Wallet          },
+  { path: '/dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
+  { path: '/transactions', label: 'Transazioni', icon: ArrowLeftRight  },
+  { path: '/budgets',      label: 'Budget',      icon: Wallet          },
+  { path: '/calendar',     label: 'Calendario',  icon: CalendarDays    },
 ];
 
 const GESTIONE: NavItem[] = [
-  { path: '/categories', label: 'Categorie',  icon: Tags     },
-  { path: '/recurring',  label: 'Ricorrenti', icon: Repeat   },
+  { path: '/categories', label: 'Categorie',   icon: Tags     },
+  { path: '/recurring',  label: 'Ricorrenti',  icon: Repeat   },
   { path: '/planned',    label: 'Pianificati', icon: Calendar },
 ];
 
@@ -65,6 +67,7 @@ function UserAvatar({ name, size = 36 }: { name?: string; size?: number }) {
 function ProfileDropdown({ onClose }: { onClose: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const go = (path: string) => { onClose(); navigate(path); };
   const handleLogout = () => { onClose(); logout(); navigate('/'); };
@@ -78,6 +81,7 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
           <p className="navbar-profile-email">{user?.email}</p>
         </div>
         <div className="navbar-profile-body">
+
           <p className="navbar-profile-section-label">Account</p>
           <button onClick={() => go('/profile')} className="navbar-profile-item">
             <User size={15} className="navbar-profile-item-icon" />
@@ -87,17 +91,35 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
             <Shield size={15} className="navbar-profile-item-icon" />
             Sicurezza e password
           </button>
+
+          <div className="navbar-profile-divider" />
+          <p className="navbar-profile-section-label">Aspetto</p>
+
+          {/* Theme toggle row — doesn't close dropdown so user sees the switch */}
+          <button onClick={toggleTheme} className="navbar-profile-item navbar-profile-theme-row">
+            {theme === 'dark'
+              ? <Sun  size={15} className="navbar-profile-item-icon" />
+              : <Moon size={15} className="navbar-profile-item-icon" />
+            }
+            <span className="navbar-profile-theme-label">
+              {theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
+            </span>
+            <span className={`navbar-theme-switch${theme === 'dark' ? ' is-on' : ''}`} />
+          </button>
+
           <div className="navbar-profile-divider" />
           <p className="navbar-profile-section-label">Altro</p>
           <button onClick={() => go('/privacy')} className="navbar-profile-item">
             <FileText size={15} className="navbar-profile-item-icon" />
             Privacy Policy
           </button>
+
           <div className="navbar-profile-divider" />
           <button onClick={handleLogout} className="navbar-profile-item navbar-profile-logout">
             <LogOut size={15} />
             Esci
           </button>
+
         </div>
       </div>
     </>
@@ -118,14 +140,12 @@ export default function Navbar() {
 
   const isGestioneActive = GESTIONE_PATHS.includes(location.pathname);
 
-  // Scroll shadow
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close Gestione dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -136,10 +156,7 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Close tray on route change
-  useEffect(() => { setTrayOpen(false); }, [location.pathname]);
-
-  // Close dropdown on route change
+  useEffect(() => { setTrayOpen(false); },    [location.pathname]);
   useEffect(() => { setDropdownOpen(false); }, [location.pathname]);
 
   return (
@@ -203,7 +220,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* User menu */}
+          {/* User menu (no more theme button here) */}
           <div className="navbar-right">
             <button
               onClick={() => setProfileOpen((v) => !v)}
@@ -223,7 +240,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile bottom bar */}
+      {/* Mobile bottom bar — 5 tabs: 4 primary + Gestione */}
       <div className="navbar-mobile-bar">
         {PRIMARY.map(({ path, label, icon: Icon }) => (
           <Link
@@ -231,7 +248,7 @@ export default function Navbar() {
             to={path}
             className={`navbar-mobile-tab${location.pathname === path ? ' is-active' : ''}`}
           >
-            <Icon size={21} />
+            <Icon size={20} />
             <span className="navbar-mobile-tab-label">{label}</span>
           </Link>
         ))}
@@ -240,7 +257,7 @@ export default function Navbar() {
           className={`navbar-mobile-tab${isGestioneActive ? ' is-active' : ''}`}
         >
           <span className="navbar-badge-wrap">
-            <Settings2 size={21} />
+            <Settings2 size={20} />
             {(recurringDueCount + plannedDueCount) > 0 && (
               <span className="navbar-badge">
                 {(recurringDueCount + plannedDueCount) > 99 ? '99+' : recurringDueCount + plannedDueCount}

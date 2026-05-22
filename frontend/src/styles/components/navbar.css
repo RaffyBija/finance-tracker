@@ -394,7 +394,7 @@
 }
 
 .navbar-mobile-tab-label {
-  font-size: 0.6875rem;
+  font-size: 0.5625rem;
   font-weight: 500;
   line-height: 1;
   text-align: center;
@@ -541,3 +541,110 @@
     padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom, 0));
   }
 }
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark .navbar {
+  background: #0f172a;
+  border-bottom-color: #1e293b;
+}
+.dark .navbar.is-scrolled {
+  box-shadow: 0 1px 16px rgba(0,0,0,0.4);
+}
+.dark .navbar-wordmark { color: #f1f5f9; }
+.dark .navbar-link { color: #94a3b8; }
+.dark .navbar-link:hover:not(.is-active) { background: #1e293b; color: #f1f5f9; }
+.dark .navbar-link.is-active { background: #0d2d2a; color: #14b8a6; }
+.dark .navbar-dropdown-trigger { color: #94a3b8; }
+.dark .navbar-dropdown-trigger:hover:not(.is-active-group) { background: #1e293b; color: #f1f5f9; }
+.dark .navbar-dropdown-trigger.is-active-group { background: #0d2d2a; color: #14b8a6; }
+.dark .navbar-dropdown-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
+}
+.dark .navbar-dropdown-section { color: #475569; }
+.dark .navbar-dropdown-item { color: #cbd5e1; }
+.dark .navbar-dropdown-item:hover:not(.is-active) { background: #334155; color: #f1f5f9; }
+.dark .navbar-dropdown-item.is-active { background: #0d2d2a; color: #14b8a6; }
+.dark .navbar-dropdown-item-icon { color: #475569; }
+.dark .navbar-dropdown-item:hover .navbar-dropdown-item-icon,
+.dark .navbar-dropdown-item.is-active .navbar-dropdown-item-icon { color: #14b8a6; }
+.dark .navbar-user-trigger:hover { background: #1e293b; }
+.dark .navbar-user-name { color: #f1f5f9; }
+.dark .navbar-user-chevron { color: #475569; }
+.dark .navbar-profile-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+}
+.dark .navbar-profile-header { background: #0f172a; border-bottom-color: #334155; }
+.dark .navbar-profile-name { color: #f1f5f9; }
+.dark .navbar-profile-email { color: #64748b; }
+.dark .navbar-profile-section-label { color: #475569; }
+.dark .navbar-profile-item { color: #cbd5e1; }
+.dark .navbar-profile-item:hover { background: #334155; }
+.dark .navbar-profile-item-icon { color: #475569; }
+.dark .navbar-profile-divider { background: #334155; }
+.dark .navbar-profile-logout { color: #f87171; }
+.dark .navbar-profile-logout:hover { background: #450a0a; }
+.dark .navbar-mobile-bar { background: #0f172a; border-top-color: #1e293b; }
+.dark .navbar-mobile-tab { color: #64748b; }
+.dark .navbar-mobile-tab:hover { color: #14b8a6; }
+.dark .navbar-mobile-tab.is-active { color: #14b8a6; }
+.dark .navbar-badge { border-color: #0f172a; }
+.dark .navbar-tray-backdrop { background: rgba(0,0,0,0.6); }
+.dark .navbar-tray { background: #1e293b; box-shadow: 0 -8px 32px rgba(0,0,0,0.5); }
+.dark .navbar-tray-handle { background: #334155; }
+.dark .navbar-tray-title { color: #475569; }
+.dark .navbar-tray-item { color: #f1f5f9; }
+.dark .navbar-tray-item:hover:not(.is-active) { background: #334155; }
+.dark .navbar-tray-item.is-active { background: #0d2d2a; color: #14b8a6; }
+.dark .navbar-tray-item-icon { color: #475569; }
+.dark .navbar-tray-item.is-active .navbar-tray-item-icon { color: #14b8a6; }
+
+/* ── Theme toggle row in profile dropdown ── */
+.navbar-profile-theme-row {
+  justify-content: flex-start;
+}
+
+.navbar-profile-theme-label {
+  flex: 1;
+}
+
+/* Toggle switch pill */
+.navbar-theme-switch {
+  width: 30px;
+  height: 17px;
+  border-radius: 99px;
+  background: #e7e5e4;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.navbar-theme-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  transition: left 0.2s ease;
+}
+
+.navbar-theme-switch.is-on {
+  background: #0d9488;
+}
+
+.navbar-theme-switch.is-on::after {
+  left: 15px;
+}
+
+.dark .navbar-theme-switch            { background: #475569; }
+.dark .navbar-theme-switch.is-on      { background: #0d9488; }
+.dark .navbar-theme-switch::after     { box-shadow: 0 1px 3px rgba(0,0,0,0.5); }

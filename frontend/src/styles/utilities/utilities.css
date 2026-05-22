@@ -469,3 +469,13 @@
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
 }
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark .page-header-title { color: #f1f5f9; }
+.dark .page-header-subtitle { color: #64748b; }
+.dark .list-result-count { color: #475569; }
+
+.dark .skeleton { background-color: #334155; }
+.dark .divider { border-top-color: #334155; }
+.dark .divider-vertical { border-left-color: #334155; }

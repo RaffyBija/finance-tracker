@@ -1355,3 +1355,85 @@
     grid-template-columns: 3fr 2fr;
   }
 }
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+/* Base card */
+.dark .card { background-color: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.dark .card-header { background-color: #1e293b; border-bottom-color: #334155; }
+.dark .card-footer { background-color: #1e293b; border-top-color: #334155; }
+.dark .card-divided { background-color: #1e293b; }
+.dark .card-divided > :not([hidden]) ~ :not([hidden]) { border-top-color: #334155; }
+.dark .card-primary { background-color: #0d2d2a; border-color: #0d9488; }
+.dark .card-warning { background-color: #451a03; border-color: #d97706; }
+
+/* Transaction cards */
+.dark .transaction-card:hover { background-color: #334155; }
+
+/* Budget card */
+.dark .budget-card-progress-bar { background-color: #334155; }
+.dark .budget-card-stats { border-top-color: #334155; }
+
+/* Category card */
+.dark .list-card-item:hover { background-color: #334155; }
+.dark .list-card-item-due { background: #1a1a08; }
+.dark .list-card-item-due:hover { background: #292908; }
+
+/* KPI strip */
+.dark .kpi-strip { background: #1e293b; }
+.dark .kpi-item { border-right-color: #334155; border-bottom-color: #334155; }
+.dark .kpi-item-primary { background-color: #0d2d2a; }
+.dark .kpi-label { color: #64748b; }
+
+/* Projected filter */
+.dark .projected-filter { background-color: #1e293b; border-color: #334155; }
+
+/* Dashboard balance hint */
+.dark .dashboard-balance-hint { color: #64748b; }
+
+/* Page header */
+.dark .page-header-title { color: #f1f5f9; }
+.dark .page-header-subtitle { color: #64748b; }
+
+/* Forecast card */
+.dark .forecast-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.dark .forecast-card-title { color: #94a3b8; }
+.dark .forecast-card-subtitle { color: #475569; }
+.dark .forecast-card-days { color: #475569; }
+.dark .forecast-progress-bar { background: #334155; }
+.dark .forecast-projected { border-top-color: #334155; }
+.dark .forecast-projected-label { color: #64748b; }
+.dark .forecast-projected-value { color: #f1f5f9; }
+.dark .forecast-breakdown { border-top-color: #334155; }
+.dark .forecast-breakdown-label { color: #94a3b8; }
+.dark .forecast-breakdown-none { color: #475569; }
+.dark .forecast-habitual-cat { color: #94a3b8; background: #334155; border-color: #475569; }
+
+/* Subscription card */
+.dark .subscription-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.dark .subscription-totals { border-top-color: #334155; border-bottom-color: #334155; }
+.dark .subscription-item { border-bottom-color: #334155; }
+.dark .subscription-item-name { color: #cbd5e1; }
+.dark .subscription-item-monthly { color: #f1f5f9; }
+
+/* List card dividers — removed in dark, hover bg provides enough separation */
+.dark .list-card { background-color: #1e293b; }
+.dark .list-card > :not([hidden]) ~ :not([hidden]) { border-top-color: #334155; }
+
+/* Projection card */
+.dark .projection-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.dark .projection-title { color: #f1f5f9; }
+.dark .projection-pill { border-color: #475569; color: #94a3b8; background: transparent; }
+.dark .projection-pill:hover { border-color: #0d9488; color: #0d9488; }
+.dark .projection-custom-toggle { color: #64748b; }
+.dark .projection-custom-toggle:hover { color: #0d9488; }
+.dark .projection-custom-toggle.is-open { color: #0d9488; }
+.dark .projection-custom-panel { background: #0f172a; border-color: #334155; }
+.dark .projection-flow { background: #0f172a; }
+.dark .projection-flow-node-label { color: #64748b; }
+.dark .projection-flow-node-value { color: #f1f5f9; }
+.dark .projection-flow-arrow { color: #475569; }
+.dark .projection-meta { border-top-color: #334155; }
+.dark .projection-meta-item { color: #64748b; }

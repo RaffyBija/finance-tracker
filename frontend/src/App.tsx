@@ -21,6 +21,7 @@ import { ToastProvider } from "./contexts/ToastContext";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
+import CalendarPage from "./pages/CalendarPage";
 
 inject();
 
@@ -123,6 +124,17 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <PlannedTransactions />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CalendarPage />
                   </Layout>
                 </ProtectedRoute>
               }

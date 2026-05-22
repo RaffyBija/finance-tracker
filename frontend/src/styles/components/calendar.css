@@ -1,0 +1,435 @@
+/* ============================================
+   CALENDAR — Cash Flow Calendar
+   ============================================ */
+
+/* ─── Layout ──────────────────────────────── */
+
+.cal-wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 1100px) {
+  .cal-wrap {
+    grid-template-columns: 1fr 360px;
+    align-items: start;
+  }
+}
+
+/* ─── Navigation ──────────────────────────── */
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+
+.cal-nav-month {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.cal-nav-btn {
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+}
+
+/* ─── Legend ──────────────────────────────── */
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cal-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-dot-income   { background: #10b981; }
+.cal-dot-expense  { background: #ef4444; }
+.cal-dot-planned  { background: #f59e0b; }
+.cal-dot-recurring{ background: #8b5cf6; }
+
+/* ─── Grid wrapper ────────────────────────── */
+
+.cal-grid-wrap {
+  background: #fff;
+  border-radius: 0.875rem;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: opacity 0.15s;
+}
+
+.cal-grid-wrap.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ─── Weekday headers ─────────────────────── */
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cal-weekday {
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Day grid ────────────────────────────── */
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* ─── Day cell ────────────────────────────── */
+
+.cal-cell {
+  min-height: 72px;
+  padding: 5px 3px 4px;
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.12s;
+  position: relative;
+  text-align: center;
+}
+
+.cal-cell:nth-child(7n) { border-right: none; }
+
+.cal-cell:hover {
+  background: #f8fafc;
+}
+
+.cal-cell.cal-cell-empty {
+  background: #fafafa;
+  cursor: default;
+  pointer-events: none;
+}
+
+.cal-cell.has-data {
+  background: #fafffe;
+}
+
+.cal-cell.is-selected {
+  background: #f0fdfa;
+  outline: 2px solid #0d9488;
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* ─── Day number ──────────────────────────── */
+
+.cal-cell-num {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-cell.is-today .cal-cell-num {
+  background: #0d9488;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ─── Income/expense bars ─────────────────── */
+
+.cal-cell-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 28px;
+}
+
+.cal-bar {
+  width: 7px;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+}
+
+.cal-bar-income  { background: #10b981; }
+.cal-bar-expense { background: #ef4444; }
+
+/* ─── Net amount label ────────────────────── */
+
+.cal-cell-net {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.cal-cell-net.pos { color: #059669; }
+.cal-cell-net.neg { color: #dc2626; }
+
+/* Hide bars/net on very small screens to avoid overflow */
+@media (max-width: 400px) {
+  .cal-cell { min-height: 52px; }
+  .cal-cell-bars { display: none; }
+  .cal-cell-net  { display: none; }
+  .cal-cell.has-data::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #0d9488;
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* ─── Detail panel ────────────────────────── */
+
+.cal-detail {
+  display: none;
+}
+
+.cal-detail.is-visible {
+  display: block;
+}
+
+@media (min-width: 1100px) {
+  .cal-detail {
+    display: block;
+    position: sticky;
+    top: 80px;
+  }
+}
+
+/* ─── Detail empty state ──────────────────── */
+
+.cal-detail-empty {
+  background: #fff;
+  border-radius: 0.875rem;
+  border: 1px solid #e2e8f0;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cal-detail-empty-icon {
+  color: #cbd5e1;
+}
+
+/* ─── Detail inner ────────────────────────── */
+
+.cal-detail-inner {
+  background: #fff;
+  border-radius: 0.875rem;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.cal-detail-header {
+  padding: 1rem 1.25rem 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.cal-detail-date {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.625rem;
+  text-transform: capitalize;
+}
+
+.cal-detail-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cal-kpi {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  letter-spacing: -0.01em;
+}
+
+.cal-kpi-income  { background: #d1fae5; color: #065f46; }
+.cal-kpi-expense { background: #fee2e2; color: #991b1b; }
+.cal-kpi-net     { background: #e2e8f0; color: #334155; }
+.cal-kpi-net.pos { background: #d1fae5; color: #065f46; }
+.cal-kpi-net.neg { background: #fee2e2; color: #991b1b; }
+
+/* ─── Events list ─────────────────────────── */
+
+.cal-events-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Single event row ────────────────────── */
+
+.cal-event {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.1s;
+}
+
+.cal-event:last-child { border-bottom: none; }
+
+.cal-event:hover { background: #f8fafc; }
+
+/* Colored left stripe */
+.cal-event-stripe {
+  width: 3px;
+  height: 36px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.cal-stripe-actual    { background: #0ea5e9; }
+.cal-stripe-planned   { background: #f59e0b; }
+.cal-stripe-recurring { background: #8b5cf6; }
+
+.cal-event-body {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-event-icon {
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.cal-event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cal-event-desc {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-event-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.cal-event-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.cal-badge-actual    { background: #e0f2fe; color: #0369a1; }
+.cal-badge-planned   { background: #fef3c7; color: #92400e; }
+.cal-badge-recurring { background: #ede9fe; color: #5b21b6; }
+
+.cal-event-cat {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.cal-event-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.cal-event-amount.pos { color: #059669; }
+.cal-event-amount.neg { color: #dc2626; }
+
+/* ─── Dark mode ───────────────────────────── */
+
+.dark .cal-nav-month            { color: #f1f5f9; }
+.dark .cal-legend               { color: #94a3b8; }
+
+.dark .cal-grid-wrap            { background: #1e293b; border-color: #334155; }
+.dark .cal-weekdays             { background: #0f172a; border-color: #334155; }
+.dark .cal-weekday              { color: #64748b; }
+
+.dark .cal-cell                 { background: #1e293b; border-color: #334155; }
+.dark .cal-cell:hover           { background: #334155; }
+.dark .cal-cell.cal-cell-empty  { background: #0f172a; }
+.dark .cal-cell.has-data        { background: #1e3a38; }
+.dark .cal-cell.is-selected     { background: #0d2d2a; outline-color: #0d9488; }
+.dark .cal-cell-num             { color: #94a3b8; }
+.dark .cal-cell.is-today .cal-cell-num { background: #0d9488; color: #fff; }
+
+.dark .cal-detail-empty         { background: #1e293b; border-color: #334155; color: #64748b; }
+.dark .cal-detail-inner         { background: #1e293b; border-color: #334155; }
+.dark .cal-detail-header        { background: #0f172a; border-color: #334155; }
+.dark .cal-detail-date          { color: #f1f5f9; }
+
+.dark .cal-kpi                  { background: #334155; color: #cbd5e1; }
+.dark .cal-kpi-income           { background: #064e3b; color: #6ee7b7; }
+.dark .cal-kpi-expense          { background: #450a0a; color: #fca5a5; }
+.dark .cal-kpi-net.pos          { background: #064e3b; color: #6ee7b7; }
+.dark .cal-kpi-net.neg          { background: #450a0a; color: #fca5a5; }
+
+.dark .cal-event                { border-color: #1e293b; }
+.dark .cal-event:hover          { background: #334155; }
+.dark .cal-event-desc           { color: #e2e8f0; }
+.dark .cal-event-cat            { color: #64748b; }
+
+.dark .cal-badge-actual         { background: #0c2a3d; color: #7dd3fc; }
+.dark .cal-badge-planned        { background: #451a03; color: #fcd34d; }
+.dark .cal-badge-recurring      { background: #2e1065; color: #c4b5fd; }

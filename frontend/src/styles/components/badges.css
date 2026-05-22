@@ -339,3 +339,50 @@
     @apply animate-pulse-subtle;
   }
 }
+
+/* ============================================
+   DARK MODE OVERRIDES
+   @apply bakes in light-mode values, so these
+   must be explicit CSS rules outside @layer.
+   ============================================ */
+.dark .badge-primary        { background-color: #0d2d2a; color: #14b8a6; }
+.dark .badge-success        { background-color: #064e3b; color: #34d399; }
+.dark .badge-danger         { background-color: #450a0a; color: #f87171; }
+.dark .badge-warning        { background-color: #451a03; color: #fbbf24; }
+.dark .badge-info           { background-color: #0c2940; color: #38bdf8; }
+.dark .badge-neutral        { background-color: #334155; color: #cbd5e1; }
+
+.dark .badge-income         { background-color: #064e3b; color: #34d399; }
+.dark .badge-expense        { background-color: #450a0a; color: #f87171; }
+
+.dark .badge-status-active     { background-color: #064e3b; color: #34d399; }
+.dark .badge-status-inactive   { background-color: #334155; color: #94a3b8; }
+.dark .badge-status-pending    { background-color: #451a03; color: #fbbf24; }
+.dark .badge-status-completed  { background-color: #0d2d2a; color: #14b8a6; }
+
+.dark .badge-date-today    { background-color: #450a0a; color: #f87171; }
+.dark .badge-date-tomorrow { background-color: #451a03; color: #fbbf24; }
+.dark .badge-date-upcoming { background-color: #0c2940; color: #38bdf8; }
+.dark .badge-date-past     { background-color: #1e293b; color: #64748b; }
+
+.dark .badge-budget-safe     { background-color: #064e3b; color: #34d399; }
+.dark .badge-budget-warning  { background-color: #451a03; color: #fbbf24; }
+.dark .badge-budget-danger   { background-color: #450a0a; color: #f87171; }
+
+.dark .badge-frequency-weekly  { background-color: #0c2940; color: #38bdf8; }
+.dark .badge-frequency-monthly { background-color: #0d2d2a; color: #14b8a6; }
+.dark .badge-frequency-yearly  { background-color: #451a03; color: #fbbf24; }
+
+.dark .badge-paid    { background-color: #064e3b; color: #34d399; }
+.dark .badge-unpaid  { background-color: #451a03; color: #fbbf24; }
+.dark .badge-overdue { background-color: #450a0a; color: #f87171; }
+
+.dark .badge-priority-high   { background-color: #450a0a; color: #f87171; }
+.dark .badge-priority-medium { background-color: #451a03; color: #fbbf24; }
+.dark .badge-priority-low    { background-color: #0c2940; color: #38bdf8; }
+
+.dark .badge-outline-primary { border-color: #0d9488; color: #14b8a6; }
+.dark .badge-outline-success { border-color: #10b981; color: #34d399; }
+.dark .badge-outline-danger  { border-color: #ef4444; color: #f87171; }
+.dark .badge-outline-warning { border-color: #f59e0b; color: #fbbf24; }
+.dark .badge-outline-neutral { border-color: #475569; color: #94a3b8; }

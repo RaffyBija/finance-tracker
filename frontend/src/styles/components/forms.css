@@ -379,3 +379,42 @@
     75% { transform: translateX(5px); }
   }
 }
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark .form-input {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+.dark .form-input::placeholder { color: #475569; }
+.dark .form-input:focus { border-color: #0d9488; background-color: #1e293b; }
+.dark .form-input:disabled { background-color: #1e293b; color: #475569; }
+
+.dark .form-select {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+.dark .form-select:focus { border-color: #0d9488; background-color: #1e293b; }
+
+.dark .form-textarea {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+.dark .form-textarea:focus { border-color: #0d9488; background-color: #1e293b; }
+
+.dark .form-label { color: #94a3b8; }
+.dark .form-help { color: #475569; }
+
+.dark .form-fieldset { border-color: #334155; }
+.dark .form-legend { color: #94a3b8; }
+
+.dark .form-search {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+.dark .form-search:focus { border-color: #0d9488; }
