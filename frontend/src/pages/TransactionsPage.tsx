@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
@@ -27,6 +28,7 @@ export default function TransactionsPage() {
   // ── Modal ──
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
 
@@ -82,13 +84,14 @@ export default function TransactionsPage() {
     setPage((p) => p + 1);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questa transazione?')) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await deleteTransactionMutation.mutateAsync(id);
+      await deleteTransactionMutation.mutateAsync(deletingId);
       setPage(0);
       setPrevPages([]);
       toast.success('Transazione eliminata');
+      setDeletingId(null);
     } catch {
       toast.error("Errore nell'eliminazione");
     }
@@ -195,9 +198,8 @@ export default function TransactionsPage() {
                     <Pencil className="icon-sm" />
                   </button>
                   <button
-                    onClick={() => handleDelete(transaction.id)}
+                    onClick={() => setDeletingId(transaction.id)}
                     className="btn-icon-danger"
-                    disabled={deleteTransactionMutation.isPending}
                   >
                     <Trash2 className="icon-sm" />
                   </button>
@@ -244,6 +246,16 @@ export default function TransactionsPage() {
         editingTransactionData={editingTransaction}
         onClose={handleCloseModal}
         sentFeed={() => {}}
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingId}
+        title="Elimina transazione"
+        message="Sei sicuro di voler eliminare questa transazione? L'operazione non può essere annullata."
+        confirmLabel="Elimina"
+        isPending={deleteTransactionMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingId(null)}
       />
 
     </div>

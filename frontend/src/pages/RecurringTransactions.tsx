@@ -7,7 +7,6 @@ import {
   useExecuteRecurringNow,
 } from "../hooks/useRecurringTransactions";
 import { useFormModal } from "../hooks/useFormModal";
-import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { usePending } from "../contexts/PendingContext";
 import PageHeader from "../components/shared/PageHeader";
 import {
@@ -18,6 +17,7 @@ import RecurringList from "../components/recurring/RecurringList";
 import RecurringDueSection from "../components/recurring/RecurringDueSection";
 import RecurringExecuteModal from "../components/recurring/RecurringExecuteModal";
 import RecurringFormModal from "../components/recurring/RecurringFormModal";
+import ConfirmModal from "../components/shared/ConfirmModal";
 import type { RecurringTransaction, RecurringDueItem } from "../types";
 import { useToast } from "../contexts/ToastContext";
 
@@ -30,20 +30,21 @@ export const RecurringTransactions = () => {
   const executeNowMutation = useExecuteRecurringNow();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<RecurringTransaction>();
-  const { confirmDelete } = useDeleteConfirm();
   const toast = useToast();
 
   const [executingItem, setExecutingItem] = useState<RecurringDueItem | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const dueItems = recurringDueData
     ? [...recurringDueData.dueToday, ...recurringDueData.overdue]
     : [];
 
-  const handleDelete = async (id: string) => {
-    if (!confirmDelete("Sei sicuro di voler eliminare questa spesa ricorrente?")) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(deletingId);
       toast.success("Spesa ricorrente eliminata");
+      setDeletingId(null);
     } catch {
       toast.error("Errore nell'eliminazione");
     }
@@ -92,7 +93,7 @@ export const RecurringTransactions = () => {
             recurring={recurring}
             dueItems={dueItems}
             onEdit={openEditModal}
-            onDelete={handleDelete}
+            onDelete={setDeletingId}
             onToggle={handleToggle}
             onRequestExecute={setExecutingItem}
             onOpenModal={openModal}
@@ -113,6 +114,16 @@ export const RecurringTransactions = () => {
         isPending={executeMutation.isPending || executeNowMutation.isPending}
         onConfirm={handleConfirmExecute}
         onClose={() => setExecutingItem(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingId}
+        title="Elimina ricorrente"
+        message="Sei sicuro di voler eliminare questa spesa ricorrente? L'operazione non può essere annullata."
+        confirmLabel="Elimina"
+        isPending={deleteMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingId(null)}
       />
     </div>
   );

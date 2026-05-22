@@ -5,7 +5,6 @@ import {
   useMarkAsPaid,
 } from "../hooks/usePlannedTransactions";
 import { useFormModal } from "../hooks/useFormModal";
-import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import PageHeader from "../components/shared/PageHeader";
 import {
   SkeletonPageHeader,
@@ -15,6 +14,7 @@ import PlannedFilters from "../components/planned/PlannedFilters";
 import PlannedList from "../components/planned/PlannedList";
 import PlannedFormModal from "../components/planned/PlannedFormModal";
 import PlannedMarkAsPaidModal from "../components/planned/PlannedMarkAsPaidModal";
+import ConfirmModal from "../components/shared/ConfirmModal";
 import type { PlannedTransaction } from "../types";
 import { useToast } from "../contexts/ToastContext";
 
@@ -25,16 +25,17 @@ export const PlannedTransactions = () => {
   const markAsPaidMutation = useMarkAsPaid();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<PlannedTransaction>();
-  const { confirmDelete } = useDeleteConfirm();
   const [markingPaidItem, setMarkingPaidItem] = useState<PlannedTransaction | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
 
-  const handleDelete = async (id: string) => {
-    if (!confirmDelete("Sei sicuro di voler eliminare questa spesa pianificata?")) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(deletingId);
       toast.success("Spesa pianificata eliminata");
+      setDeletingId(null);
     } catch {
       toast.error("Errore nell'eliminazione");
     }
@@ -72,7 +73,7 @@ export const PlannedTransactions = () => {
           <PlannedList
             planned={planned}
             onEdit={openEditModal}
-            onDelete={handleDelete}
+            onDelete={setDeletingId}
             onMarkAsPaid={setMarkingPaidItem}
             onOpenModal={openModal}
           />
@@ -92,6 +93,16 @@ export const PlannedTransactions = () => {
         isPending={markAsPaidMutation.isPending}
         onConfirm={handleConfirmMarkAsPaid}
         onClose={() => setMarkingPaidItem(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingId}
+        title="Elimina pianificata"
+        message="Sei sicuro di voler eliminare questa spesa pianificata? L'operazione non può essere annullata."
+        confirmLabel="Elimina"
+        isPending={deleteMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingId(null)}
       />
     </div>
   );

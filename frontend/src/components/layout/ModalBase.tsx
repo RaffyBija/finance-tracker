@@ -1,5 +1,6 @@
 import "../../styles/Modal.css";
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ export default function BaseModal({
 }: BaseModalProps) {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-container"
@@ -38,6 +39,7 @@ export default function BaseModal({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

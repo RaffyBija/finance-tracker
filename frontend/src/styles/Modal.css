@@ -496,45 +496,34 @@
 }
 
 /* ============================================================
-   MOBILE — Bottom Sheet
+   MOBILE — Full-page modal (copre navbar top e bottom)
    ============================================================ */
 @media (max-width: 540px) {
 
-  /* L'overlay allinea il modal in fondo */
+  /* Overlay a tutto schermo, nessun padding */
   .modal-overlay {
-    align-items: flex-end;
-    justify-content: center;
+    align-items: stretch;
     padding: 0;
   }
 
-  /* Bottom sheet: si attacca al fondo, arrotondato solo in alto */
+  /* Il container occupa tutto il viewport */
   .modal-container {
     max-width: 100%;
     width: 100%;
-    max-height: 92vh;
-    border-radius: 20px 20px 0 0;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
     animation: modal-slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    /* Handle drag visivo */
-    padding-top: 0;
   }
 
-  /* Indicatore drag (pill) in cima al sheet */
+  /* Nessun drag handle su full-page */
   .modal-header::before {
-    content: '';
-    display: block;
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
+    display: none;
   }
 
   .modal-header {
     position: relative;
-    padding: 1.5rem 1.25rem 1rem;
+    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.25rem 1rem;
   }
 
   .modal-title {
@@ -543,8 +532,6 @@
 
   .modal-content {
     padding: 1rem 1.25rem 1.5rem;
-    /* Extra padding per la home bar di iOS */
-    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
   }
 
   .modal-form input,
@@ -556,6 +543,7 @@
     border-radius: 10px;
   }
 
+  /* Bottoni sticky in fondo, con safe area per home indicator */
   .form-actions,
   .modal-buttons {
     flex-direction: column-reverse;
@@ -583,7 +571,7 @@
   .modal-footer {
     flex-direction: column-reverse;
     padding: 1rem 1.25rem;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
     gap: 0.5rem;
   }
 }
