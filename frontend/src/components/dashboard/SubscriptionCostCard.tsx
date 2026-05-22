@@ -44,7 +44,10 @@ export default function SubscriptionCostCard() {
       <div className="subscription-card-header">
         <div className="forecast-card-title-group">
           <RepeatIcon size={16} className="forecast-card-icon" />
-          <span className="forecast-card-title">Costo abbonamenti</span>
+          <div>
+            <span className="forecast-card-title">Costo abbonamenti</span>
+            <p className="forecast-card-subtitle">Spese ricorrenti attive normalizzate al mese</p>
+          </div>
         </div>
       </div>
 

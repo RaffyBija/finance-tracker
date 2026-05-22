@@ -137,12 +137,15 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     }
 
     // ── Proiezione ──
-    const paceRemainingIncome = dailyIncomeRate * daysRemaining;
+    // Income: solo impegni noti (ricorrenti + pianificate), non il pace giornaliero.
+    // Il pace income distorce la proiezione quando lo stipendio arriva a inizio mese
+    // come importo unico — il tasso giornaliero risulterebbe gonfiato e verrebbe
+    // proiettato in avanti in modo non realistico.
     const paceRemainingExpenses = dailyExpenseRate * daysRemaining;
 
     const projectedEndBalance =
       currentBalance +
-      paceRemainingIncome + knownRemainingIncome -
+      knownRemainingIncome -
       paceRemainingExpenses - knownRemainingExpenses;
 
     const result = {

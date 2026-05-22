@@ -42,6 +42,7 @@ export const analyticsCache = {
 
   // Una pianificata è cambiata (create/update/delete)
   onPlannedMutated: (uid: string) => {
+    cache.del(`forecast:${uid}`);
     cache.del(`planned-due:${uid}`);
     cache.keys().filter(k => k.startsWith(`projected-balance:${uid}:`)).forEach(k => cache.del(k));
   },

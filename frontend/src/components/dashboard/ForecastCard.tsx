@@ -31,7 +31,10 @@ export default function ForecastCard() {
       <div className="forecast-card-header">
         <div className="forecast-card-title-group">
           <Calendar size={16} className="forecast-card-icon" />
-          <span className="forecast-card-title">Previsione fine mese</span>
+          <div>
+            <span className="forecast-card-title">Previsione fine mese</span>
+            <p className="forecast-card-subtitle">Stima basata sul ritmo di spesa + impegni pianificati</p>
+          </div>
         </div>
         <span className="forecast-card-days">
           {daysRemaining > 0 ? `${daysRemaining} giorni rimanenti` : 'Ultimo giorno'}
