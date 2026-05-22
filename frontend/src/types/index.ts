@@ -235,6 +235,14 @@ export interface AlertPopUp{
 
 // Analytics
 
+export interface ForecastHabitualCategory {
+  categoryId?: string;
+  categoryName: string;
+  avgMonthly: number;
+  alreadySpent: number;
+  estimated: number;
+}
+
 export interface Forecast {
   daysElapsed: number;
   daysInMonth: number;
@@ -244,5 +252,10 @@ export interface Forecast {
   dailyPace: { income: number; expenses: number };
   knownRemaining: { income: number; expenses: number };
   historicalAvg: { income: number; expenses: number; monthsConsidered: number };
+  habitualRemaining: {
+    total: number;
+    hasData: boolean;
+    categories: ForecastHabitualCategory[];
+  };
   projectedEndBalance: number;
 }

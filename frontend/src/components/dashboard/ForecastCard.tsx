@@ -16,6 +16,7 @@ export default function ForecastCard() {
     currentMonthActual,
     knownRemaining,
     historicalAvg,
+    habitualRemaining,
     projectedEndBalance,
   } = forecast;
 
@@ -33,7 +34,7 @@ export default function ForecastCard() {
           <Calendar size={16} className="forecast-card-icon" />
           <div>
             <span className="forecast-card-title">Previsione fine mese</span>
-            <p className="forecast-card-subtitle">Stima basata sul ritmo di spesa + impegni pianificati</p>
+            <p className="forecast-card-subtitle">Stima basata su pattern per categoria + impegni pianificati</p>
           </div>
         </div>
         <span className="forecast-card-days">
@@ -91,6 +92,41 @@ export default function ForecastCard() {
             )}
           </div>
         </div>
+        {habitualRemaining.hasData && (
+          <>
+            <div className="forecast-breakdown-row">
+              <span className="forecast-breakdown-label">
+                Spese abituali stimate
+              </span>
+              <div className="forecast-breakdown-amounts">
+                {habitualRemaining.total > 0 ? (
+                  <span className="forecast-amount-expense">−€{fmt(habitualRemaining.total)}</span>
+                ) : (
+                  <span className="forecast-breakdown-none">nessuna</span>
+                )}
+              </div>
+            </div>
+            {habitualRemaining.categories.length > 0 && habitualRemaining.total > 0 && (
+              <div className="forecast-habitual-cats">
+                {habitualRemaining.categories.slice(0, 3).map((cat) => (
+                  <span key={cat.categoryName} className="forecast-habitual-cat">
+                    {cat.categoryName} −€{fmt(cat.estimated)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {!habitualRemaining.hasData && (
+          <div className="forecast-breakdown-row">
+            <span className="forecast-breakdown-label">Spese stimate (ritmo attuale)</span>
+            <div className="forecast-breakdown-amounts">
+              <span className="forecast-amount-expense">
+                −€{fmt(forecast.dailyPace.expenses * daysRemaining)}
+              </span>
+            </div>
+          </div>
+        )}
         {historicalAvg.monthsConsidered > 0 && (
           <div className="forecast-breakdown-row forecast-breakdown-hist">
             <span className="forecast-breakdown-label">

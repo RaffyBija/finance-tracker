@@ -1178,6 +1178,23 @@
   font-style: italic;
 }
 
+.forecast-habitual-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: -0.25rem;
+}
+
+.forecast-habitual-cat {
+  font-size: 0.6875rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  white-space: nowrap;
+}
+
 /* ============================================================
    SUBSCRIPTION COST CARD
    ============================================================ */

@@ -396,6 +396,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
           categoryId: r.categoryId,
           date: dueDate,
           userId,
+          fromRecurringId: r.id,
         },
         include: { category: true },
       });
@@ -442,6 +443,7 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
         categoryId: recurring.categoryId,
         date: today,
         userId,
+        fromRecurringId: recurringId,
       },
       include: { category: true },
     });
