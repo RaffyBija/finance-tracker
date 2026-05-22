@@ -1,11 +1,16 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreatePlannedTransactionDTO } from '../types';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // Ottieni pianificate scadute non pagate (data <= oggi)
 export const getPlannedDue = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId   = req.userId!;
+    const cacheKey = analyticsCache.keys.plannedDue(userId);
+    const cached   = analyticsCache.get<object[]>(cacheKey);
+    if (cached) return res.json(cached);
+
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
@@ -15,6 +20,7 @@ export const getPlannedDue = async (req: AuthRequest, res: Response) => {
       orderBy: { plannedDate: 'asc' },
     });
 
+    analyticsCache.set(cacheKey, planned);
     res.json(planned);
   } catch (error) {
     console.error('Get planned due error:', error);
@@ -124,6 +130,7 @@ export const createPlannedTransaction = async (req: AuthRequest, res: Response) 
       include: { category: true },
     });
 
+    analyticsCache.onPlannedMutated(userId);
     res.status(201).json(planned);
   } catch (error) {
     console.error('Create planned transaction error:', error);
@@ -175,6 +182,7 @@ export const updatePlannedTransaction = async (req: AuthRequest, res: Response) 
       include: { category: true },
     });
 
+    analyticsCache.onPlannedMutated(userId);
     res.json(planned);
   } catch (error) {
     console.error('Update planned transaction error:', error);
@@ -198,6 +206,7 @@ export const deletePlannedTransaction = async (req: AuthRequest, res: Response) 
 
     await prisma.plannedTransaction.delete({ where: { id } });
 
+    analyticsCache.onPlannedMutated(userId);
     res.json({ message: 'Transazione pianificata eliminata con successo' });
   } catch (error) {
     console.error('Delete planned transaction error:', error);
@@ -238,10 +247,11 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       include: { category: true },
     });
 
-    res.json({ 
-      planned: updated, 
+    analyticsCache.onPlannedPaid(userId);
+    res.json({
+      planned: updated,
       transaction,
-      message: 'Transazione creata e spesa pianificata marcata come pagata' 
+      message: 'Transazione creata e spesa pianificata marcata come pagata'
     });
   } catch (error) {
     console.error('Mark as paid error:', error);

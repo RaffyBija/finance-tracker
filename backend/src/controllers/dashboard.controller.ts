@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
 
@@ -111,6 +112,10 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   try {
     const userId      = req.userId!;
     const monthsCount = parseInt((req.query.months as string) || '6');
+    const cacheKey    = analyticsCache.keys.monthlyTrend(userId);
+
+    const cached = analyticsCache.get<object[]>(cacheKey);
+    if (cached) return res.json(cached);
 
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - monthsCount);
@@ -139,7 +144,9 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
       data.balance = data.income - data.expense;
     });
 
-    res.json(Array.from(monthlyData.values()));
+    const result = Array.from(monthlyData.values());
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
   } catch (error) {
     console.error('Get monthly trend error:', error);
     res.status(500).json({ error: 'Errore del server' });
@@ -160,7 +167,7 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
 //   Ritorna { occurrences, effectiveAmount } dove effectiveAmount tiene già conto
 //   dell'importo unitario × occorrenze.
 
-function countOccurrences(
+export function countOccurrences(
   rec: {
     frequency: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
     dayOfMonth: number | null;
@@ -257,6 +264,12 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { months, startDate, endDate } = req.query;
 
+    // Chiave cache composita sui parametri della richiesta
+    const paramSuffix = months ? `m${months}` : `${startDate}_${endDate}`;
+    const cacheKey    = analyticsCache.keys.projectedBalance(userId, paramSuffix);
+    const cached      = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
     // ── Calcola il range temporale ──
     const now   = new Date();
     let rangeStart: Date;
@@ -345,14 +358,16 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       else                     projectedExpense += Number(p.amount);
     }
 
-    res.json({
+    const result = {
       currentBalance,
       projectedIncome,
       projectedExpense,
       projectedBalance: currentBalance + projectedIncome - projectedExpense,
-      recurringCount,   // occorrenze reali nel range
-      plannedCount,     // pianificate nel range
-    });
+      recurringCount,
+      plannedCount,
+    };
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
   } catch (error) {
     console.error('Get projected balance error:', error);
     res.status(500).json({ error: 'Errore del server' });

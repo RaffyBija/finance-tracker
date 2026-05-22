@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateRecurringTransactionDTO } from '../types';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // ── Due date helpers ─────────────────────────────────────────────────────────
 
@@ -223,6 +224,7 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
       include: { category: true },
     });
 
+    analyticsCache.onRecurringMutated(userId);
     res.status(201).json(recurring);
   } catch (error) {
     console.error('Create recurring transaction error:', error);
@@ -278,6 +280,7 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
       include: { category: true },
     });
 
+    analyticsCache.onRecurringMutated(userId);
     res.json(recurring);
   } catch (error) {
     console.error('Update recurring transaction error:', error);
@@ -302,6 +305,7 @@ export const deleteRecurringTransaction = async (req: AuthRequest, res: Response
 
     await prisma.recurringTransaction.delete({ where: { id: transactionId } });
 
+    analyticsCache.onRecurringMutated(userId);
     res.json({ message: 'Transazione ricorrente eliminata con successo' });
   } catch (error) {
     console.error('Delete recurring transaction error:', error);
@@ -312,7 +316,11 @@ export const deleteRecurringTransaction = async (req: AuthRequest, res: Response
 // Restituisce le ricorrenti da processare (scadute o in scadenza oggi)
 export const getDueRecurring = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId  = req.userId!;
+    const cacheKey = analyticsCache.keys.recurringDue(userId);
+    const cached   = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
     const today = new Date();
 
     const recurring = await prisma.recurringTransaction.findMany({
@@ -346,7 +354,9 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
 
     overdue.sort((a: any, b: any) => b.daysOverdue - a.daysOverdue);
 
-    res.json({ dueToday, overdue });
+    const result = { dueToday, overdue };
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
   } catch (error) {
     console.error('Get due recurring error:', error);
     res.status(500).json({ error: 'Errore del server' });
@@ -398,6 +408,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
       created.push({ ...transaction, amount: Number(transaction.amount) });
     }
 
+    analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ created, count: created.length });
   } catch (error) {
     console.error('Execute recurring error:', error);
@@ -440,6 +451,7 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
       data: { lastExecutedDate: dateToMark },
     });
 
+    analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ ...transaction, amount: Number(transaction.amount) });
   } catch (error) {
     console.error('Execute recurring now error:', error);
@@ -468,6 +480,7 @@ export const toggleRecurringTransaction = async (req: AuthRequest, res: Response
       include: { category: true },
     });
 
+    analyticsCache.onRecurringMutated(userId);
     res.json(updated);
   } catch (error) {
     console.error('Toggle recurring transaction error:', error);

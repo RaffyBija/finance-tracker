@@ -15,6 +15,8 @@ import {
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard';
+import ForecastCard from '../components/dashboard/ForecastCard';
+import SubscriptionCostCard from '../components/dashboard/SubscriptionCostCard';
 import {
   SkeletonChart,
   SkeletonPieChart,
@@ -187,6 +189,12 @@ export default function DashboardPage() {
 
       {/* ── Proiezione — gestisce il proprio skeleton internamente ── */}
       <ProjectedDetailCard />
+
+      {/* ── Previsione fine mese + Abbonamenti ── */}
+      <div className="dashboard-analytics-grid">
+        <ForecastCard />
+        <SubscriptionCostCard />
+      </div>
 
       {/* ── Grafici ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

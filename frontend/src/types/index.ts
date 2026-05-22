@@ -232,3 +232,17 @@ export interface AlertPopUp{
   messaggio: string;
   checked: boolean;
 }
+
+// Analytics
+
+export interface Forecast {
+  daysElapsed: number;
+  daysInMonth: number;
+  daysRemaining: number;
+  currentBalance: number;
+  currentMonthActual: { income: number; expenses: number };
+  dailyPace: { income: number; expenses: number };
+  knownRemaining: { income: number; expenses: number };
+  historicalAvg: { income: number; expenses: number; monthsConsidered: number };
+  projectedEndBalance: number;
+}

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateTransactionDTO } from '../types';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // Ottieni tutte le transazioni dell'utente
 export const getTransactions = async (req: AuthRequest, res: Response) => {
@@ -126,6 +127,7 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onTransactionMutated(userId);
     res.status(201).json(transaction);
   } catch (error) {
     console.error('Create transaction error:', error);
@@ -195,6 +197,7 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onTransactionMutated(userId);
     res.json(transaction);
   } catch (error) {
     console.error('Update transaction error:', error);
@@ -224,6 +227,7 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
       where: { id },
     });
 
+    analyticsCache.onTransactionMutated(userId);
     res.json({ message: 'Transazione eliminata con successo' });
   } catch (error) {
     console.error('Delete transaction error:', error);

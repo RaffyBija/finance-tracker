@@ -1008,6 +1008,313 @@
 }
 
 /* ============================================================
+   FORECAST CARD
+   ============================================================ */
+.forecast-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  padding: 1.25rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.forecast-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.forecast-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.forecast-card-icon {
+  color: #0d9488;
+  flex-shrink: 0;
+}
+
+.forecast-card-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.forecast-card-days {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.forecast-progress-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.forecast-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d9488, #14b8a6);
+  transition: width 0.4s ease;
+}
+
+.forecast-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.625rem;
+  color: #cbd5e1;
+  margin-top: -0.25rem;
+}
+
+.forecast-projected {
+  text-align: center;
+  padding: 0.75rem 0 0.25rem;
+  border-top: 1px solid #f8fafc;
+}
+
+.forecast-projected-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.forecast-projected-value {
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.forecast-projected-value.is-negative {
+  color: #dc2626;
+}
+
+.forecast-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+}
+
+.forecast-delta.is-positive {
+  background: oklch(0.96 0.04 155);
+  color: #065f46;
+}
+
+.forecast-delta.is-negative {
+  background: oklch(0.97 0.04 27);
+  color: #991b1b;
+}
+
+.forecast-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.75rem;
+}
+
+.forecast-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.forecast-breakdown-hist {
+  opacity: 0.6;
+}
+
+.forecast-breakdown-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  flex: 1;
+  min-width: 0;
+}
+
+.forecast-breakdown-amounts {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.forecast-amount-income {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.forecast-amount-expense {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.forecast-breakdown-none {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+/* ============================================================
+   SUBSCRIPTION COST CARD
+   ============================================================ */
+.subscription-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  padding: 1.25rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.subscription-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subscription-totals {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #f8fafc;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.subscription-total-main {}
+.subscription-total-secondary { text-align: right; }
+
+.subscription-total-label {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.125rem;
+}
+
+.subscription-total-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #dc2626;
+  letter-spacing: -0.3px;
+}
+
+.subscription-yearly {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.subscription-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.subscription-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.subscription-item:last-child {
+  border-bottom: none;
+}
+
+.subscription-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.subscription-item-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.subscription-item-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+.subscription-item-monthly {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.subscription-item-freq {
+  font-size: 0.625rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subscription-empty {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 0.5rem 0;
+  font-style: italic;
+}
+
+.subscription-more {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  padding-top: 0.25rem;
+}
+
+/* Grid per le due nuove card affiancate */
+.dashboard-analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================
    DASHBOARD CHARTS GRID
    ============================================================ */
 .dashboard-charts-grid {
