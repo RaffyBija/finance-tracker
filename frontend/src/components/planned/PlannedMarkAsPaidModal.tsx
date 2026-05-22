@@ -1,33 +1,29 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
-import type { RecurringDueItem } from '../../types';
+import type { PlannedTransaction } from '../../types';
 
-interface RecurringExecuteModalProps {
-  item: RecurringDueItem | null;
+interface PlannedMarkAsPaidModalProps {
+  item: PlannedTransaction | null;
   isPending: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
 
-export default function RecurringExecuteModal({
+export default function PlannedMarkAsPaidModal({
   item,
   isPending,
   onConfirm,
   onClose,
-}: RecurringExecuteModalProps) {
+}: PlannedMarkAsPaidModalProps) {
   if (!item) return null;
 
   const isIncome = item.type === 'INCOME';
 
-  const isManual = item.daysOverdue === -1;
-
   return (
-    <BaseModal isOpen={!!item} title="Registra transazione" onClose={onClose}>
+    <BaseModal isOpen={!!item} title="Segna come pagata" onClose={onClose}>
       <div className="modal-form">
         <p className="recurring-due-subtitle">
-          {isManual
-            ? 'Vuoi registrare anticipatamente questa transazione ricorrente? La data di oggi verrà usata.'
-            : 'Vuoi registrare questa transazione ricorrente?'}
+          Vuoi segnare questa transazione pianificata come pagata?
         </p>
 
         <div className="recurring-due-item" style={{ cursor: 'default', pointerEvents: 'none' }}>
@@ -45,12 +41,6 @@ export default function RecurringExecuteModal({
             <span className={isIncome ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
               {isIncome ? '+' : '−'}€{Number(item.amount).toFixed(2)}
             </span>
-            {isManual
-              ? <span className="recurring-due-badge recurring-due-badge-manual">anticipato</span>
-              : item.daysOverdue > 0
-              ? <span className="recurring-due-badge recurring-due-badge-overdue">⚠ {item.daysOverdue}g fa</span>
-              : <span className="recurring-due-badge recurring-due-badge-today">oggi</span>
-            }
           </div>
         </div>
 
@@ -64,7 +54,7 @@ export default function RecurringExecuteModal({
             disabled={isPending}
             className="btn btn-primary btn-md"
           >
-            {isPending ? 'Registrazione...' : 'Registra'}
+            {isPending ? 'Salvataggio...' : 'Conferma'}
           </button>
         </div>
       </div>

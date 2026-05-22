@@ -1,4 +1,4 @@
-import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar } from 'lucide-react';
+import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar, PlayCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { RecurringTransaction, Frequency, RecurringDueItem } from '../../types';
@@ -37,14 +37,22 @@ export default function RecurringListItem({
   };
 
   const handleCardClick = () => {
-    if (dueItem && onRequestExecute) onRequestExecute(dueItem);
+    if (!onRequestExecute) return;
+    if (dueItem) {
+      onRequestExecute(dueItem);
+    } else if (recurring.isActive) {
+      onRequestExecute({ ...recurring, nextDueDate: '', daysOverdue: -1 });
+    }
   };
 
+  const cardClass = dueItem
+    ? 'list-card-item list-card-item-due'
+    : recurring.isActive
+    ? 'list-card-item list-card-item-executable'
+    : 'list-card-item';
+
   return (
-    <div
-      className={`list-card-item${dueItem ? ' list-card-item-due' : ''}`}
-      onClick={handleCardClick}
-    >
+    <div className={cardClass} onClick={handleCardClick}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
           <div
@@ -68,9 +76,13 @@ export default function RecurringListItem({
               >
                 {recurring.isActive ? 'Attivo' : 'Inattivo'}
               </span>
-              {dueItem && (
+              {dueItem ? (
                 <span className={`recurring-due-indicator${dueItem.daysOverdue > 0 ? ' recurring-due-indicator-overdue' : ''}`}>
                   {dueItem.daysOverdue > 0 ? `⚠ ${dueItem.daysOverdue}g fa` : '⚡ da eseguire'}
+                </span>
+              ) : recurring.isActive && (
+                <span className="recurring-due-indicator recurring-due-indicator-manual">
+                  <PlayCircle className="icon-xs" /> registra ora
                 </span>
               )}
             </div>

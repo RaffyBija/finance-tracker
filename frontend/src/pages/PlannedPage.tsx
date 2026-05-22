@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   usePlannedTransactions,
   useDeletePlanned,
@@ -13,6 +14,7 @@ import {
 import PlannedFilters from "../components/planned/PlannedFilters";
 import PlannedList from "../components/planned/PlannedList";
 import PlannedFormModal from "../components/planned/PlannedFormModal";
+import PlannedMarkAsPaidModal from "../components/planned/PlannedMarkAsPaidModal";
 import type { PlannedTransaction } from "../types";
 import { useToast } from "../contexts/ToastContext";
 
@@ -24,6 +26,7 @@ export const PlannedTransactions = () => {
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<PlannedTransaction>();
   const { confirmDelete } = useDeleteConfirm();
+  const [markingPaidItem, setMarkingPaidItem] = useState<PlannedTransaction | null>(null);
 
   const toast = useToast();
 
@@ -37,11 +40,12 @@ export const PlannedTransactions = () => {
     }
   };
 
-  const handleMarkAsPaid = async (id: string) => {
-    if (!confirmDelete("Sei sicuro di voler segnare questa spesa come pagata?")) return;
+  const handleConfirmMarkAsPaid = async () => {
+    if (!markingPaidItem) return;
     try {
-      await markAsPaidMutation.mutateAsync(id);
+      await markAsPaidMutation.mutateAsync(markingPaidItem.id);
       toast.success("Segnata come pagata");
+      setMarkingPaidItem(null);
     } catch {
       toast.error("Errore nel salvataggio");
     }
@@ -69,7 +73,7 @@ export const PlannedTransactions = () => {
             planned={planned}
             onEdit={openEditModal}
             onDelete={handleDelete}
-            onMarkAsPaid={handleMarkAsPaid}
+            onMarkAsPaid={setMarkingPaidItem}
             onOpenModal={openModal}
           />
         </>
@@ -81,6 +85,13 @@ export const PlannedTransactions = () => {
         categories={categories}
         onClose={closeModal}
         onSuccess={() => {}}
+      />
+
+      <PlannedMarkAsPaidModal
+        item={markingPaidItem}
+        isPending={markAsPaidMutation.isPending}
+        onConfirm={handleConfirmMarkAsPaid}
+        onClose={() => setMarkingPaidItem(null)}
       />
     </div>
   );

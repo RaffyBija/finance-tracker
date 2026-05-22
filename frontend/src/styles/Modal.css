@@ -356,6 +356,11 @@
   color: #92400e;
 }
 
+.recurring-due-badge-manual {
+  background: oklch(0.93 0.03 250);
+  color: #1e40af;
+}
+
 @media (max-width: 540px) {
   .recurring-due-list {
     max-height: 240px;
@@ -401,6 +406,66 @@
   background: oklch(0.95 0.05 60);
   color: #92400e;
 }
+
+.recurring-due-indicator-manual {
+  background: oklch(0.93 0.03 250);
+  color: #1e40af;
+}
+
+/* ── Toast container ── */
+.toast-container {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+/* Su mobile/tablet: sopra la bottom nav */
+@media (max-width: 1023px) {
+  .toast-container {
+    right: 1rem;
+    left: 1rem;
+    bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  }
+}
+
+.toast-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 360px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 1023px) {
+  .toast-item {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.toast-item-success { background: oklch(0.97 0.04 150); border-color: oklch(0.87 0.08 155); color: #065f46; }
+.toast-item-error   { background: oklch(0.97 0.04 27);  border-color: oklch(0.87 0.08 27);  color: #991b1b; }
+.toast-item-warning { background: oklch(0.97 0.04 90);  border-color: oklch(0.87 0.08 90);  color: #92400e; }
+.toast-item-info    { background: oklch(0.97 0.02 220); border-color: oklch(0.87 0.05 220); color: #1e40af; }
+
+.toast-icon { font-weight: 700; font-size: 0.875rem; line-height: 1.25; flex-shrink: 0; }
+.toast-icon-success { color: #10b981; }
+.toast-icon-error   { color: #ef4444; }
+.toast-icon-warning { color: #f59e0b; }
+.toast-icon-info    { color: #0ea5e9; }
 
 /* ── Animazioni ── */
 @keyframes modal-overlay-in {
@@ -495,6 +560,12 @@
   .modal-buttons {
     flex-direction: column-reverse;
     gap: 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    margin: 0 -1.25rem -1.5rem;
+    padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #f1f5f9;
   }
 
   .form-actions .btn,

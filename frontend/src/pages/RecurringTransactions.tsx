@@ -4,6 +4,7 @@ import {
   useDeleteRecurring,
   useToggleRecurring,
   useExecuteRecurring,
+  useExecuteRecurringNow,
 } from "../hooks/useRecurringTransactions";
 import { useFormModal } from "../hooks/useFormModal";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
@@ -26,6 +27,7 @@ export const RecurringTransactions = () => {
   const deleteMutation = useDeleteRecurring();
   const toggleMutation = useToggleRecurring();
   const executeMutation = useExecuteRecurring();
+  const executeNowMutation = useExecuteRecurringNow();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<RecurringTransaction>();
   const { confirmDelete } = useDeleteConfirm();
@@ -59,7 +61,11 @@ export const RecurringTransactions = () => {
   const handleConfirmExecute = async () => {
     if (!executingItem) return;
     try {
-      await executeMutation.mutateAsync([executingItem.id]);
+      if (executingItem.daysOverdue === -1) {
+        await executeNowMutation.mutateAsync(executingItem.id);
+      } else {
+        await executeMutation.mutateAsync([executingItem.id]);
+      }
       toast.success("Transazione registrata con successo");
       setExecutingItem(null);
     } catch {
@@ -104,7 +110,7 @@ export const RecurringTransactions = () => {
 
       <RecurringExecuteModal
         item={executingItem}
-        isPending={executeMutation.isPending}
+        isPending={executeMutation.isPending || executeNowMutation.isPending}
         onConfirm={handleConfirmExecute}
         onClose={() => setExecutingItem(null)}
       />

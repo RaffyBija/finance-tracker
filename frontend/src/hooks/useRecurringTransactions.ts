@@ -37,17 +37,27 @@ export function useRecurringDue() {
   return { data: data ?? null, isOpen, dismiss };
 }
 
+const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  queryClient.invalidateQueries({ queryKey: ['recurring'] });
+  queryClient.invalidateQueries({ queryKey: ['recurring-due'] });
+  queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+};
+
 export function useExecuteRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (ids: string[]) => recurringApi.execute(ids),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['recurring-due'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-    },
+    onSuccess: () => recurringInvalidations(queryClient),
+  });
+}
+
+export function useExecuteRecurringNow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => recurringApi.executeNow(id),
+    onSuccess: () => recurringInvalidations(queryClient),
   });
 }
 

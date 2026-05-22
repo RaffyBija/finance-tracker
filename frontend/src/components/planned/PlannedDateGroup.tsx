@@ -11,7 +11,7 @@ interface PlannedDateGroupProps {
   badgeText: string;
   onEdit: (planned: PlannedTransaction) => void;
   onDelete: (id: string) => void;
-  onMarkAsPaid: (id: string) => void;
+  onMarkAsPaid: (planned: PlannedTransaction) => void;
 }
 
 /**

@@ -125,6 +125,17 @@
   transform: translateY(-1px);
 }
 
+.landing-btn-primary:active {
+  transform: scale(0.97) translateY(0);
+  box-shadow: 0 1px 6px rgba(13, 148, 136, 0.2);
+  transition-duration: 0.1s;
+}
+
+.landing-btn-ghost:active {
+  transform: scale(0.97);
+  transition-duration: 0.1s;
+}
+
 .landing-btn-primary-lg {
   padding: 15px 34px;
   font-size: 16px;
@@ -217,8 +228,8 @@
     0 20px 80px rgba(15, 23, 42, 0.12),
     0 40px 120px rgba(13, 148, 136, 0.06);
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transform: translateY(44px);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .landing-browser.is-visible {
@@ -283,6 +294,12 @@
   align-items: center;
   gap: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.landing-browser.is-visible .landing-mock-wordmark {
+  animation: landing-fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
 }
 
 .landing-mock-nav {
@@ -302,12 +319,21 @@
   font-weight: 500;
   color: rgba(255, 255, 255, 0.45);
   background: transparent;
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 .landing-mock-nav-item.is-active {
   background: rgba(13, 148, 136, 0.25);
   color: white;
 }
+
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(1) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.20s forwards; }
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(2) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.27s forwards; }
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(3) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.34s forwards; }
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(4) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.41s forwards; }
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(5) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.48s forwards; }
+.landing-browser.is-visible .landing-mock-nav-item:nth-child(6) { animation: landing-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards; }
 
 .landing-mock-main {
   padding: 24px;
@@ -319,6 +345,12 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.landing-browser.is-visible .landing-mock-header {
+  animation: landing-fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
 }
 
 .landing-mock-title {
@@ -352,7 +384,17 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  opacity: 0;
+  transform: translateY(10px);
 }
+
+.landing-browser.is-visible .landing-mock-stat {
+  animation: landing-fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.landing-browser.is-visible .landing-mock-stat:nth-child(1) { animation-delay: 0.30s; }
+.landing-browser.is-visible .landing-mock-stat:nth-child(2) { animation-delay: 0.40s; }
+.landing-browser.is-visible .landing-mock-stat:nth-child(3) { animation-delay: 0.50s; }
+.landing-browser.is-visible .landing-mock-stat:nth-child(4) { animation-delay: 0.60s; }
 
 .landing-mock-stat-label {
   font-size: 11px;
@@ -383,6 +425,15 @@
   border-radius: 10px;
   padding: 16px;
   border: 1px solid #f1f5f9;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.landing-browser.is-visible .landing-mock-chart:nth-child(1) {
+  animation: landing-fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+}
+.landing-browser.is-visible .landing-mock-chart:nth-child(2) {
+  animation: landing-fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards;
 }
 
 .landing-mock-chart-label {
@@ -418,10 +469,11 @@
   flex: 1;
   border-radius: 4px 4px 0 0;
   transform-origin: bottom;
+  transform: scaleY(0);
 }
 
-.landing-mock-bar.is-animated {
-  animation: landing-growBar 1s ease forwards;
+.landing-browser.is-visible .landing-mock-bar {
+  animation: landing-growBar 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .landing-mock-bar-income  { background: #10b981; }
@@ -465,6 +517,12 @@
   border-radius: 10px;
   border: 1px solid #f1f5f9;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.landing-browser.is-visible .landing-mock-tx-list {
+  animation: landing-fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.75s forwards;
 }
 
 .landing-mock-tx-header {
@@ -542,6 +600,14 @@
   color: #0d9488;
   margin-bottom: 14px;
   display: block;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0s;
+}
+
+.landing-features-header.is-visible .landing-features-eyebrow {
+  opacity: 1;
+  transform: none;
 }
 
 .landing-features-title {
@@ -551,6 +617,14 @@
   color: #0f172a;
   line-height: 1.15;
   margin-bottom: 16px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+}
+
+.landing-features-header.is-visible .landing-features-title {
+  opacity: 1;
+  transform: none;
 }
 
 .landing-features-sub {
@@ -558,6 +632,14 @@
   color: #475569;
   line-height: 1.7;
   margin: 0;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+.landing-features-header.is-visible .landing-features-sub {
+  opacity: 1;
+  transform: none;
 }
 
 .landing-features-grid {
@@ -574,7 +656,7 @@
   border-bottom: 1px solid #f1f5f9;
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .landing-feature-item.is-visible {
@@ -604,6 +686,12 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.landing-feature-item:hover .landing-feature-icon-box {
+  background: #ccfbf1;
+  transform: scale(1.1);
 }
 
 .landing-feature-content {
@@ -635,6 +723,14 @@
 .landing-cta-inner {
   max-width: 560px;
   margin: 0 auto;
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-cta-inner.is-visible {
+  opacity: 1;
+  transform: none;
 }
 
 .landing-cta-title {
@@ -751,14 +847,10 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-.landing-anim-1 { opacity: 0; animation: landing-fadeUp 0.6s ease 0.1s  forwards; }
-.landing-anim-2 { opacity: 0; animation: landing-fadeUp 0.7s ease 0.2s  forwards; }
-.landing-anim-3 { opacity: 0; animation: landing-fadeUp 0.7s ease 0.35s forwards; }
-.landing-anim-4 { opacity: 0; animation: landing-fadeUp 0.7s ease 0.5s  forwards; }
-
-.landing-tx-1 { opacity: 0; animation: landing-fadeIn 0.4s ease 0.1s forwards; }
-.landing-tx-2 { opacity: 0; animation: landing-fadeIn 0.4s ease 0.2s forwards; }
-.landing-tx-3 { opacity: 0; animation: landing-fadeIn 0.4s ease 0.3s forwards; }
+.landing-anim-1 { opacity: 0; animation: landing-fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s  forwards; }
+.landing-anim-2 { opacity: 0; animation: landing-fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards; }
+.landing-anim-3 { opacity: 0; animation: landing-fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.38s forwards; }
+.landing-anim-4 { opacity: 0; animation: landing-fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.54s forwards; }
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
@@ -774,23 +866,39 @@
     transform: none;
     transition: none;
   }
-  .landing-feature-item {
+  .landing-feature-item,
+  .landing-features-eyebrow,
+  .landing-features-title,
+  .landing-features-sub {
     opacity: 1;
     transform: none;
     transition: none;
   }
-  .landing-mock-bar.is-animated {
-    animation: none;
-  }
-  .landing-tx-1,
-  .landing-tx-2,
-  .landing-tx-3 {
+  .landing-cta-inner {
     opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .landing-mock-wordmark,
+  .landing-mock-nav-item,
+  .landing-mock-header,
+  .landing-mock-stat,
+  .landing-mock-chart,
+  .landing-mock-tx-list,
+  .landing-mock-bar {
+    opacity: 1;
+    transform: none;
     animation: none;
+    transition: none;
   }
   .landing-btn-primary:hover,
-  .landing-btn-ghost:hover {
+  .landing-btn-ghost:hover,
+  .landing-btn-primary:active,
+  .landing-btn-ghost:active {
     transform: none;
+  }
+  .landing-feature-icon-box {
+    transition: none;
   }
 }
 

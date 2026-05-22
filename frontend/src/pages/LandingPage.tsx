@@ -122,8 +122,12 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mockVisible, setMockVisible] = useState(false);
   const [visibleFeatures, setVisibleFeatures] = useState<boolean[]>(new Array(6).fill(false));
+  const [featuresHeaderVisible, setFeaturesHeaderVisible] = useState(false);
+  const [ctaVisible, setCtaVisible] = useState(false);
   const mockRef = useRef<HTMLDivElement>(null);
   const featureRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const featuresHeaderRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
   const l = t[lang];
 
   useEffect(() => {
@@ -141,6 +145,24 @@ export default function LandingPage() {
     );
     if (mockRef.current) obs.observe(mockRef.current);
     return () => { obs.disconnect(); clearTimeout(fallback); };
+  }, []);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setFeaturesHeaderVisible(true); },
+      { threshold: 0, rootMargin: '0px 0px -8% 0px' },
+    );
+    if (featuresHeaderRef.current) obs.observe(featuresHeaderRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setCtaVisible(true); },
+      { threshold: 0, rootMargin: '0px 0px -8% 0px' },
+    );
+    if (ctaRef.current) obs.observe(ctaRef.current);
+    return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
@@ -280,12 +302,12 @@ export default function LandingPage() {
                         <div key={month} className="landing-mock-bar-group">
                           <div className="landing-mock-bar-pair">
                             <div
-                              className="landing-mock-bar landing-mock-bar-income is-animated"
-                              style={{ height: barHeights[i * 2], animationDelay: `${i * 0.05}s` }}
+                              className="landing-mock-bar landing-mock-bar-income"
+                              style={{ height: barHeights[i * 2], animationDelay: `${0.55 + i * 0.05}s` }}
                             />
                             <div
-                              className="landing-mock-bar landing-mock-bar-expense is-animated"
-                              style={{ height: barHeights[i * 2 + 1], animationDelay: `${i * 0.05 + 0.02}s` }}
+                              className="landing-mock-bar landing-mock-bar-expense"
+                              style={{ height: barHeights[i * 2 + 1], animationDelay: `${0.57 + i * 0.05}s` }}
                             />
                           </div>
                           <div className="landing-mock-bar-label">{month}</div>
@@ -327,8 +349,8 @@ export default function LandingPage() {
                 {/* Recent transactions */}
                 <div className="landing-mock-tx-list">
                   <div className="landing-mock-tx-header">{l.mockRecent}</div>
-                  {l.mockTxItems.map((tx, i) => (
-                    <div key={tx.name} className={`landing-mock-tx-item landing-tx-${i + 1}`}>
+                  {l.mockTxItems.map((tx) => (
+                    <div key={tx.name} className="landing-mock-tx-item">
                       <div className="landing-mock-tx-icon" style={{ background: tx.bg }}>{tx.icon}</div>
                       <div className="landing-mock-tx-info">
                         <div className="landing-mock-tx-name">{tx.name}</div>
@@ -352,7 +374,7 @@ export default function LandingPage() {
       {/* Features */}
       <section id="features" className="landing-features-section">
         <div className="landing-features-inner">
-          <div className="landing-features-header">
+          <div ref={featuresHeaderRef} className={`landing-features-header${featuresHeaderVisible ? ' is-visible' : ''}`}>
             <span className="landing-features-eyebrow">{l.featuresEyebrow}</span>
             <h2 className="landing-features-title">
               {l.featuresTitle1}<br />{l.featuresTitle2}
@@ -385,7 +407,7 @@ export default function LandingPage() {
 
       {/* CTA Banner */}
       <section className="landing-cta-section">
-        <div className="landing-cta-inner">
+        <div ref={ctaRef} className={`landing-cta-inner${ctaVisible ? ' is-visible' : ''}`}>
           <h2 className="landing-cta-title">
             {l.ctaBannerTitle1}<br />{l.ctaBannerTitle2}
           </h2>

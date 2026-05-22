@@ -8,6 +8,7 @@ import {
   toggleRecurringTransaction,
   getDueRecurring,
   executeRecurring,
+  executeRecurringNow,
 } from '../controllers/recurring.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ router.use(authenticate);
 
 router.get('/due', getDueRecurring);
 router.post('/execute', executeRecurring);
+router.post('/:id/execute-now', executeRecurringNow);
 router.get('/', getRecurringTransactions);
 router.get('/:id', getRecurringTransaction);
 router.post('/', createRecurringTransaction);

@@ -66,6 +66,57 @@ function computeNextDueDate(
   return dueDate;
 }
 
+// Ritorna la prossima occorrenza >= oggi (usata per execute-now)
+function computeNextFutureDueDate(
+  recurring: {
+    frequency: string;
+    dayOfMonth: number | null;
+    startDate: Date;
+    endDate: Date | null;
+  },
+  today: Date
+): Date | null {
+  const start = normalizeDate(recurring.startDate);
+  const todayN = normalizeDate(today);
+  let dueDate: Date;
+
+  if (recurring.frequency === 'MONTHLY') {
+    const day = recurring.dayOfMonth || 1;
+    const thisMonthDue = clampDay(todayN.getFullYear(), todayN.getMonth(), day);
+    if (thisMonthDue >= todayN) {
+      dueDate = thisMonthDue;
+    } else {
+      dueDate = todayN.getMonth() === 11
+        ? clampDay(todayN.getFullYear() + 1, 0, day)
+        : clampDay(todayN.getFullYear(), todayN.getMonth() + 1, day);
+    }
+  } else if (recurring.frequency === 'WEEKLY') {
+    const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+    if (start >= todayN) {
+      dueDate = start;
+    } else {
+      const weeks = Math.floor((todayN.getTime() - start.getTime()) / MS_WEEK);
+      const lastOcc = new Date(start.getTime() + weeks * MS_WEEK);
+      dueDate = lastOcc.getTime() === todayN.getTime()
+        ? lastOcc
+        : new Date(start.getTime() + (weeks + 1) * MS_WEEK);
+    }
+  } else {
+    // YEARLY
+    const thisYear = new Date(todayN.getFullYear(), start.getMonth(), start.getDate());
+    dueDate = thisYear >= todayN
+      ? thisYear
+      : new Date(todayN.getFullYear() + 1, start.getMonth(), start.getDate());
+  }
+
+  if (recurring.endDate) {
+    const end = normalizeDate(recurring.endDate);
+    if (dueDate > end) return null;
+  }
+
+  return dueDate;
+}
+
 // Ottieni tutte le transazioni ricorrenti
 export const getRecurringTransactions = async (req: AuthRequest, res: Response) => {
   try {
@@ -350,6 +401,48 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
     res.status(201).json({ created, count: created.length });
   } catch (error) {
     console.error('Execute recurring error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Crea la transazione per oggi e segna la prossima occorrenza futura come eseguita
+export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const recurringId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const recurring = await prisma.recurringTransaction.findFirst({
+      where: { id: recurringId, userId, isActive: true },
+    });
+
+    if (!recurring) {
+      return res.status(404).json({ error: 'Transazione ricorrente non trovata' });
+    }
+
+    const today = new Date();
+    const nextFuture = computeNextFutureDueDate(recurring, today);
+    const dateToMark = nextFuture ?? today;
+
+    const transaction = await prisma.transaction.create({
+      data: {
+        amount: recurring.amount,
+        type: recurring.type,
+        description: recurring.description,
+        categoryId: recurring.categoryId,
+        date: today,
+        userId,
+      },
+      include: { category: true },
+    });
+
+    await prisma.recurringTransaction.update({
+      where: { id: recurringId },
+      data: { lastExecutedDate: dateToMark },
+    });
+
+    res.status(201).json({ ...transaction, amount: Number(transaction.amount) });
+  } catch (error) {
+    console.error('Execute recurring now error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

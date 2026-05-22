@@ -164,6 +164,10 @@
     background: oklch(0.96 0.04 90);
   }
 
+  .list-card-item-executable {
+    cursor: pointer;
+  }
+
   /* ============================
      CATEGORY CARD (existing style improved)
      ============================ */

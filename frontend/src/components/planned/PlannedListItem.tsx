@@ -5,7 +5,7 @@ interface PlannedListItemProps {
   planned: PlannedTransaction;
   onEdit: (planned: PlannedTransaction) => void;
   onDelete: (id: string) => void;
-  onMarkAsPaid: (id: string) => void;
+  onMarkAsPaid: (planned: PlannedTransaction) => void;
 }
 
 /**
@@ -66,7 +66,7 @@ export default function PlannedListItem({
           <div className="flex items-center gap-2">
             {!planned.isPaid && (
               <button
-                onClick={() => onMarkAsPaid(planned.id)}
+                onClick={() => onMarkAsPaid(planned)}
                 className="btn-icon text-success-600 hover:bg-success-50"
                 title="Segna come pagato"
               >

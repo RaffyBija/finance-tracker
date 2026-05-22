@@ -40,4 +40,8 @@ export const recurringApi = {
     const response = await apiClient.post<ExecuteRecurringResult>('/recurring/execute', { ids });
     return response.data;
   },
+
+  executeNow: async (id: string): Promise<void> => {
+    await apiClient.post(`/recurring/${id}/execute-now`);
+  },
 };

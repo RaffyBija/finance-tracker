@@ -9,7 +9,7 @@ interface PlannedListProps {
   planned: PlannedTransaction[];
   onEdit: (planned: PlannedTransaction) => void;
   onDelete: (id: string) => void;
-  onMarkAsPaid: (id: string) => void;
+  onMarkAsPaid: (planned: PlannedTransaction) => void;
   onOpenModal: () => void;
 }
 
