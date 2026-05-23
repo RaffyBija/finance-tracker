@@ -9,7 +9,7 @@ const MONTHS   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
 const MONTHS_S = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
 function barH(amount: number, max: number): number {
   if (amount <= 0 || max <= 0) return 0;
@@ -62,6 +62,10 @@ export default function CalendarPage() {
   );
 
   const selectedDay = selected ? data?.days[selected] : null;
+
+  const selectedBalance = selected && data
+    ? computeRunningBalance(data.openingBalance, data.days, selected)
+    : null;
 
   return (
     <div className="container-custom">
@@ -156,7 +160,7 @@ export default function CalendarPage() {
         {/* ─── Detail column ─── */}
         <div ref={detailRef} className={`cal-detail${selectedDay ? ' is-visible' : ''}`}>
           {selected && selectedDay
-            ? <DayDetail date={selected} day={selectedDay} />
+            ? <DayDetail date={selected} day={selectedDay} balance={selectedBalance} />
             : (
               <div className="cal-detail-empty">
                 <CalendarDays size={32} className="cal-detail-empty-icon" />
@@ -171,7 +175,27 @@ export default function CalendarPage() {
   );
 }
 
-function DayDetail({ date, day }: { date: string; day: CalendarDay }) {
+function computeRunningBalance(
+  openingBalance: number,
+  days: Record<string, import('../api/calendar').CalendarDay>,
+  upToDate: string,
+): number {
+  const [y, m, d] = upToDate.split('-').map(Number);
+  let balance = openingBalance;
+  for (let day = 1; day <= d; day++) {
+    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayData = days[dateStr];
+    if (!dayData) continue;
+    for (const ev of dayData.events) {
+      if (ev.source !== 'actual') continue;
+      if (ev.transactionType === 'INCOME') balance += ev.amount;
+      else balance -= ev.amount;
+    }
+  }
+  return balance;
+}
+
+function DayDetail({ date, day, balance }: { date: string; day: CalendarDay; balance: number | null }) {
   const [y, m, d] = date.split('-').map(Number);
   const net       = day.income - day.expenses;
 
@@ -182,10 +206,17 @@ function DayDetail({ date, day }: { date: string; day: CalendarDay }) {
         <div className="cal-detail-kpis">
           {day.income   > 0 && <span className="cal-kpi cal-kpi-income">+{fmt(day.income)}</span>}
           {day.expenses > 0 && <span className="cal-kpi cal-kpi-expense">-{fmt(day.expenses)}</span>}
-          <span className={`cal-kpi cal-kpi-net${net >= 0 ? ' pos' : ' neg'}`}>
-            {net > 0 ? '+' : ''}{fmt(net)}
-          </span>
+          {day.income > 0 && day.expenses > 0 && (
+            <span className={`cal-kpi cal-kpi-net${net >= 0 ? ' pos' : ' neg'}`}>
+              {net > 0 ? '+' : ''}{fmt(net)}
+            </span>
+          )}
         </div>
+        {balance !== null && (
+          <div className={`cal-detail-balance${balance >= 0 ? ' pos' : ' neg'}`}>
+            Saldo a fine giornata: <strong>{fmt(balance)}</strong>
+          </div>
+        )}
       </div>
       <div className="cal-events-list">
         {day.events.map(ev => <EventRow key={ev.id} event={ev} />)}

@@ -286,6 +286,19 @@
   gap: 0.5rem;
 }
 
+.cal-detail-balance {
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  color: #475569;
+}
+
+.cal-detail-balance strong {
+  font-weight: 700;
+}
+
+.cal-detail-balance.pos strong { color: #059669; }
+.cal-detail-balance.neg strong { color: #dc2626; }
+
 .cal-kpi {
   font-size: 0.8125rem;
   font-weight: 700;
@@ -418,6 +431,9 @@
 .dark .cal-detail-inner         { background: #1e293b; border-color: #334155; }
 .dark .cal-detail-header        { background: #0f172a; border-color: #334155; }
 .dark .cal-detail-date          { color: #f1f5f9; }
+.dark .cal-detail-balance       { color: #94a3b8; }
+.dark .cal-detail-balance.pos strong { color: #34d399; }
+.dark .cal-detail-balance.neg strong { color: #f87171; }
 
 .dark .cal-kpi                  { background: #334155; color: #cbd5e1; }
 .dark .cal-kpi-income           { background: #064e3b; color: #6ee7b7; }

@@ -86,20 +86,25 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
     const monthStart = new Date(year, month,     1,  0,  0,  0,   0);
     const monthEnd   = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const [transactions, plannedTransactions, recurringTransactions] = await Promise.all([
+    const [transactions, plannedTransactions, recurringTransactions, openingBalanceRows] = await Promise.all([
       prisma.transaction.findMany({
         where: { userId, date: { gte: monthStart, lte: monthEnd } },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
         orderBy: { date: 'asc' },
       }),
       prisma.plannedTransaction.findMany({
-        where: { userId, plannedDate: { gte: monthStart, lte: monthEnd } },
+        where: { userId, plannedDate: { gte: monthStart, lte: monthEnd }, isPaid: false },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
         orderBy: { plannedDate: 'asc' },
       }),
       prisma.recurringTransaction.findMany({
         where: { userId, isActive: true },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
+      }),
+      prisma.transaction.groupBy({
+        by: ['type'],
+        where: { userId, date: { lt: monthStart } },
+        _sum: { amount: true },
       }),
     ]);
 
@@ -161,14 +166,26 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Build map: recurringId → Set of dateStr where already executed (actual tx exists)
+    const openingBalance = openingBalanceRows.reduce((sum, row) => {
+      const amount = Number(row._sum.amount || 0);
+      return row.type === 'INCOME' ? sum + amount : sum - amount;
+    }, 0);
+
+    // Build map: recurringId → Set of dateStr where already executed
+    // Sources: actual transactions linked via fromRecurringId, and lastExecutedDate
+    // (covers executeRecurringNow which writes date=today but marks lastExecutedDate=nextOccurrence)
     const executedDatesPerRec = new Map<string, Set<string>>();
+    const ensureSet = (id: string) => {
+      if (!executedDatesPerRec.has(id)) executedDatesPerRec.set(id, new Set());
+      return executedDatesPerRec.get(id)!;
+    };
     for (const t of transactions) {
       if (!t.fromRecurringId) continue;
-      if (!executedDatesPerRec.has(t.fromRecurringId)) {
-        executedDatesPerRec.set(t.fromRecurringId, new Set());
-      }
-      executedDatesPerRec.get(t.fromRecurringId)!.add(toDateStr(new Date(t.date)));
+      ensureSet(t.fromRecurringId).add(toDateStr(new Date(t.date)));
+    }
+    for (const rec of recurringTransactions) {
+      if (!rec.lastExecutedDate) continue;
+      ensureSet(rec.id).add(toDateStr(new Date(rec.lastExecutedDate)));
     }
 
     // Recurring occurrences (only if not already executed on that date)
@@ -212,7 +229,12 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    res.json({ year, month: month1, days: daysObj });
+    res.json({
+      year,
+      month: month1,
+      days: daysObj,
+      openingBalance: Math.round(openingBalance * 100) / 100,
+    });
   } catch (error) {
     console.error('Get calendar events error:', error);
     res.status(500).json({ error: 'Errore del server' });

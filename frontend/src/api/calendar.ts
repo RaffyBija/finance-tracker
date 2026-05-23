@@ -28,6 +28,7 @@ export interface CalendarData {
   year: number;
   month: number;
   days: Record<string, CalendarDay>;
+  openingBalance: number;
 }
 
 export const calendarApi = {
