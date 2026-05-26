@@ -1,36 +1,36 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, UserPlus, Mail} from 'lucide-react';
+import AuthLayout from '../components/layout/AuthLayout';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName]                       = useState('');
+  const [email, setEmail]                     = useState('');
+  const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPass, setShowPass]               = useState(false);
+  const [showConfirm, setShowConfirm]         = useState(false);
+  const [error, setError]                     = useState('');
+  const [isLoading, setIsLoading]             = useState(false);
+  const [success, setSuccess]                 = useState(false);
 
   const { register } = useAuth();
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validazione
     if (password !== confirmPassword) {
       setError('Le password non corrispondono');
       return;
     }
-
     if (password.length < 6) {
       setError('La password deve essere di almeno 6 caratteri');
       return;
     }
 
     setIsLoading(true);
-
     try {
       await register({ email, password, name });
       setSuccess(true);
@@ -41,138 +41,130 @@ export default function RegisterPage() {
     }
   };
 
-  if(success){
+  if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex-center p-4">
-        <div className="card card-xl w-full max-w-md text-center">
-          <div className="flex-center mb-6">
-            <div className="gradient-primary rounded-full p-4">
-              <Mail className="icon-2xl text-white" />
+      <AuthLayout>
+        <div className="auth-status">
+          <div className="auth-status-icon is-mail">
+            <Mail size={28} />
+          </div>
+          <h1 className="auth-status-title">Registrazione completata!</h1>
+          <p className="auth-status-text">
+            Riceverai una email di verifica all'indirizzo fornito. Clicca sul link per attivare il tuo account.
+          </p>
+          <Link to="/login" className="btn btn-primary btn-block">
+            Torna al login
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout>
+      <h1 className="auth-title">Crea account</h1>
+      <p className="auth-subtitle">Inizia a gestire le tue finanze</p>
+
+      <form autoComplete="off" onSubmit={handleSubmit}>
+        <div className="auth-fields">
+
+          <div className="form-group">
+            <label htmlFor="name" className="form-label">Nome completo</label>
+            <div className="auth-field-wrap">
+              <span className="auth-field-icon"><User size={15} /></span>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="form-input"
+                placeholder="Mario Rossi"
+              />
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-neutral-800 mb-3">
-            Registrazione completata!
-          </h1>
-          
-          <p className="text-neutral-600 mb-6">
-            Riceverai una email di verifica all'indirizzo fornito. Clicca sul link nella email per attivare il tuo account.
-          </p>
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">Email</label>
+            <div className="auth-field-wrap">
+              <span className="auth-field-icon"><Mail size={15} /></span>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="form-input"
+                placeholder="mario.rossi@email.com"
+              />
+            </div>
+          </div>
 
-          <Link to="/login" className="btn btn-primary btn-block">
-            <ArrowLeft className="icon-md" />
-            Torna al Login
-          </Link>
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">Password</label>
+            <div className="auth-field-wrap">
+              <span className="auth-field-icon"><Lock size={15} /></span>
+              <input
+                id="password"
+                type={showPass ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="form-input has-toggle"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="auth-pass-toggle"
+                onClick={() => setShowPass((v) => !v)}
+                aria-label={showPass ? 'Nascondi password' : 'Mostra password'}
+              >
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">Conferma password</label>
+            <div className="auth-field-wrap">
+              <span className="auth-field-icon"><Lock size={15} /></span>
+              <input
+                id="confirmPassword"
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="form-input has-toggle"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="auth-pass-toggle"
+                onClick={() => setShowConfirm((v) => !v)}
+                aria-label={showConfirm ? 'Nascondi password' : 'Mostra password'}
+              >
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
-    );
 
-  }
+        {error && <div className="auth-error">{error}</div>}
 
+        <button
+          type="submit"
+          disabled={isLoading}
+          className={`btn btn-primary btn-block btn-lg${isLoading ? ' btn-loading' : ''}`}
+        >
+          {isLoading ? 'Registrazione in corso...' : 'Registrati'}
+        </button>
+      </form>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex-center p-4">
-      <div className="card card-xl w-full max-w-md">
-        <div className="flex-center mb-8">
-          <div className="gradient-primary rounded-full p-3">
-            <UserPlus className="icon-xl text-white" />
-          </div>
-        </div>
-
-        <h1 className="text-3xl font-bold text-center text-neutral-800 mb-2">
-          Crea Account
-        </h1>
-        <p className="text-center text-neutral-600 mb-8">
-          Inizia a gestire le tue finanze
-        </p>
-
-        {error && (
-          <div className="card card-danger p-4 mb-4">
-            <p className="text-sm text-danger-700">{error}</p>
-          </div>
-        )}
-
-        <form 
-          autoComplete='none'        
-          onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="name" className="form-label">
-              Nome
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="form-input"
-              placeholder="Mario Rossi"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="form-input"
-              placeholder="mario.rossi@email.com"
-              
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="form-input"
-              placeholder="••••••••"
-       
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword" className="form-label">
-              Conferma Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="form-input"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`btn btn-primary btn-block btn-lg ${isLoading ? 'btn-loading' : ''}`}
-          >
-            {isLoading ? 'Registrazione in corso...' : 'Registrati'}
-          </button>
-        </form>
-
-        <p className="text-center text-neutral-600 mt-6">
-          Hai già un account?{' '}
-          <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-            Accedi
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="auth-link-row">
+        Hai già un account?{' '}
+        <Link to="/login">Accedi</Link>
+      </p>
+    </AuthLayout>
   );
 }
