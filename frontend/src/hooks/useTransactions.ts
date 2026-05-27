@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
+import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateTransactionDTO, TransactionType } from '../types';
+
+const TRANSACTION_KEYS = ['transactions', 'dashboard', 'budgets', 'calendar'];
 
 const PAGE_SIZE = 20;
 
@@ -31,16 +34,16 @@ export const useTransactions = (filters: TransactionFilters = {}) => {
   });
 };
 
+const invalidateTransactions = (queryClient: ReturnType<typeof useQueryClient>) => {
+  TRANSACTION_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+  broadcastInvalidation(TRANSACTION_KEYS);
+};
+
 export const useCreateTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateTransactionDTO) => transactionAPI.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidateTransactions(queryClient),
   });
 };
 
@@ -49,12 +52,7 @@ export const useUpdateTransaction = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateTransactionDTO> }) =>
       transactionAPI.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidateTransactions(queryClient),
   });
 };
 
@@ -62,12 +60,7 @@ export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => transactionAPI.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidateTransactions(queryClient),
   });
 };
 

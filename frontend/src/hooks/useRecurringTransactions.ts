@@ -2,7 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { recurringApi } from '../api/recurring';
 import { categoryAPI } from '../api/client';
+import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateRecurringTransactionDTO, RecurringDueResponse } from '../types';
+
+const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'recurring-due', 'pending-recurring', 'calendar'];
+const RECURRING_CRUD_KEYS    = ['recurring', 'dashboard', 'pending-recurring', 'calendar'];
 
 const DUE_CHECK_KEY = 'recurringDueCheck';
 
@@ -38,12 +42,8 @@ export function useRecurringDue() {
 }
 
 const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {
-  queryClient.invalidateQueries({ queryKey: ['transactions'] });
-  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-  queryClient.invalidateQueries({ queryKey: ['recurring'] });
-  queryClient.invalidateQueries({ queryKey: ['recurring-due'] });
-  queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-  queryClient.invalidateQueries({ queryKey: ['calendar'] });
+  RECURRING_EXECUTE_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+  broadcastInvalidation(RECURRING_EXECUTE_KEYS);
 };
 
 export function useExecuteRecurring() {
@@ -83,16 +83,16 @@ export function useRecurringTransactions() {
   };
 }
 
+const recurringCrudInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {
+  RECURRING_CRUD_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+  broadcastInvalidation(RECURRING_CRUD_KEYS);
+};
+
 export function useDeleteRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => recurringApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => recurringCrudInvalidations(queryClient),
   });
 }
 
@@ -100,12 +100,7 @@ export function useToggleRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => recurringApi.toggle(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => recurringCrudInvalidations(queryClient),
   });
 }
 
@@ -113,12 +108,7 @@ export function useCreateRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateRecurringTransactionDTO) => recurringApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => recurringCrudInvalidations(queryClient),
   });
 }
 
@@ -127,11 +117,6 @@ export function useUpdateRecurring() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateRecurringTransactionDTO> }) =>
       recurringApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => recurringCrudInvalidations(queryClient),
   });
 }

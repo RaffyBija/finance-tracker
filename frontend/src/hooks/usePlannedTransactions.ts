@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { plannedApi } from '../api/planned';
 import { categoryAPI } from '../api/client';
+import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreatePlannedTransactionDTO } from '../types';
+
+const PLANNED_KEYS         = ['planned', 'dashboard', 'pending-planned', 'calendar'];
+const PLANNED_PAID_KEYS    = ['planned', 'transactions', 'dashboard', 'pending-planned', 'calendar'];
 
 type FilterStatus = 'ALL' | 'UNPAID' | 'PAID';
 
@@ -37,16 +41,16 @@ export function usePlannedTransactions() {
   };
 }
 
+const invalidatePlanned = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {
+  keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+  broadcastInvalidation(keys);
+};
+
 export function useDeletePlanned() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => plannedApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['planned'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidatePlanned(queryClient, PLANNED_KEYS),
   });
 }
 
@@ -54,13 +58,7 @@ export function useMarkAsPaid() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => plannedApi.markAsPaid(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['planned'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidatePlanned(queryClient, PLANNED_PAID_KEYS),
   });
 }
 
@@ -68,12 +66,7 @@ export function useCreatePlanned() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreatePlannedTransactionDTO) => plannedApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['planned'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidatePlanned(queryClient, PLANNED_KEYS),
   });
 }
 
@@ -82,11 +75,6 @@ export function useUpdatePlanned() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreatePlannedTransactionDTO> }) =>
       plannedApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['planned'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-    },
+    onSuccess: () => invalidatePlanned(queryClient, PLANNED_KEYS),
   });
 }

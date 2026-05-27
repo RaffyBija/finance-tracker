@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { setupCrossTabSync } from './utils/syncChannel';
 import './styles/index.css';
 import App from './App.tsx';
 
@@ -15,6 +16,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+setupCrossTabSync(queryClient);
 
 // ✅ Lazy load: Vite esclude questo chunk dal bundle di produzione
 const ReactQueryDevtools = import.meta.env.DEV

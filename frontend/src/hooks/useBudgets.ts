@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetApi } from '../api/budgets';
 import { categoryAPI } from '../api/client';
+import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateBudgetDTO } from '../types';
+
+const BUDGET_KEYS = ['budgets', 'dashboard'];
 
 export function useBudgets() {
   const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
@@ -24,14 +27,16 @@ export function useBudgets() {
   };
 }
 
+const invalidateBudgets = (queryClient: ReturnType<typeof useQueryClient>) => {
+  BUDGET_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+  broadcastInvalidation(BUDGET_KEYS);
+};
+
 export function useDeleteBudget() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => budgetApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
+    onSuccess: () => invalidateBudgets(queryClient),
   });
 }
 
@@ -39,10 +44,7 @@ export function useCreateBudget() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateBudgetDTO) => budgetApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
+    onSuccess: () => invalidateBudgets(queryClient),
   });
 }
 
@@ -51,9 +53,6 @@ export function useUpdateBudget() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateBudgetDTO> }) =>
       budgetApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
+    onSuccess: () => invalidateBudgets(queryClient),
   });
 }
