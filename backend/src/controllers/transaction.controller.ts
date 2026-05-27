@@ -7,7 +7,7 @@ import { analyticsCache } from '../utils/analyticsCache';
 export const getTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { type, categoryId, startDate, endDate, limit, offset } = req.query;
+    const { type, categoryId, startDate, endDate, search, limit, offset } = req.query;
 
     // Build filter
     const where: any = { userId };
@@ -28,6 +28,13 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       if (endDate) {
         where.date.lte = new Date(endDate as string);
       }
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      where.OR = [
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+        { category: { name: { contains: search.trim(), mode: 'insensitive' } } },
+      ];
     }
 
     const MAX_LIMIT = 200;

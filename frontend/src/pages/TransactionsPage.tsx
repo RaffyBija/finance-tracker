@@ -11,15 +11,16 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 export default function TransactionsPage() {
   // ── Filtri inviati al backend ──
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
-  // ── Ricerca testuale client-side (sull'array già paginato) ──
-  const [searchFilter, setSearchFilter] = useState('');
+  // ── Ricerca testuale server-side con debounce ──
+  const [searchInput, setSearchInput] = useState('');   // valore immediato (input)
+  const [search, setSearch] = useState('');             // valore debouncato (API)
 
   // ── Paginazione: accumulo di pagine già caricate ──
   const [page, setPage] = useState(0);
@@ -32,10 +33,21 @@ export default function TransactionsPage() {
 
   const toast = useToast();
 
+  // Debounce: aggiorna il valore API 400ms dopo l'ultima digitazione e resetta la paginazione
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+      setPrevPages([]);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const { data: currentPage = [], isLoading: transactionsLoading, isFetching } = useTransactions({
     type: filterType,
     startDate: dateRange.startDate || undefined,
     endDate: dateRange.endDate || undefined,
+    search: search || undefined,
     page,
   });
 
@@ -48,17 +60,6 @@ export default function TransactionsPage() {
     const currentIds = new Set(currentPage.map((t) => t.id));
     return [...prevPages.filter((t) => !currentIds.has(t.id)), ...currentPage];
   }, [currentPage, prevPages, page]);
-
-  // Filtro testo locale
-  const filteredTransactions = useMemo(() => {
-    if (!searchFilter.trim()) return transactions;
-    const q = searchFilter.toLowerCase();
-    return transactions.filter(
-      (t) =>
-        t.description?.toLowerCase().includes(q) ||
-        t.category?.name?.toLowerCase().includes(q)
-    );
-  }, [transactions, searchFilter]);
 
   const hasMore = currentPage.length === PAGE_SIZE;
 
@@ -77,6 +78,11 @@ export default function TransactionsPage() {
     setDateRange(range);
     setPage(0);
     setPrevPages([]);
+  };
+
+  const handleNewTransaction = () => {
+    setShowModal(true);
+    setEditingTransaction(null);
   };
 
   const handleLoadMore = () => {
@@ -116,13 +122,6 @@ export default function TransactionsPage() {
       ) : (
         <div className="page-header">
           <h1 className="page-header-title">Transazioni</h1>
-          <button
-            onClick={() => { setShowModal(true); setEditingTransaction(null); }}
-            className="btn btn-primary btn-md page-header-btn"
-          >
-            <Plus className="icon-md" />
-            <span>Nuova Transazione</span>
-          </button>
         </div>
       )}
 
@@ -131,7 +130,7 @@ export default function TransactionsPage() {
         <FilterNav
           filterType={filterType}
           setFilterType={handleFilterType}
-          setSearchFilter={setSearchFilter}
+          setSearchFilter={setSearchInput}
           dateRange={dateRange}
           setDateRange={handleDateRange}
         />
@@ -142,17 +141,17 @@ export default function TransactionsPage() {
         <SkeletonList rows={8} />
       ) : (
         <div className="list-card">
-          {filteredTransactions.length === 0 && !isFetching ? (
+          {transactions.length === 0 && !isFetching ? (
             <div className="empty-state-card">
               <p className="empty-state-title">Nessuna transazione trovata</p>
               <p className="empty-state-description">
-                {searchFilter || dateRange.startDate || dateRange.endDate
+                {search || dateRange.startDate || dateRange.endDate
                   ? 'Prova a modificare i filtri applicati'
                   : 'Inizia aggiungendo la tua prima transazione'}
               </p>
-              {!searchFilter && !dateRange.startDate && !dateRange.endDate && (
+              {!search && !dateRange.startDate && !dateRange.endDate && (
                 <button
-                  onClick={() => setShowModal(true)}
+                  onClick={handleNewTransaction}
                   className="btn btn-primary btn-md"
                 >
                   <Plus className="icon-md" />
@@ -161,7 +160,7 @@ export default function TransactionsPage() {
               )}
             </div>
           ) : (
-            filteredTransactions.map((transaction) => (
+            transactions.map((transaction) => (
               <div key={transaction.id} className="transaction-card">
 
                 <div className="transaction-card-left min-w-0 flex-1">
@@ -212,7 +211,7 @@ export default function TransactionsPage() {
       )}
 
       {/* ── Carica altro ── */}
-      {!isFirstLoad && hasMore && !searchFilter && (
+      {!isFirstLoad && hasMore && (
         <div className="list-pagination">
           <button
             onClick={handleLoadMore}
@@ -232,12 +231,18 @@ export default function TransactionsPage() {
       )}
 
       {/* ── Contatore risultati ── */}
-      {!isFirstLoad && filteredTransactions.length > 0 && (
+      {!isFirstLoad && transactions.length > 0 && (
         <p className="list-result-count">
-          {filteredTransactions.length} transazion{filteredTransactions.length === 1 ? 'e' : 'i'} visualizzat{filteredTransactions.length === 1 ? 'a' : 'e'}
-          {hasMore && !searchFilter && ' · altri risultati disponibili'}
+          {transactions.length} transazion{transactions.length === 1 ? 'e' : 'i'} visualizzat{transactions.length === 1 ? 'a' : 'e'}
+          {hasMore && ' · altri risultati disponibili'}
         </p>
       )}
+
+      {/* ── Floating Action Button ── */}
+      <button className="fab" onClick={handleNewTransaction} aria-label="Nuova transazione">
+        <Plus size={22} />
+        <span className="fab-label">Nuova</span>
+      </button>
 
       {/* ── Modal ── */}
       <TransactionModal

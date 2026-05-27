@@ -291,6 +291,77 @@
   }
 }
 /* ============================================================
+   FLOATING ACTION BUTTON
+   ============================================================ */
+
+/* FAB is position:fixed — must live outside @layer to avoid cascade issues */
+.fab {
+  position: fixed;
+  bottom: calc(3.5rem + 1.25rem); /* above mobile bottom nav (56px) + gap */
+  right: 1.25rem;
+  z-index: 80;
+
+  display: flex;
+  flex-direction: row-reverse; /* icon on right, label expands to the left */
+  align-items: center;
+  gap: 0.5rem;
+
+  height: 3.5rem;
+  width: 3.5rem;
+  padding: 0 1rem;
+  border-radius: 1.75rem;
+  border: none;
+  cursor: pointer;
+
+  background-color: #0d9488;
+  color: white;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.45);
+
+  overflow: hidden;
+  white-space: nowrap;
+
+  transition:
+    width 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms ease;
+}
+
+.fab:hover,
+.fab:focus-visible {
+  width: 7rem;
+  box-shadow: 0 6px 24px rgba(13, 148, 136, 0.55);
+  outline: none;
+}
+
+.fab:active {
+  transform: scale(0.95);
+  transition-duration: 75ms;
+}
+
+/* Icon must never shrink — it's the always-visible anchor of the FAB */
+.fab > svg {
+  flex-shrink: 0;
+}
+
+.fab-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transition: opacity 140ms ease 60ms;
+}
+
+.fab:hover .fab-label,
+.fab:focus-visible .fab-label {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .fab {
+    bottom: 1.5rem; /* no bottom nav on desktop */
+  }
+}
+
+/* ============================================================
    DARK MODE
    ============================================================ */
 .dark .btn-secondary {

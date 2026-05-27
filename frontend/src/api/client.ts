@@ -105,6 +105,7 @@ export const transactionAPI = {
     categoryId?: string;
     startDate?: string;
     endDate?: string;
+    search?: string;
     limit?: number;
     offset?: number;
   }): Promise<Transaction[]> => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useBudgets, useDeleteBudget } from '../hooks/useBudgets';
 import { useFormModal } from '../hooks/useFormModal';
 import PageHeader from '../components/shared/PageHeader';
@@ -37,7 +38,7 @@ export const Budgets = () => {
         </>
       ) : (
         <>
-          <PageHeader title="Budget" actionLabel="Nuovo Budget" onAction={openModal} />
+          <PageHeader title="Budget" />
           <BudgetList
             budgets={budgets}
             onEdit={openEditModal}
@@ -45,6 +46,14 @@ export const Budgets = () => {
             onOpenModal={openModal}
           />
         </>
+      )}
+
+      {/* ── Floating Action Button ── */}
+      {!isLoading && (
+        <button className="fab" onClick={openModal} aria-label="Nuovo budget">
+          <Plus size={22} />
+          <span className="fab-label">Nuovo</span>
+        </button>
       )}
 
       <BudgetFormModal

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import {
   useRecurringTransactions,
   useDeleteRecurring,
@@ -83,11 +84,7 @@ export const RecurringTransactions = () => {
         </>
       ) : (
         <>
-          <PageHeader
-            title="Ricorrenti"
-            actionLabel="Nuova voce ricorrente"
-            onAction={openModal}
-          />
+          <PageHeader title="Ricorrenti" />
           <RecurringDueSection />
           <RecurringList
             recurring={recurring}
@@ -99,6 +96,14 @@ export const RecurringTransactions = () => {
             onOpenModal={openModal}
           />
         </>
+      )}
+
+      {/* ── Floating Action Button ── */}
+      {!isLoading && (
+        <button className="fab" onClick={openModal} aria-label="Nuova ricorrente">
+          <Plus size={22} />
+          <span className="fab-label">Nuova</span>
+        </button>
       )}
 
       <RecurringFormModal

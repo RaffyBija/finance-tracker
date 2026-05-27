@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import {
   usePlannedTransactions,
   useDeletePlanned,
@@ -61,11 +62,7 @@ export const PlannedTransactions = () => {
         </>
       ) : (
         <>
-          <PageHeader
-            title="Pianificati"
-            actionLabel="Nuova voce pianificata"
-            onAction={openModal}
-          />
+          <PageHeader title="Pianificati" />
           <PlannedFilters
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
@@ -78,6 +75,14 @@ export const PlannedTransactions = () => {
             onOpenModal={openModal}
           />
         </>
+      )}
+
+      {/* ── Floating Action Button ── */}
+      {!isLoading && (
+        <button className="fab" onClick={openModal} aria-label="Nuova pianificata">
+          <Plus size={22} />
+          <span className="fab-label">Nuova</span>
+        </button>
       )}
 
       <PlannedFormModal

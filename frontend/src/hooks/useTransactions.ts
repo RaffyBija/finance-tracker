@@ -11,11 +11,12 @@ interface TransactionFilters {
   type?: TransactionType | 'ALL';
   startDate?: string;
   endDate?: string;
+  search?: string;
   page?: number;
 }
 
 export const useTransactions = (filters: TransactionFilters = {}) => {
-  const { type, startDate, endDate, page = 0 } = filters;
+  const { type, startDate, endDate, search, page = 0 } = filters;
 
   const params: Record<string, any> = {
     limit: PAGE_SIZE,
@@ -25,9 +26,10 @@ export const useTransactions = (filters: TransactionFilters = {}) => {
   if (type && type !== 'ALL') params.type = type;
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
+  if (search?.trim()) params.search = search.trim();
 
   return useQuery({
-    queryKey: ['transactions', type, startDate, endDate, page],
+    queryKey: ['transactions', type, startDate, endDate, search, page],
     queryFn: () => transactionAPI.getAll(params),
     staleTime: 3 * 60 * 1000,
     placeholderData: (prev) => prev, // mantiene i dati precedenti durante il caricamento

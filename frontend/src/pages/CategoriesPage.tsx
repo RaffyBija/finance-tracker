@@ -55,16 +55,9 @@ export default function CategoriesPage() {
         </>
       ) : (
         <>
-          {/* ── Header responsive ── */}
+          {/* ── Header ── */}
           <div className="page-header">
             <h1 className="page-header-title">Categorie</h1>
-            <button
-              onClick={handleOpenModal}
-              className="btn btn-primary btn-md page-header-btn"
-            >
-              <Plus className="icon-md" />
-              <span>Nuova Categoria</span>
-            </button>
           </div>
 
           {/* Filtri */}
@@ -114,14 +107,23 @@ export default function CategoriesPage() {
             )}
           </div>
 
-          <CategoriesModal
-            isOpen={showModal}
-            onClose={handleCloseModal}
-            sentFeed={() => {}}
-            editingCategory={editingCategory}
-          />
         </>
       )}
+
+      {/* ── Floating Action Button ── */}
+      {!isLoading && (
+        <button className="fab" onClick={handleOpenModal} aria-label="Nuova categoria">
+          <Plus size={22} />
+          <span className="fab-label">Nuova</span>
+        </button>
+      )}
+
+      <CategoriesModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        sentFeed={() => {}}
+        editingCategory={editingCategory}
+      />
     </div>
   </>
 );
