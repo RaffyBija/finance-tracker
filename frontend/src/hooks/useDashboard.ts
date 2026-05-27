@@ -12,13 +12,14 @@ interface ProjectedBalanceParams {
   endDate?: string;
 }
 
-// staleTime: 0 → dati considerati stale immediatamente → refetch garantito ad ogni mount
+// staleTime: 0 + refetchOnMount: true → refetch garantito ad ogni mount (override del default globale false)
 // il trend mensile è dati storici stabili, può restare cacheato più a lungo
 export const useSummary = (dateRange?: DateRange) => {
   return useQuery({
     queryKey: ['dashboard', 'summary', dateRange],
     queryFn: () => dashboardAPI.getSummary(dateRange),
     staleTime: 0,
+    refetchOnMount: true,
   });
 };
 
@@ -27,6 +28,7 @@ export const useCategoryStats = (dateRange?: DateRange) => {
     queryKey: ['dashboard', 'category-stats', dateRange],
     queryFn: () => dashboardAPI.getCategoryStats(dateRange),
     staleTime: 0,
+    refetchOnMount: true,
   });
 };
 
@@ -43,6 +45,7 @@ export const useRecentTransactions = (limit: number = 5) => {
     queryKey: ['dashboard', 'recent', limit],
     queryFn: () => dashboardAPI.getRecent(limit),
     staleTime: 0,
+    refetchOnMount: true,
   });
 };
 
@@ -51,6 +54,7 @@ export const useProjectedBalance = (params: ProjectedBalanceParams, enabled = tr
     queryKey: ['dashboard', 'projected-balance', params],
     queryFn: () => dashboardAPI.getProjectedBalance(params),
     staleTime: 0,
+    refetchOnMount: true,
     enabled,
   });
 };

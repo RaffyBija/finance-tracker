@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
-import { useCreatePlanned } from '../../hooks/usePlannedTransactions';
+import { useCreatePlanned, useUpdatePlanned } from '../../hooks/usePlannedTransactions';
 import { useToast } from '../../contexts/ToastContext';
-import { useQueryClient } from '@tanstack/react-query';
-import { plannedApi } from '../../api/planned';
 import type { PlannedTransaction, Category, CreatePlannedTransactionDTO } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
@@ -25,7 +23,7 @@ export default function PlannedFormModal({
   onSuccess,
 }: PlannedFormModalProps) {
   const createMutation = useCreatePlanned();
-  const queryClient = useQueryClient();
+  const updateMutation = useUpdatePlanned();
   const toast = useToast();
 
   const [formData, setFormData] = useState<CreatePlannedTransactionDTO>({
@@ -60,7 +58,7 @@ export default function PlannedFormModal({
   }, [editingItem, isOpen]);
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
-  const isPending = createMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const { errors, validate, clearError } = useFormValidation<CreatePlannedTransactionDTO>({
   amount: (value) => {
@@ -91,8 +89,7 @@ export default function PlannedFormModal({
     if(!validate(formData)) return;
     try {
       if (editingItem) {
-        await plannedApi.update(editingItem.id, formData);
-        queryClient.invalidateQueries({ queryKey: ['planned'] });
+        await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
         toast.success('Spesa pianificata aggiornata con successo');
       } else {
         await createMutation.mutateAsync(formData);

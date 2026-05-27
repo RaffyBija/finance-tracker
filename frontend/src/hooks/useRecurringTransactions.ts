@@ -43,6 +43,7 @@ const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) 
   queryClient.invalidateQueries({ queryKey: ['recurring'] });
   queryClient.invalidateQueries({ queryKey: ['recurring-due'] });
   queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+  queryClient.invalidateQueries({ queryKey: ['calendar'] });
 };
 
 export function useExecuteRecurring() {
@@ -90,6 +91,7 @@ export function useDeleteRecurring() {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
     },
   });
 }
@@ -102,6 +104,7 @@ export function useToggleRecurring() {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
     },
   });
 }
@@ -114,6 +117,7 @@ export function useCreateRecurring() {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
     },
   });
 }
@@ -127,6 +131,7 @@ export function useUpdateRecurring() {
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['pending-recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
     },
   });
 }
