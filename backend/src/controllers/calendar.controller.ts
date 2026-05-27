@@ -98,7 +98,12 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
         orderBy: { plannedDate: 'asc' },
       }),
       prisma.recurringTransaction.findMany({
-        where: { userId, isActive: true },
+        where: {
+          userId,
+          isActive: true,
+          startDate: { lte: monthEnd },
+          OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+        },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
       }),
       prisma.transaction.groupBy({

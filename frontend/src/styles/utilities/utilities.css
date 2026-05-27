@@ -479,3 +479,40 @@
 .dark .skeleton { background-color: #334155; }
 .dark .divider { border-top-color: #334155; }
 .dark .divider-vertical { border-left-color: #334155; }
+
+/* ============================================================
+   ERROR BOUNDARY
+   ============================================================ */
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.error-boundary-content {
+  text-align: center;
+  max-width: 380px;
+}
+
+.error-boundary-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.error-boundary-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.error-boundary-message {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.dark .error-boundary-title   { color: #f1f5f9; }
+.dark .error-boundary-message { color: #94a3b8; }

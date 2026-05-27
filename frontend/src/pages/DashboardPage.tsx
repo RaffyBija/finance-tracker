@@ -1,6 +1,6 @@
 // frontend/src/pages/DashboardPage.tsx
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import {
   useSummary,
   useCategoryStats,
@@ -40,44 +40,44 @@ const getCategoryColor = (entry: { categoryColor?: string }, index: number) =>
 
 // ── Tooltip personalizzati ────────────────────────────────────────────────────
 
-const CustomBarTooltip = ({ active, payload, label }: any) => {
+const CustomBarTooltip = memo(({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card card-md text-sm shadow-lg">
-      <p className="font-semibold text-neutral-700 mb-1">{label}</p>
+    <div className="card card-md dashboard-tooltip">
+      <p className="dashboard-tooltip-label">{label}</p>
       {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }} className="font-medium">
+        <p key={p.name} style={{ color: p.color }} className="dashboard-tooltip-value">
           {p.name}: €{Number(p.value).toFixed(2)}
         </p>
       ))}
     </div>
   );
-};
+});
 
-const CustomPieTooltip = ({ active, payload }: any) => {
+const CustomPieTooltip = memo(({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card card-md text-sm shadow-lg">
-      <p className="font-semibold text-neutral-700">{payload[0].name}</p>
-      <p className="text-danger-600 font-medium">€{Number(payload[0].value).toFixed(2)}</p>
+    <div className="card card-md dashboard-tooltip">
+      <p className="dashboard-tooltip-label">{payload[0].name}</p>
+      <p className="dashboard-tooltip-amount">€{Number(payload[0].value).toFixed(2)}</p>
     </div>
   );
-};
+});
 
-const CustomPieLegend = ({ data }: { data: any[] }) => (
-  <div className="flex flex-col gap-2 justify-center pl-2">
+const CustomPieLegend = memo(({ data }: { data: any[] }) => (
+  <div className="dashboard-legend">
     {data.slice(0, 8).map((entry, i) => (
-      <div key={entry.categoryName} className="flex items-center gap-2 text-xs">
+      <div key={entry.categoryName} className="dashboard-legend-item">
         <span
-          className="inline-block rounded-full flex-shrink-0"
+          className="dashboard-legend-dot"
           style={{ width: 10, height: 10, background: getCategoryColor(entry, i) }}
         />
-        <span className="text-neutral-600 truncate max-w-[110px]">{entry.categoryName}</span>
-        <span className="ml-auto font-semibold text-neutral-800">€{Number(entry.total).toFixed(0)}</span>
+        <span className="dashboard-legend-name">{entry.categoryName}</span>
+        <span className="dashboard-legend-value">€{Number(entry.total).toFixed(0)}</span>
       </div>
     ))}
   </div>
-);
+));
 
 // ── Componente principale ─────────────────────────────────────────────────────
 
@@ -197,21 +197,21 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Grafici ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="dashboard-charts-grid">
 
         {/* Trend mensile */}
         {trendLoading ? (
           <SkeletonChart />
         ) : (
           <div className="card card-lg">
-            <div className="flex items-center justify-between mb-4">
+            <div className="dashboard-chart-header">
               <h2 className="card-header-title">Trend Mensile</h2>
-              <div className="flex items-center gap-3 text-xs text-neutral-500">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-3 h-3 rounded-sm bg-success-500" /> Entrate
+              <div className="dashboard-chart-legend">
+                <span className="dashboard-chart-legend-item">
+                  <span className="dashboard-chart-dot dashboard-chart-dot-income" /> Entrate
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-3 h-3 rounded-sm bg-danger-400" /> Uscite
+                <span className="dashboard-chart-legend-item">
+                  <span className="dashboard-chart-dot dashboard-chart-dot-expense" /> Uscite
                 </span>
               </div>
             </div>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                   tickFormatter={(v) => `€${v}`}
                   width={60}
                 />
-                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                <Tooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
                 <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" name="Uscite" fill="#EF4444" radius={[4, 4, 0, 0]} opacity={0.8} />
               </BarChart>
@@ -246,16 +246,16 @@ export default function DashboardPage() {
           <div className="card card-lg">
             <h2 className="card-header-title mb-4">
               Spese per Categoria
-              <span className="text-sm font-normal text-neutral-400 ml-2 capitalize">
+              <span className="dashboard-pie-month">
                 {format(currentMonth, 'MMMM', { locale: it })}
               </span>
             </h2>
             {expenseCategoryStats.length === 0 ? (
-              <div className="flex items-center justify-center h-[280px] text-neutral-400 text-sm">
+              <div className="dashboard-chart-empty">
                 Nessuna spesa registrata questo mese
               </div>
             ) : (
-              <div className="flex items-center gap-4 h-[280px]">
+              <div className="dashboard-pie-body">
                 <ResponsiveContainer width="55%" height="100%">
                   <PieChart>
                     <Pie
@@ -275,10 +275,10 @@ export default function DashboardPage() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomPieTooltip />} />
+                    <Tooltip content={CustomPieTooltip} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex-1 overflow-hidden">
+                <div className="dashboard-pie-legend-wrap">
                   <CustomPieLegend data={expenseCategoryStats} />
                 </div>
               </div>
@@ -297,7 +297,7 @@ export default function DashboardPage() {
           </div>
           <div className="card-divided">
             {recentTransactions.length === 0 ? (
-              <div className="p-8 text-center text-neutral-400 text-sm">
+              <div className="dashboard-empty-state">
                 Nessuna transazione recente
               </div>
             ) : (

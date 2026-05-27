@@ -51,7 +51,6 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Troppi tentativi di accesso, riprova tra 15 minuti.' },
-  skipSuccessfulRequests: true, // i login riusciti non consumano il limite
 });
 
 // Routes

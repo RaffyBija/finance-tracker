@@ -30,7 +30,8 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [isLoading, setIsLoading] = useState(true);
+  // true solo se esiste un token da verificare — evita lo spinner su /login senza sessione attiva
+  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('token'));
 
   // Verifica il token all'avvio
   useEffect(() => {

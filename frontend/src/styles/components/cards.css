@@ -1357,6 +1357,141 @@
 }
 
 /* ============================================================
+   DASHBOARD TOOLTIP
+   ============================================================ */
+.dashboard-tooltip {
+  font-size: 0.875rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.dashboard-tooltip-label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-tooltip-value {
+  font-weight: 500;
+}
+
+.dashboard-tooltip-amount {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* ============================================================
+   DASHBOARD CHART HEADER & LEGEND
+   ============================================================ */
+.dashboard-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.dashboard-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.dashboard-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dashboard-chart-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.125rem;
+  flex-shrink: 0;
+}
+
+.dashboard-chart-dot-income  { background-color: #10b981; }
+.dashboard-chart-dot-expense { background-color: #f87171; }
+
+.dashboard-pie-month {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 0.5rem;
+  text-transform: capitalize;
+}
+
+.dashboard-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 280px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.dashboard-pie-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 280px;
+}
+
+.dashboard-pie-legend-wrap {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ============================================================
+   DASHBOARD PIE LEGEND
+   ============================================================ */
+.dashboard-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+  padding-left: 0.5rem;
+}
+
+.dashboard-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.dashboard-legend-dot {
+  display: inline-block;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.dashboard-legend-name {
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.dashboard-legend-value {
+  margin-left: auto;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ============================================================
+   DASHBOARD EMPTY STATE
+   ============================================================ */
+.dashboard-empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* ============================================================
    DARK MODE
    ============================================================ */
 
@@ -1437,4 +1572,14 @@
 .dark .projection-flow-node-value { color: #f1f5f9; }
 .dark .projection-flow-arrow { color: #475569; }
 .dark .projection-meta { border-top-color: #334155; }
+
+/* Dashboard charts & tooltip */
+.dark .dashboard-tooltip-label  { color: #cbd5e1; }
+.dark .dashboard-tooltip-amount { color: #f87171; }
+.dark .dashboard-chart-legend   { color: #64748b; }
+.dark .dashboard-pie-month      { color: #64748b; }
+.dark .dashboard-chart-empty    { color: #64748b; }
+.dark .dashboard-empty-state    { color: #64748b; }
+.dark .dashboard-legend-name    { color: #94a3b8; }
+.dark .dashboard-legend-value   { color: #f1f5f9; }
 .dark .projection-meta-item { color: #64748b; }
