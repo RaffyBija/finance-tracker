@@ -4,7 +4,7 @@ import { useTransactions, useDeleteTransaction, PAGE_SIZE } from '../hooks/useTr
 import { useCategories } from '../hooks/useCategories';
 import { useAccounts } from '../hooks/useAccounts';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import TransactionModal from '../components/transactions/TransactionModal';
@@ -27,6 +27,10 @@ export default function TransactionsPage() {
   // ── Paginazione: accumulo di pagine già caricate ──
   const [page, setPage] = useState(0);
   const [prevPages, setPrevPages] = useState<Transaction[]>([]);
+
+  // ── Espansione riga ──
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
   // ── Modal ──
   const [showModal, setShowModal] = useState(false);
@@ -195,58 +199,126 @@ export default function TransactionsPage() {
               )}
             </div>
           ) : (
-            transactions.map((transaction) => (
-              <div key={transaction.id} className="transaction-card">
+            transactions.map((transaction) => {
+              const isExpanded = expandedId === transaction.id;
+              return (
+                <div
+                  key={transaction.id}
+                  className={`transaction-card-wrap${isExpanded ? ' is-expanded' : ''}`}
+                  onClick={() => toggleExpand(transaction.id)}
+                >
+                  {/* ── Riga compatta (sempre visibile) ── */}
+                  <div className="transaction-card">
+                    <div className="transaction-card-left min-w-0 flex-1">
+                      <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+                        {transaction.type === 'INCOME'
+                          ? <TrendingUp className="icon-md text-success-600" />
+                          : <TrendingDown className="icon-md text-danger-600" />
+                        }
+                      </div>
+                      <div className="transaction-card-info min-w-0">
+                        <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
+                        <p className="transaction-card-title truncate">
+                          {transaction.description || 'Nessuna descrizione'}
+                        </p>
+                        <p className="transaction-card-subtitle truncate">
+                          {transaction.category?.name || 'Senza categoria'}
+                          {accounts.length > 1 && transaction.account && (
+                            <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: transaction.account.color, display: 'inline-block' }} />
+                              {transaction.account.name}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="transaction-card-left min-w-0 flex-1">
-                  <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
-                    {transaction.type === 'INCOME'
-                      ? <TrendingUp className="icon-md text-success-600" />
-                      : <TrendingDown className="icon-md text-danger-600" />
-                    }
+                    <div className="transaction-card-right flex-shrink-0">
+                      <span className={transaction.type === 'INCOME' ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
+                        {transaction.type === 'INCOME' ? '+' : '-'}€{Number(transaction.amount).toFixed(2)}
+                      </span>
+                      {/* Su mobile le azioni vanno nel pannello espanso */}
+                      <div className="transaction-card-actions">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(transaction); }}
+                          className="btn-icon-primary"
+                        >
+                          <Pencil className="icon-sm" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeletingId(transaction.id); }}
+                          className="btn-icon-danger"
+                        >
+                          <Trash2 className="icon-sm" />
+                        </button>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`transaction-card-chevron${isExpanded ? ' is-open' : ''}`}
+                      />
+                    </div>
                   </div>
-                  <div className="transaction-card-info min-w-0">
-                    <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
-                    <p className="transaction-card-title truncate">
-                      {transaction.description || 'Nessuna descrizione'}
-                    </p>
-                    <p className="transaction-card-subtitle truncate">
-                      {transaction.category?.name || 'Senza categoria'}
-                      {accounts.length > 1 && transaction.account && (
-                        <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: transaction.account.color, display: 'inline-block' }} />
-                          {transaction.account.name}
-                        </span>
-                      )}
-                    </p>
+
+                  {/* ── Pannello dettaglio (espandibile) ── */}
+                  <div className={`transaction-card-detail${isExpanded ? ' is-open' : ''}`}>
+                    <div className="transaction-card-detail-inner">
+                      {/* Griglia dettagli — solo mobile (desktop ha già tutto nel compact row) */}
+                      <div className="transaction-card-detail-body">
+                        <div className="transaction-card-detail-field">
+                          <span className="transaction-card-detail-label">Descrizione</span>
+                          <span className="transaction-card-detail-value">
+                            {transaction.description || 'Nessuna descrizione'}
+                          </span>
+                        </div>
+                        <div className="transaction-card-detail-field">
+                          <span className="transaction-card-detail-label">Importo</span>
+                          <span className={`transaction-card-detail-amount ${transaction.type === 'INCOME' ? 'transaction-card-detail-amount-income' : 'transaction-card-detail-amount-expense'}`}>
+                            {transaction.type === 'INCOME' ? '+' : '−'}€{Number(transaction.amount).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="transaction-card-detail-field">
+                          <span className="transaction-card-detail-label">Categoria</span>
+                          <span className="transaction-card-detail-value">
+                            {transaction.category?.name || 'Senza categoria'}
+                          </span>
+                        </div>
+                        <div className="transaction-card-detail-field">
+                          <span className="transaction-card-detail-label">Data</span>
+                          <span className="transaction-card-detail-value">
+                            {format(new Date(transaction.date), 'dd MMMM yyyy', { locale: it })}
+                          </span>
+                        </div>
+                        {transaction.account && (
+                          <div className="transaction-card-detail-field">
+                            <span className="transaction-card-detail-label">Conto</span>
+                            <span className="transaction-card-detail-value transaction-card-detail-account">
+                              <span className="transaction-card-detail-dot" style={{ backgroundColor: transaction.account.color }} />
+                              {transaction.account.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Azioni — sempre visibili nel pannello su tutti i breakpoint */}
+                      <div className="transaction-card-detail-actions">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(transaction); }}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          <Pencil size={14} /> Modifica
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeletingId(transaction.id); }}
+                          className="btn btn-danger-outline btn-sm"
+                        >
+                          <Trash2 size={14} /> Elimina
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="transaction-card-right flex-shrink-0">
-                  <span className={
-                    transaction.type === 'INCOME'
-                      ? 'transaction-card-amount-income'
-                      : 'transaction-card-amount-expense'
-                  }>
-                    {transaction.type === 'INCOME' ? '+' : '-'}€
-                    {Number(transaction.amount).toFixed(2)}
-                  </span>
-                  <button
-                    onClick={() => handleEdit(transaction)}
-                    className="btn-icon-primary"
-                  >
-                    <Pencil className="icon-sm" />
-                  </button>
-                  <button
-                    onClick={() => setDeletingId(transaction.id)}
-                    className="btn-icon-danger"
-                  >
-                    <Trash2 className="icon-sm" />
-                  </button>
-                </div>
-
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

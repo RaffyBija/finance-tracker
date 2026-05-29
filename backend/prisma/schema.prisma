@@ -12,6 +12,7 @@ model User {
   email              String    @unique
   password           String
   name               String
+  isPro              Boolean   @default(false)
   isEmailVerified    Boolean   @default(false)
   emailVerifyToken   String?
   emailVerifyExpires DateTime?

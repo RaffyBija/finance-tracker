@@ -86,7 +86,10 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
       <div className="navbar-profile-panel">
         <div className="navbar-profile-header">
-          <p className="navbar-profile-name">{user?.name}</p>
+          <div className="navbar-profile-name-row">
+            <p className="navbar-profile-name">{user?.name}</p>
+            {user?.isPro && <span className="pro-badge">PRO</span>}
+          </div>
           <p className="navbar-profile-email">{user?.email}</p>
         </div>
         <div className="navbar-profile-body">
@@ -248,6 +251,7 @@ export default function Navbar() {
             >
               <UserAvatar name={user?.name} size={34} />
               <span className="navbar-user-name">{user?.name}</span>
+              {user?.isPro && <span className="pro-badge">PRO</span>}
               <ChevronDown
                 size={13}
                 className={`navbar-user-chevron${profileOpen ? ' is-open' : ''}`}

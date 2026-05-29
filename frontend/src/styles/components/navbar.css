@@ -273,6 +273,12 @@
   background: #fafaf9;
 }
 
+.navbar-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 .navbar-profile-name {
   font-size: 0.875rem;
   font-weight: 600;
@@ -280,6 +286,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ── PRO badge ── */
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+
+.pro-badge-lg {
+  font-size: 0.75rem;
+  padding: 0.2em 0.6em;
+  border-radius: 6px;
 }
 
 .navbar-profile-email {

@@ -5,7 +5,7 @@ import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateRecurringTransactionDTO, RecurringDueResponse } from '../types';
 
-const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'recurring-due', 'pending-recurring', 'calendar'];
+const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'recurring-due', 'pending-recurring', 'calendar', 'accounts'];
 const RECURRING_CRUD_KEYS    = ['recurring', 'dashboard', 'pending-recurring', 'calendar'];
 
 const DUE_CHECK_KEY = 'recurringDueCheck';

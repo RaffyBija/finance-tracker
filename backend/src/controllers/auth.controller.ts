@@ -233,6 +233,7 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        isPro: user.isPro,
       },
     };
 
@@ -254,6 +255,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         id: true,
         email: true,
         name: true,
+        isPro: true,
         createdAt: true,
       },
     });

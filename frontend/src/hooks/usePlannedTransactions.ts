@@ -6,7 +6,7 @@ import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreatePlannedTransactionDTO } from '../types';
 
 const PLANNED_KEYS         = ['planned', 'dashboard', 'pending-planned', 'calendar'];
-const PLANNED_PAID_KEYS    = ['planned', 'transactions', 'dashboard', 'pending-planned', 'calendar'];
+const PLANNED_PAID_KEYS    = ['planned', 'transactions', 'dashboard', 'pending-planned', 'calendar', 'accounts'];
 
 type FilterStatus = 'ALL' | 'UNPAID' | 'PAID';
 

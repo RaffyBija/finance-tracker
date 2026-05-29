@@ -4,9 +4,9 @@ import { Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 
 type Lang = 'it' | 'en';
 
-const lastUpdated = '18 marzo 2026';
-const lastUpdatedEn = 'March 18, 2026';
-const contactEmail = 'privacy@tuodominio.com'; // ← sostituisci
+const lastUpdated = '29 maggio 2026';
+const lastUpdatedEn = 'May 29, 2026';
+const contactEmail = '';
 
 // ── Contenuto ────────────────────────────────────────────────────────────────
 

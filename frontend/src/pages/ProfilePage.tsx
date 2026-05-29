@@ -5,7 +5,70 @@ import { authAPI } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { useFormValidation } from '../hooks/useFormValidation';
 import FieldError from '../components/shared/FieldError';
-import { User, Lock, Trash2, ChevronRight, ShieldAlert } from 'lucide-react';
+import { User, Lock, Trash2, ChevronRight, ShieldAlert, Sparkles, Check } from 'lucide-react';
+
+// ── Sezione: Piano ───────────────────────────────────────────────────────────
+
+function PlanSection() {
+  const { user } = useAuth();
+  const isPro = user?.isPro ?? false;
+
+  return (
+    <div className="card card-lg">
+      <div className="card-header">
+        <h2 className="card-title">Piano</h2>
+      </div>
+
+      <div className="plan-current">
+        <div className="plan-badge-row">
+          {isPro
+            ? <span className="pro-badge pro-badge-lg">PRO</span>
+            : <span className="plan-standard-badge">Standard</span>
+          }
+          <span className="plan-status-label">
+            {isPro ? 'Account Pro attivo' : 'Piano gratuito'}
+          </span>
+        </div>
+
+        <div className="plan-limits">
+          <div className="plan-limit-item">
+            <Check size={14} className="plan-limit-check" />
+            <span>Conti bancari / carte: fino a {isPro ? '10' : '3'}</span>
+          </div>
+          <div className="plan-limit-item">
+            <Check size={14} className="plan-limit-check" />
+            <span>Transazioni illimitate</span>
+          </div>
+          <div className="plan-limit-item">
+            <Check size={14} className="plan-limit-check" />
+            <span>Budget, ricorrenti e pianificate illimitati</span>
+          </div>
+          {isPro && (
+            <div className="plan-limit-item">
+              <Check size={14} className="plan-limit-check" />
+              <span>Accesso anticipato alle nuove funzionalità</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!isPro && (
+        <div className="plan-upgrade">
+          <div className="plan-upgrade-content">
+            <Sparkles size={16} className="plan-upgrade-icon" />
+            <div>
+              <p className="plan-upgrade-title">Passa a Pro</p>
+              <p className="plan-upgrade-desc">Fino a 10 conti e accesso anticipato alle prossime funzionalità.</p>
+            </div>
+          </div>
+          <button className="btn btn-primary btn-sm" disabled>
+            Disponibile a breve
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Sezione: Dati Account ────────────────────────────────────────────────────
 
@@ -424,6 +487,7 @@ export default function ProfilePage() {
 
       {/* Sezioni */}
       <div className="space-y-6">
+        <PlanSection />
         <AccountSection />
         <SecuritySection />
         <DangerZoneSection />

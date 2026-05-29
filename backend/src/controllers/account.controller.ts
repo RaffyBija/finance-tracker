@@ -4,6 +4,7 @@ import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 
 const MAX_FREE_ACCOUNTS = 3;
+const MAX_PRO_ACCOUNTS  = 10;
 
 export const getAccounts = async (req: AuthRequest, res: Response) => {
   try {
@@ -107,9 +108,11 @@ export const createAccount = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const user  = await prisma.user.findUnique({ where: { id: userId }, select: { isPro: true } });
+    const limit = user?.isPro ? MAX_PRO_ACCOUNTS : MAX_FREE_ACCOUNTS;
     const count = await prisma.account.count({ where: { userId } });
-    if (count >= MAX_FREE_ACCOUNTS) {
-      return res.status(403).json({ error: 'Limite account raggiunto', upgrade: true, limit: MAX_FREE_ACCOUNTS });
+    if (count >= limit) {
+      return res.status(403).json({ error: 'Limite account raggiunto', upgrade: !user?.isPro, limit });
     }
 
     const existing = await prisma.account.findFirst({ where: { userId, name: name.trim() } });

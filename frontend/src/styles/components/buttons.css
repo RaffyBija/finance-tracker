@@ -88,6 +88,13 @@
     @apply focus:ring-danger-500;
   }
 
+  .btn-danger-outline {
+    @apply bg-transparent text-danger-600;
+    border: 1px solid theme('colors.danger.300');
+    @apply hover:bg-danger-50;
+    @apply focus:ring-danger-400;
+  }
+
   /* ============================
      VARIANTS - WARNING
      ============================ */
