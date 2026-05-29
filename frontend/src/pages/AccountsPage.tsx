@@ -29,7 +29,10 @@ export default function AccountsPage() {
 
   const atLimit = accounts.length >= maxAccounts;
 
-  const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const bankAccounts = accounts.filter((a) => a.type !== 'CREDIT_CARD');
+  const ccAccounts   = accounts.filter((a) => a.type === 'CREDIT_CARD');
+  const liquidity    = bankAccounts.reduce((sum, a) => sum + a.balance, 0);
+  const ccExposure   = ccAccounts.reduce((sum, a) => sum + a.balance, 0);
 
   const handleEdit = (account: Account) => {
     setEditingAccount(account);
@@ -125,32 +128,20 @@ export default function AccountsPage() {
               )}
             </div>
 
-            {/* Patrimonio netto */}
-            {accounts.length > 0 && (
+            {/* Riepilogo conti */}
+            {bankAccounts.length > 0 && (
               <div className="account-net-worth" style={{ marginTop: 24 }}>
                 <div>
-                  <div className="account-net-worth-label">Patrimonio netto</div>
+                  <div className="account-net-worth-label">Liquidità</div>
                   <div className="account-net-worth-rows">
-                    {accounts.map((a) => (
+                    {bankAccounts.map((a) => (
                       <div key={a.id} className="account-net-worth-row">
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: a.color,
-                              display: 'inline-block',
-                              flexShrink: 0,
-                            }}
-                          />
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: a.color, display: 'inline-block', flexShrink: 0 }} />
                           {a.name}
                         </span>
-                        <span
-                          className={`account-net-worth-row-amount ${
-                            a.balance >= 0 ? 'is-asset' : 'is-liability'
-                          }`}
-                        >
+                        <span style={{padding:'0 10px'}} />
+                        <span className="account-net-worth-row-amount is-asset">
                           {formatCurrency(a.balance)}
                         </span>
                       </div>
@@ -159,11 +150,36 @@ export default function AccountsPage() {
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div className="account-net-worth-label" style={{ marginBottom: 4 }}>Totale</div>
-                  <div
-                    className="account-net-worth-amount"
-                    style={{ color: netWorth >= 0 ? '#0d9488' : '#ef4444' }}
-                  >
-                    {formatCurrency(netWorth)}
+                  <div className="account-net-worth-amount" style={{ color: '#0d9488' }}>
+                    {formatCurrency(liquidity)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {ccAccounts.length > 0 && (
+              <div className="account-net-worth" style={{ marginTop: 12 }}>
+                <div>
+                  <div className="account-net-worth-label">Esposizione CC</div>
+                  <div className="account-net-worth-rows">
+                    {ccAccounts.map((a) => (
+                      <div key={a.id} className="account-net-worth-row">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: a.color, display: 'inline-block', flexShrink: 0 }} />
+                          {a.name}
+                        </span>
+                        <span style={{padding:'0 10px'}} />
+                        <span className={`account-net-worth-row-amount ${a.balance < 0 ? 'is-liability' : 'is-asset'}`}>
+                          {formatCurrency(a.balance)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div className="account-net-worth-label" style={{ marginBottom: 4 }}>Totale</div>
+                  <div className="account-net-worth-amount" style={{ color: ccExposure < 0 ? '#ef4444' : '#0d9488' }}>
+                    {formatCurrency(ccExposure)}
                   </div>
                 </div>
               </div>
