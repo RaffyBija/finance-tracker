@@ -34,4 +34,9 @@ export const accountsAPI = {
     const { data } = await api.post<{ settledAmount: number }>(`/accounts/${id}/settle`, { categoryId });
     return data;
   },
+
+  closeBillingCycle: async (id: string): Promise<{ cycled: boolean; debtAmount?: number; billingDate?: string; created?: boolean }> => {
+    const { data } = await api.post(`/accounts/${id}/close-billing-cycle`);
+    return data;
+  },
 };

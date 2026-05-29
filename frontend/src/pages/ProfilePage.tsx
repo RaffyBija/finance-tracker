@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
@@ -464,6 +464,16 @@ function DangerZoneSection() {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.replace('#', '');
+    const el = document.getElementById(id);
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  }, [hash]);
 
   // Genera le iniziali per l'avatar
   const initials = user?.name
@@ -488,8 +498,8 @@ export default function ProfilePage() {
       {/* Sezioni */}
       <div className="space-y-6">
         <PlanSection />
-        <AccountSection />
-        <SecuritySection />
+        <div id="dati"><AccountSection /></div>
+        <div id="sicurezza"><SecuritySection /></div>
         <DangerZoneSection />
       </div>
     </div>

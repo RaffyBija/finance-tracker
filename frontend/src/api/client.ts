@@ -96,6 +96,10 @@ export const authAPI = {
     );
     return res;
   },
+
+  completeTour: async (): Promise<void> => {
+    await api.post('/auth/tour-complete');
+  },
 };
 
 // Transaction API

@@ -234,6 +234,7 @@ export const login = async (req: Request, res: Response) => {
         email: user.email,
         name: user.name,
         isPro: user.isPro,
+        tourCompleted: user.tourCompleted,
       },
     };
 
@@ -256,6 +257,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         email: true,
         name: true,
         isPro: true,
+        tourCompleted: true,
         createdAt: true,
       },
     });
@@ -478,6 +480,21 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Account eliminato con successo' });
   } catch (error) {
     console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Segna il tour come completato per l'utente corrente
+export const completeTour = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { tourCompleted: true },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Complete tour error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

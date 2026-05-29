@@ -3,7 +3,7 @@ import {
   register, login, getMe,
   verifyEmail, requestPasswordReset, resetPassword,
   updateProfile, changePassword, deleteAccount,
-  verifyEmailChange
+  verifyEmailChange, completeTour
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -26,5 +26,6 @@ router.post('/reset-password', resetPassword);
 router.put('/profile', authenticate, updateProfile);
 router.put('/change-password', authenticate, changePassword);
 router.delete('/account', authenticate, deleteAccount);
+router.post('/tour-complete', authenticate, completeTour);
 
 export default router;

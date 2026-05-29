@@ -7,6 +7,7 @@ import {
   deleteAccount,
   setDefaultAccount,
   settleAccount,
+  closeBillingCycle,
 } from '../controllers/account.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -21,5 +22,6 @@ router.put('/:id', updateAccount);
 router.delete('/:id', deleteAccount);
 router.patch('/:id/default', setDefaultAccount);
 router.post('/:id/settle', settleAccount);
+router.post('/:id/close-billing-cycle', closeBillingCycle);
 
 export default router;

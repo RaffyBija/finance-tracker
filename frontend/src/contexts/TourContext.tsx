@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-
-const TOUR_KEY = 'tourCompleted';
+import { useAuth } from './AuthContext';
+import { authAPI } from '../api/client';
 
 interface TourContextType {
   isActive: boolean;
@@ -15,21 +15,29 @@ interface TourContextType {
 const TourContext = createContext<TourContextType | null>(null);
 
 export function TourProvider({ children, total }: { children: React.ReactNode; total: number }) {
+  const { user, updateUser } = useAuth();
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Avvia il tour solo se l'utente non lo ha mai completato (flag dal DB)
   useEffect(() => {
-    if (localStorage.getItem(TOUR_KEY) !== 'true') {
+    if (user && !user.tourCompleted) {
       const t = setTimeout(() => setIsActive(true), 800);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [user?.tourCompleted]);
 
-  const complete = useCallback(() => {
-    localStorage.setItem(TOUR_KEY, 'true');
+  const complete = useCallback(async () => {
     setIsActive(false);
     setCurrentStep(0);
-  }, []);
+    // Aggiorna DB + stato locale
+    updateUser({ tourCompleted: true });
+    try {
+      await authAPI.completeTour();
+    } catch {
+      // Silenzioso — il tour è già visivamente chiuso, non vale la pena mostrare un errore
+    }
+  }, [updateUser]);
 
   const next = useCallback(() => {
     setCurrentStep((s) => {
@@ -45,6 +53,7 @@ export function TourProvider({ children, total }: { children: React.ReactNode; t
 
   const skip = complete;
 
+  // Restart: solo sessione corrente, non resetta il flag DB
   const restart = useCallback(() => {
     setCurrentStep(0);
     setIsActive(true);

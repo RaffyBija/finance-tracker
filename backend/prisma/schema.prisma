@@ -13,6 +13,7 @@ model User {
   password           String
   name               String
   isPro              Boolean   @default(false)
+  tourCompleted      Boolean   @default(false)
   isEmailVerified    Boolean   @default(false)
   emailVerifyToken   String?
   emailVerifyExpires DateTime?
@@ -44,7 +45,8 @@ model Account {
 
   // Solo CREDIT_CARD
   creditLimit     Decimal?    @db.Decimal(10, 2)
-  billingDay      Int?
+  billingDay      Int?        // giorno di addebito (es. 15)
+  closingDay      Int?        // giorno di chiusura ciclo (es. 1) — resetta la CC e crea la pianificata
   linkedAccountId String?
 
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -54,6 +56,7 @@ model Account {
   transactions          Transaction[]
   recurringTransactions RecurringTransaction[]
   plannedTransactions   PlannedTransaction[]
+  ccBillingPlanned      PlannedTransaction[]  @relation("CCBillingPlanned")
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -166,12 +169,14 @@ model PlannedTransaction {
   notes       String?
   userId      String
   accountId   String?
+  ccAccountId String?         // se valorizzato: è il pagamento mensile di questa CC
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  account   Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ccAccount Account?  @relation("CCBillingPlanned", fields: [ccAccountId], references: [id], onDelete: SetNull)
 
   @@index([userId, plannedDate])
   @@index([userId, isPaid])

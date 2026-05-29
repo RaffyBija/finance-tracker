@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string;
   isPro: boolean;
+  tourCompleted: boolean;
   createdAt: string;
 }
 
@@ -258,6 +259,7 @@ export interface Account {
   openingBalance: number;
   creditLimit?: number | null;
   billingDay?: number | null;
+  closingDay?: number | null;
   linkedAccountId?: string | null;
   linkedAccount?: { id: string; name: string } | null;
   balance: number;
@@ -274,6 +276,7 @@ export interface CreateAccountDTO {
   openingBalance?: number;
   creditLimit?: number;
   billingDay?: number;
+  closingDay?: number;
   linkedAccountId?: string;
 }
 
@@ -284,6 +287,7 @@ export interface UpdateAccountDTO {
   openingBalance?: number;
   creditLimit?: number | null;
   billingDay?: number | null;
+  closingDay?: number | null;
   linkedAccountId?: string | null;
 }
 

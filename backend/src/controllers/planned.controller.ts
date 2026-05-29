@@ -264,6 +264,9 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       include: { category: true },
     });
 
+    // Nota: per le pianificate CC (ccAccountId valorizzato), il saldo della CC viene azzerato
+    // al giorno di chiusura ciclo (closeBillingCycle), NON qui. Qui addebitiamo solo il conto bancario.
+
     analyticsCache.onPlannedPaid(userId);
     res.json({
       planned: updated,

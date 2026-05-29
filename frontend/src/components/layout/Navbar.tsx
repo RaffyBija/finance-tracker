@@ -95,11 +95,11 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
         <div className="navbar-profile-body">
 
           <p className="navbar-profile-section-label">Account</p>
-          <button onClick={() => go('/profile')} className="navbar-profile-item">
+          <button onClick={() => go('/profile#dati')} className="navbar-profile-item">
             <User size={15} className="navbar-profile-item-icon" />
             Impostazioni profilo
           </button>
-          <button onClick={() => go('/profile')} className="navbar-profile-item">
+          <button onClick={() => go('/profile#sicurezza')} className="navbar-profile-item">
             <Shield size={15} className="navbar-profile-item-icon" />
             Sicurezza e password
           </button>

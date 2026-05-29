@@ -21,6 +21,17 @@ const SECTIONS: Section[] = [
     ),
   },
   {
+    title: 'Conti e Carte di credito',
+    emoji: '🏦',
+    content: (
+      <>
+        <p>Vai su <strong>Gestione → Conti</strong> per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
+        <p>Per le <strong>carte di credito</strong>: imposta il limite, il giorno di addebito mensile e il conto collegato. L'app ti avvisa automaticamente quando è il momento di registrare il pagamento mensile.</p>
+        <p>Il <strong>Patrimonio netto</strong> in Dashboard è la somma di tutti i saldi: conti bancari meno debiti CC.</p>
+      </>
+    ),
+  },
+  {
     title: 'Transazioni',
     emoji: '💸',
     content: (

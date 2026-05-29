@@ -19,7 +19,7 @@ export function useRecurringDue() {
     queryKey: ['recurring-due'],
     queryFn: recurringApi.getDue,
     enabled,
-    staleTime: Infinity,
+    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 

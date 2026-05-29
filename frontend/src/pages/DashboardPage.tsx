@@ -119,11 +119,12 @@ export default function DashboardPage() {
     [monthlyTrend]
   );
 
-  const multiAccount = accounts.length > 1;
-  const netWorth = accounts.reduce((s, a) => s + a.balance, 0);
+  const liquidAccounts = accounts.filter((a) => a.type !== 'CREDIT_CARD');
+  const multiAccount = liquidAccounts.length > 1;
+  const netWorth = liquidAccounts.reduce((s, a) => s + a.balance, 0);
 
-  const heroValue = multiAccount ? netWorth : (totalSummary?.balance ?? 0);
-  const heroLoading = multiAccount ? false : totalSummaryLoading;
+  const heroValue = liquidAccounts.length > 0 ? netWorth : (totalSummary?.balance ?? 0);
+  const heroLoading = liquidAccounts.length > 0 ? false : totalSummaryLoading;
   const heroPositive = heroValue >= 0;
 
   const fmt = (n: number) =>
@@ -168,7 +169,7 @@ export default function DashboardPage() {
         {/* Breakdown per conto (solo multi-account) */}
         {multiAccount && (
           <div className="dashboard-hero-accounts">
-            {accounts.map((a) => (
+            {liquidAccounts.map((a) => (
               <div key={a.id} className="dashboard-hero-account-row">
                 <span className="dashboard-hero-account-name">
                   <span

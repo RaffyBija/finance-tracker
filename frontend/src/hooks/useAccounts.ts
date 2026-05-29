@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { accountsAPI } from '../api/accounts';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { Account, CreateAccountDTO, UpdateAccountDTO } from '../types';
@@ -71,30 +71,75 @@ export const useSettleAccount = () => {
   });
 };
 
-const CC_BILLING_KEY = 'ccBillingCheck';
+export const useCloseBillingCycle = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (accountId: string) => accountsAPI.closeBillingCycle(accountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['planned'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+const CC_BILLING_KEY  = 'ccBillingCheck';
+const CC_CLOSING_KEY  = 'ccClosingCheck';
 
 export function useCCBillingDue() {
-  const today = new Date().toISOString().split('T')[0];
+  const today    = new Date().toISOString().split('T')[0];
   const todayDay = new Date().getDate();
 
-  const [enabled] = useState(() => localStorage.getItem(CC_BILLING_KEY) !== today);
-  const [isOpen, setIsOpen] = useState(false);
+  // Gate per il billing day (modal di pagamento)
+  const [billingEnabled] = useState(() => localStorage.getItem(CC_BILLING_KEY) !== today);
+  // Gate per il closing day (chiusura ciclo automatica)
+  const [closingEnabled] = useState(() => localStorage.getItem(CC_CLOSING_KEY) !== today);
+
+  const [isOpen, setIsOpen]       = useState(false);
   const [dueAccount, setDueAccount] = useState<Account | null>(null);
+  const cycleClosedRef = useRef(false);
 
   const { data: accounts = [] } = useAccounts();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!enabled || accounts.length === 0) return;
-    const due = accounts.find(
-      (a) => a.type === 'CREDIT_CARD' && a.billingDay === todayDay && a.balance < 0
-    ) ?? null;
-    if (due) {
-      setDueAccount(due);
-      setIsOpen(true);
-    } else {
-      localStorage.setItem(CC_BILLING_KEY, today);
+    if (accounts.length === 0) return;
+
+    // 1. Chiusura ciclo automatica (closingDay = oggi)
+    if (closingEnabled && !cycleClosedRef.current) {
+      const toClose = accounts.filter(
+        (a) => a.type === 'CREDIT_CARD' && a.closingDay === todayDay && a.balance < 0
+      );
+      if (toClose.length > 0) {
+        cycleClosedRef.current = true;
+        localStorage.setItem(CC_CLOSING_KEY, today);
+        toClose.forEach((cc) => {
+          accountsAPI.closeBillingCycle(cc.id).then(() => {
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['planned'] });
+            queryClient.invalidateQueries({ queryKey: ['calendar'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
+          }).catch(() => { /* silenzioso */ });
+        });
+      }
     }
-  }, [accounts, enabled, today, todayDay]);
+
+    // 2. Modal di pagamento (billingDay = oggi, per settle manuale)
+    if (billingEnabled) {
+      const due = accounts.find(
+        (a) => a.type === 'CREDIT_CARD' && a.billingDay === todayDay && a.balance < 0
+      ) ?? null;
+      if (due) {
+        setDueAccount(due);
+        setIsOpen(true);
+      } else {
+        localStorage.setItem(CC_BILLING_KEY, today);
+      }
+    }
+  }, [accounts, billingEnabled, closingEnabled, today, todayDay, queryClient]);
 
   const dismiss = () => {
     localStorage.setItem(CC_BILLING_KEY, today);

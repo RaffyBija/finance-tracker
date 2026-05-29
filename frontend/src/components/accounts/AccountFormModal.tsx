@@ -31,6 +31,7 @@ interface FormData {
   openingBalance: string;
   creditLimit: string;
   billingDay: string;
+  closingDay: string;
   linkedAccountId: string;
 }
 
@@ -57,6 +58,9 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
     billingDay: editingAccount?.billingDay != null
       ? String(editingAccount.billingDay)
       : '',
+    closingDay: editingAccount?.closingDay != null
+      ? String(editingAccount.closingDay)
+      : '1',
     linkedAccountId: editingAccount?.linkedAccountId ?? '',
   });
 
@@ -95,6 +99,7 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
       openingBalance: formData.openingBalance ? Number(formData.openingBalance) : 0,
       ...(isCC && formData.creditLimit && { creditLimit: Number(formData.creditLimit) }),
       ...(isCC && formData.billingDay && { billingDay: Number(formData.billingDay) }),
+      ...(isCC && formData.closingDay && { closingDay: Number(formData.closingDay) }),
       ...(isCC && formData.linkedAccountId && { linkedAccountId: formData.linkedAccountId }),
     };
 
@@ -230,6 +235,18 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                   ))}
                 </select>
                 <FieldError message={errors.billingDay} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Giorno di chiusura ciclo</label>
+                <select
+                  value={formData.closingDay}
+                  onChange={(e) => set('closingDay', e.target.value)}
+                  className="form-select"
+                >
+                  {BILLING_DAYS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

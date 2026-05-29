@@ -19,41 +19,35 @@ export const getAccounts = async (req: AuthRequest, res: Response) => {
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
 
-    // Calcola il saldo corrente per ogni account
-    const accountsWithBalance = await Promise.all(
-      accounts.map(async (account) => {
-        const agg = await prisma.transaction.aggregate({
-          where: { accountId: account.id },
-          _sum: {
-            amount: true,
-          },
-        });
+    // Calcola saldi con una sola query groupBy invece di N*2 aggregate
+    const accountIds = accounts.map((a) => a.id);
+    const totals = await prisma.transaction.groupBy({
+      by: ['accountId', 'type'],
+      where: { accountId: { in: accountIds } },
+      _sum: { amount: true },
+    });
 
-        const incomeAgg = await prisma.transaction.aggregate({
-          where: { accountId: account.id, type: 'INCOME' },
-          _sum: { amount: true },
-        });
-        const expenseAgg = await prisma.transaction.aggregate({
-          where: { accountId: account.id, type: 'EXPENSE' },
-          _sum: { amount: true },
-        });
+    const balanceMap: Record<string, { income: number; expense: number }> = {};
+    for (const row of totals) {
+      if (!row.accountId) continue;
+      if (!balanceMap[row.accountId]) balanceMap[row.accountId] = { income: 0, expense: 0 };
+      if (row.type === 'INCOME') balanceMap[row.accountId].income = Number(row._sum.amount ?? 0);
+      if (row.type === 'EXPENSE') balanceMap[row.accountId].expense = Number(row._sum.amount ?? 0);
+    }
 
-        const income = Number(incomeAgg._sum.amount ?? 0);
-        const expense = Number(expenseAgg._sum.amount ?? 0);
-        // Per CC: openingBalance rappresenta il debito iniziale (positivo nel DB)
-        // Il saldo è negativo (debito), quindi neghiamo l'opening balance
-        const balance = account.type === 'CREDIT_CARD'
-          ? -Number(account.openingBalance) + income - expense
-          : Number(account.openingBalance) + income - expense;
-
-        return {
-          ...account,
-          openingBalance: Number(account.openingBalance),
-          creditLimit: account.creditLimit ? Number(account.creditLimit) : null,
-          balance,
-        };
-      })
-    );
+    const accountsWithBalance = accounts.map((account) => {
+      const { income = 0, expense = 0 } = balanceMap[account.id] ?? {};
+      // Per CC: openingBalance è il debito iniziale (positivo nel DB), il saldo è negativo
+      const balance = account.type === 'CREDIT_CARD'
+        ? -Number(account.openingBalance) + income - expense
+        : Number(account.openingBalance) + income - expense;
+      return {
+        ...account,
+        openingBalance: Number(account.openingBalance),
+        creditLimit: account.creditLimit ? Number(account.creditLimit) : null,
+        balance,
+      };
+    });
 
     res.json(accountsWithBalance);
   } catch (error) {
@@ -93,7 +87,7 @@ export const getAccount = async (req: AuthRequest, res: Response) => {
 export const createAccount = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, type, color, icon, openingBalance, creditLimit, billingDay, linkedAccountId } = req.body;
+    const { name, type, color, icon, openingBalance, creditLimit, billingDay, closingDay, linkedAccountId } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ error: 'Nome conto obbligatorio' });
@@ -135,8 +129,9 @@ export const createAccount = async (req: AuthRequest, res: Response) => {
         color: color ?? '#0d9488',
         icon: icon ?? null,
         openingBalance: openingBalance ?? 0,
-        creditLimit: type === 'CREDIT_CARD' && creditLimit ? creditLimit : null,
-        billingDay: type === 'CREDIT_CARD' && billingDay ? Number(billingDay) : null,
+        creditLimit:  type === 'CREDIT_CARD' && creditLimit  ? creditLimit          : null,
+        billingDay:   type === 'CREDIT_CARD' && billingDay   ? Number(billingDay)   : null,
+        closingDay:   type === 'CREDIT_CARD' && closingDay   ? Number(closingDay)   : null,
         linkedAccountId: type === 'CREDIT_CARD' && linkedAccountId ? linkedAccountId : null,
       },
     });
@@ -156,7 +151,7 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { name, color, icon, openingBalance, creditLimit, billingDay, linkedAccountId } = req.body;
+    const { name, color, icon, openingBalance, creditLimit, billingDay, closingDay, linkedAccountId } = req.body;
 
     const existing = await prisma.account.findFirst({ where: { id, userId } });
     if (!existing) {
@@ -194,7 +189,8 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
         ...(icon !== undefined && { icon }),
         ...(openingBalance !== undefined && { openingBalance }),
         ...(creditLimit !== undefined && { creditLimit: creditLimit ?? null }),
-        ...(billingDay !== undefined && { billingDay: billingDay ? Number(billingDay) : null }),
+        ...(billingDay  !== undefined && { billingDay:  billingDay  ? Number(billingDay)  : null }),
+        ...(closingDay  !== undefined && { closingDay:  closingDay  ? Number(closingDay)  : null }),
         ...(linkedAccountId !== undefined && { linkedAccountId: linkedAccountId ?? null }),
       },
     });
@@ -289,6 +285,19 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
       }),
     ]);
 
+    // Marca come pagata la pianificata di billing CC per questo mese (se esiste)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    await prisma.plannedTransaction.updateMany({
+      where: {
+        userId,
+        ccAccountId: account.id,
+        isPaid: false,
+        plannedDate: { gte: startOfMonth, lte: endOfMonth },
+      },
+      data: { isPaid: true },
+    });
+
     analyticsCache.onTransactionMutated(userId);
 
     res.status(201).json({
@@ -297,6 +306,86 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Settle account error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Chiude il ciclo di billing della CC:
+//   1. Azzera il saldo CC (il plafond torna disponibile per il nuovo ciclo)
+//   2. Crea la pianificata per il pagamento al billingDay del mese corrente/successivo
+// Idempotente: se la pianificata esiste già per il mese corrente non crea duplicati.
+export const closeBillingCycle = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const account = await prisma.account.findFirst({ where: { id, userId } });
+    if (!account) return res.status(404).json({ error: 'Conto non trovato' });
+    if (account.type !== 'CREDIT_CARD') return res.status(400).json({ error: 'Solo carte di credito' });
+    if (!account.linkedAccountId) return res.status(400).json({ error: 'Nessun conto collegato' });
+
+    // Calcola il debito corrente del ciclo che si sta chiudendo
+    const incomeAgg  = await prisma.transaction.aggregate({ where: { accountId: id, type: 'INCOME'  }, _sum: { amount: true } });
+    const expenseAgg = await prisma.transaction.aggregate({ where: { accountId: id, type: 'EXPENSE' }, _sum: { amount: true } });
+    const income  = Number(incomeAgg._sum.amount  ?? 0);
+    const expense = Number(expenseAgg._sum.amount ?? 0);
+    const balance = -Number(account.openingBalance) + income - expense;
+
+    if (balance >= 0) {
+      return res.json({ cycled: false, message: 'Nessun debito da chiudere' });
+    }
+
+    const debtAmount = Math.abs(balance);
+    const now = new Date();
+
+    // Idempotente: controlla se la pianificata di questo mese esiste già
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const existing = await prisma.plannedTransaction.findFirst({
+      where: { userId, ccAccountId: id, isPaid: false, plannedDate: { gte: startOfMonth, lte: endOfMonth } },
+    });
+
+    // Calcola la data di scadenza: billingDay del mese corrente (se non ancora passato) o del prossimo
+    const billingDay = account.billingDay ?? 15;
+    const billingDate = new Date(now.getFullYear(), now.getMonth(), billingDay);
+    if (billingDate <= now) billingDate.setMonth(billingDate.getMonth() + 1);
+
+    // Mese di riferimento del ciclo che si chiude (es. "maggio 2026")
+    const cycleMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+
+    let planned = existing;
+    if (!existing) {
+      planned = await prisma.plannedTransaction.create({
+        data: {
+          userId,
+          type: 'EXPENSE',
+          amount: debtAmount,
+          description: `Addebito ${account.name} - ${cycleMonth}`,
+          plannedDate: billingDate,
+          accountId: account.linkedAccountId,
+          ccAccountId: id,
+        },
+      });
+    }
+
+    // Azzera il saldo CC: il nuovo ciclo inizia da 0 (plafond completamente libero)
+    // Il debito è ora "frozen" nella pianificata — non nelle transazioni della CC
+    const newOpeningBalance = income - expense; // → saldo = 0
+    await prisma.account.update({ where: { id }, data: { openingBalance: newOpeningBalance } });
+
+    analyticsCache.onTransactionMutated(userId);
+    analyticsCache.onPlannedMutated(userId);
+
+    res.status(201).json({
+      cycled: true,
+      debtAmount,
+      billingDate,
+      created: !existing,
+      planned: planned ? { ...planned, amount: Number(planned.amount) } : null,
+    });
+  } catch (error) {
+    console.error('Close billing cycle error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

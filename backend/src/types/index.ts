@@ -48,6 +48,7 @@ export interface AuthResponse {
     email: string;
     name: string;
     isPro: boolean;
+    tourCompleted: boolean;
   };
 }
 
