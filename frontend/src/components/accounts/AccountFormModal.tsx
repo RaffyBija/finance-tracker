@@ -108,8 +108,14 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
       }
       onClose();
     } catch (err: any) {
-      if (err.response?.data?.upgrade) {
-        toast.error('Limite di 3 conti raggiunto. Passa a Plus per aggiungerne altri.');
+      if (err.response?.status === 403 && err.response?.data?.error?.includes('Limite')) {
+        const limit = err.response.data.limit ?? 3;
+        const canUpgrade = err.response.data.upgrade;
+        toast.error(
+          canUpgrade
+            ? `Limite di ${limit} conti raggiunto. Passa a Pro per aggiungerne altri.`
+            : `Hai raggiunto il limite massimo di ${limit} conti del piano Pro.`
+        );
       } else {
         toast.error(err.response?.data?.error ?? 'Errore nel salvataggio');
       }

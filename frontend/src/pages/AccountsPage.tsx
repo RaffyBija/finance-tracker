@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Lock, Plus } from 'lucide-react';
 import { useAccounts, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AccountCard from '../components/accounts/AccountCard';
 import AccountFormModal from '../components/accounts/AccountFormModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
 import type { Account } from '../types';
-
-const MAX_FREE_ACCOUNTS = 3;
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -19,12 +18,16 @@ export default function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const { user } = useAuth();
+  const isPro = user?.isPro ?? false;
+  const maxAccounts = isPro ? 10 : 3;
+
   const { data: accounts = [], isLoading } = useAccounts();
   const deleteMutation = useDeleteAccount();
   const setDefaultMutation = useSetDefaultAccount();
   const toast = useToast();
 
-  const atLimit = accounts.length >= MAX_FREE_ACCOUNTS;
+  const atLimit = accounts.length >= maxAccounts;
 
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
 
@@ -35,7 +38,7 @@ export default function AccountsPage() {
 
   const handleOpenNew = () => {
     if (atLimit) {
-      toast.info(`Hai raggiunto il limite di ${MAX_FREE_ACCOUNTS} conti del piano gratuito.`);
+      toast.info(`Hai raggiunto il limite di ${maxAccounts} conti del piano ${isPro ? 'Pro' : 'gratuito'}.`);
       return;
     }
     setEditingAccount(null);
@@ -80,7 +83,7 @@ export default function AccountsPage() {
             <div className="page-header">
               <h1 className="page-header-title">I tuoi conti</h1>
               <span style={{ fontSize: 13, color: 'var(--color-neutral-500, #64748b)' }}>
-                {accounts.length}/{MAX_FREE_ACCOUNTS} conti attivi
+                {accounts.length}/{maxAccounts} conti attivi
               </span>
             </div>
 
@@ -113,9 +116,11 @@ export default function AccountsPage() {
                   </div>
                   <span className="account-card-locked-title">Slot bloccato</span>
                   <span className="account-card-locked-desc">
-                    Hai raggiunto il limite del piano gratuito
+                    Hai raggiunto il limite di {maxAccounts} conti del piano {isPro ? 'Pro' : 'gratuito'}
                   </span>
-                  <span className="account-card-locked-badge">Plus — presto disponibile</span>
+                  {!isPro && (
+                    <span className="account-card-locked-badge">Pro — presto disponibile</span>
+                  )}
                 </div>
               )}
             </div>
