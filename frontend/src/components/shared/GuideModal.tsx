@@ -14,20 +14,9 @@ const SECTIONS: Section[] = [
     emoji: '🏦',
     content: (
       <>
-        <p>Vai su <strong>Gestione → Conti</strong> per aggiungere fino a 3 conti (piano gratuito): conto corrente, carta di debito o carta di credito.</p>
-        <p>Per le <strong>carte di credito</strong>: imposta il limite, il giorno di addebito mensile e il conto bancario collegato. L'app ti avviserà automaticamente ogni mese per registrare il pagamento, azzerando il saldo della carta.</p>
-        <p>Il <strong>Patrimonio netto</strong> (visibile nella Dashboard) è la somma di tutti i saldi: conti bancari meno debiti CC.</p>
-      </>
-    ),
-  },
-  {
-    title: 'Conti e Carte di credito',
-    emoji: '🏦',
-    content: (
-      <>
         <p>Vai su <strong>Gestione → Conti</strong> per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
-        <p>Per le <strong>carte di credito</strong>: imposta il limite, il giorno di addebito mensile e il conto collegato. L'app ti avvisa automaticamente quando è il momento di registrare il pagamento mensile.</p>
-        <p>Il <strong>Patrimonio netto</strong> in Dashboard è la somma di tutti i saldi: conti bancari meno debiti CC.</p>
+        <p>Per le <strong>carte di credito</strong>: imposta il limite, il giorno di addebito mensile e il conto collegato. L'app ti avvisa automaticamente quando è il momento di registrare il pagamento mensile, azzerando il saldo della carta.</p>
+        <p>Nella pagina Conti trovi due riquadri separati: <strong>Liquidità</strong> (somma dei conti bancari, denaro realmente disponibile) e <strong>Esposizione CC</strong> (spese sulla carta ancora da addebitare). La Dashboard mostra solo la liquidità perché quei fondi sono effettivamente tuoi — l'impatto futuro della CC è già visibile nella card Proiezione.</p>
       </>
     ),
   },
