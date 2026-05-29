@@ -16,7 +16,10 @@ export const getPlannedDue = async (req: AuthRequest, res: Response) => {
 
     const planned = await prisma.plannedTransaction.findMany({
       where: { userId, isPaid: false, plannedDate: { lte: endOfToday } },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
       orderBy: { plannedDate: 'asc' },
     });
 
@@ -49,6 +52,7 @@ export const getPlannedTransactions = async (req: AuthRequest, res: Response) =>
       where,
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
       orderBy: {
         plannedDate: 'asc',
@@ -70,7 +74,10 @@ export const getPlannedTransaction = async (req: AuthRequest, res: Response) => 
 
     const planned = await prisma.plannedTransaction.findFirst({
       where: { id, userId },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     if (!planned) {
@@ -88,14 +95,15 @@ export const getPlannedTransaction = async (req: AuthRequest, res: Response) => 
 export const createPlannedTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { 
-      amount, 
-      type, 
-      description, 
-      categoryId, 
+    const {
+      amount,
+      type,
+      description,
+      categoryId,
       plannedDate,
-      notes
-    }: CreatePlannedTransactionDTO = req.body;
+      notes,
+      accountId,
+    }: CreatePlannedTransactionDTO & { accountId?: string } = req.body;
 
     if (!amount || amount <= 0 || !type || !description || !plannedDate) {
       return res.status(400).json({ error: 'Dati non validi' });
@@ -126,8 +134,12 @@ export const createPlannedTransaction = async (req: AuthRequest, res: Response) 
         plannedDate: new Date(plannedDate),
         notes,
         userId,
+        ...(accountId && { accountId }),
       },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     analyticsCache.onPlannedMutated(userId);
@@ -143,7 +155,7 @@ export const updatePlannedTransaction = async (req: AuthRequest, res: Response) 
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { amount, description, categoryId, plannedDate, notes, isPaid } = req.body;
+    const { amount, description, categoryId, plannedDate, notes, isPaid, accountId } = req.body;
 
     const existing = await prisma.plannedTransaction.findFirst({
       where: { id, userId },
@@ -178,8 +190,12 @@ export const updatePlannedTransaction = async (req: AuthRequest, res: Response) 
         ...(plannedDate && { plannedDate: new Date(plannedDate) }),
         ...(notes !== undefined && { notes }),
         ...(isPaid !== undefined && { isPaid }),
+        ...(accountId !== undefined && { accountId: accountId ?? null }),
       },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     analyticsCache.onPlannedMutated(userId);
@@ -228,7 +244,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Transazione pianificata non trovata' });
     }
 
-    // Crea la transazione reale
+    // Crea la transazione reale, propagando il conto della pianificata
     const transaction = await prisma.transaction.create({
       data: {
         amount: planned.amount,
@@ -237,6 +253,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
         categoryId: planned.categoryId,
         date: new Date(),
         userId,
+        ...(planned.accountId && { accountId: planned.accountId }),
       },
     });
 

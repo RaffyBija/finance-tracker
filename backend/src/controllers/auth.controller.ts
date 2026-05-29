@@ -51,6 +51,18 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
+    // Crea automaticamente il conto principale per il nuovo utente
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        name: 'Conto Principale',
+        type: 'BANK',
+        color: '#0d9488',
+        isDefault: true,
+        openingBalance: 0,
+      },
+    });
+
     res.status(201).json({
       message:
         "Registrazione completata! Controlla la tua email per verificare l'account.",

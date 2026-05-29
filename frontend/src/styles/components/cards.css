@@ -625,6 +625,49 @@
   background: rgba(255, 255, 255, 0.24);
 }
 
+/* Account breakdown inside hero (multi-account mode) */
+.dashboard-hero-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+  margin-bottom: 1.25rem;
+  /* Nessun border-bottom: le stats hanno già border-top, evita il doppio divisore */
+}
+
+.dashboard-hero-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dashboard-hero-account-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-hero-account-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-hero-account-amount {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dashboard-hero-account-amount.is-negative {
+  color: rgba(252, 165, 165, 0.85);
+}
+
 .dashboard-hero-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -695,7 +738,7 @@
 
   .dashboard-hero-stat:nth-child(n+3) {
     border-top: 1px solid rgba(255, 255, 255, 0.12);
-    padding-top: 0.875rem;
+    padding-top: 1.25rem;
     padding-bottom: 0;
   }
 
@@ -705,6 +748,11 @@
 
   .dashboard-hero-stat:nth-child(2n+1) + .dashboard-hero-stat {
     padding-left: 1rem;
+  }
+
+  /* Reset colonna sinistra: item 3 eredita padding-left dal selettore +, va azzerato */
+  .dashboard-hero-stat:nth-child(2n+1) {
+    padding-left: 0;
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useTransactions, useDeleteTransaction, PAGE_SIZE } from '../hooks/useTransactions';
 import { useCategories } from '../hooks/useCategories';
+import { useAccounts } from '../hooks/useAccounts';
 import type { Transaction, TransactionType } from '../types';
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -17,6 +18,7 @@ export default function TransactionsPage() {
   // ── Filtri inviati al backend ──
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [accountFilter, setAccountFilter] = useState<string>('ALL');
 
   // ── Ricerca testuale server-side con debounce ──
   const [searchInput, setSearchInput] = useState('');   // valore immediato (input)
@@ -49,9 +51,11 @@ export default function TransactionsPage() {
     endDate: dateRange.endDate || undefined,
     search: search || undefined,
     page,
+    accountId: accountFilter !== 'ALL' ? accountFilter : undefined,
   });
 
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: accounts = [] } = useAccounts();
   const deleteTransactionMutation = useDeleteTransaction();
 
   // Lista completa = pagine precedenti + pagina corrente
@@ -70,6 +74,12 @@ export default function TransactionsPage() {
 
   const handleFilterType = (type: TransactionType | 'ALL') => {
     setFilterType(type);
+    setPage(0);
+    setPrevPages([]);
+  };
+
+  const handleAccountFilter = (accountId: string) => {
+    setAccountFilter(accountId);
     setPage(0);
     setPrevPages([]);
   };
@@ -136,6 +146,31 @@ export default function TransactionsPage() {
         />
       )}
 
+      {/* ── Filtro per conto (solo se ci sono più conti) ── */}
+      {!isFirstLoad && accounts.length > 1 && (
+        <div className="account-filter-pills">
+          <button
+            className={`account-filter-pill${accountFilter === 'ALL' ? ' is-active' : ''}`}
+            onClick={() => handleAccountFilter('ALL')}
+          >
+            Tutti i conti
+          </button>
+          {accounts.map((account) => (
+            <button
+              key={account.id}
+              className={`account-filter-pill${accountFilter === account.id ? ' is-active' : ''}`}
+              onClick={() => handleAccountFilter(account.id)}
+            >
+              <span
+                className="account-filter-pill-dot"
+                style={{ backgroundColor: account.color }}
+              />
+              {account.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Lista ── */}
       {isFirstLoad ? (
         <SkeletonList rows={8} />
@@ -177,6 +212,12 @@ export default function TransactionsPage() {
                     </p>
                     <p className="transaction-card-subtitle truncate">
                       {transaction.category?.name || 'Senza categoria'}
+                      {accounts.length > 1 && transaction.account && (
+                        <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: transaction.account.color, display: 'inline-block' }} />
+                          {transaction.account.name}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>

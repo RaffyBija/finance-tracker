@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 });
 
 setupCrossTabSync(queryClient);
-//prova commit
+
 // ✅ Lazy load: Vite esclude questo chunk dal bundle di produzione
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(() =>

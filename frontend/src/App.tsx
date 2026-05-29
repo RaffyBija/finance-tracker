@@ -22,6 +22,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
 import CalendarPage from "./pages/CalendarPage";
+import AccountsPage from "./pages/AccountsPage";
 
 inject();
 
@@ -135,6 +136,17 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <CalendarPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/accounts"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AccountsPage />
                   </Layout>
                 </ProtectedRoute>
               }

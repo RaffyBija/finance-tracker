@@ -3,10 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePending } from '../../contexts/PendingContext';
 import { useTheme } from '../../hooks/useTheme';
+import { useTourContext } from '../../contexts/TourContext';
+import GuideModal from '../shared/GuideModal';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
   Repeat, Calendar, CalendarDays, Settings2, ChevronDown,
-  User, Shield, FileText, LogOut, Sun, Moon,
+  User, Shield, FileText, LogOut, Sun, Moon, Landmark,
+  BookOpen, PlayCircle,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,6 +30,7 @@ const PRIMARY: NavItem[] = [
 ];
 
 const GESTIONE: NavItem[] = [
+  { path: '/accounts',   label: 'Conti',       icon: Landmark },
   { path: '/categories', label: 'Categorie',   icon: Tags     },
   { path: '/recurring',  label: 'Ricorrenti',  icon: Repeat   },
   { path: '/planned',    label: 'Pianificati', icon: Calendar },
@@ -68,13 +72,18 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { restart: restartTour } = useTourContext();
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const go = (path: string) => { onClose(); navigate(path); };
   const handleLogout = () => { onClose(); logout(); navigate('/'); };
+  const handleTour = () => { onClose(); restartTour(); };
+  const handleGuide = () => setGuideOpen(true);
 
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
+      <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
       <div className="navbar-profile-panel">
         <div className="navbar-profile-header">
           <p className="navbar-profile-name">{user?.name}</p>
@@ -105,6 +114,17 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
               {theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
             </span>
             <span className={`navbar-theme-switch${theme === 'dark' ? ' is-on' : ''}`} />
+          </button>
+
+          <div className="navbar-profile-divider" />
+          <p className="navbar-profile-section-label">Aiuto</p>
+          <button onClick={handleGuide} className="navbar-profile-item">
+            <BookOpen size={15} className="navbar-profile-item-icon" />
+            Guida all'app
+          </button>
+          <button onClick={handleTour} className="navbar-profile-item">
+            <PlayCircle size={15} className="navbar-profile-item-icon" />
+            Riavvia tour
           </button>
 
           <div className="navbar-profile-divider" />
@@ -241,7 +261,7 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile bottom bar — 5 tabs: 4 primary + Gestione */}
-      <div className="navbar-mobile-bar">
+      <div className="navbar-mobile-bar" data-tour="mobile-nav">
         {PRIMARY.map(({ path, label, icon: Icon }) => (
           <Link
             key={path}
@@ -255,6 +275,7 @@ export default function Navbar() {
         <button
           onClick={() => setTrayOpen((v) => !v)}
           className={`navbar-mobile-tab${isGestioneActive ? ' is-active' : ''}`}
+          data-tour="gestione-btn"
         >
           <span className="navbar-badge-wrap">
             <Settings2 size={20} />

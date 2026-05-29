@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext';
 import type { PlannedTransaction, Category, CreatePlannedTransactionDTO } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import AccountSelector from '../accounts/AccountSelector';
+import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
 interface PlannedFormModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export default function PlannedFormModal({
   const createMutation = useCreatePlanned();
   const updateMutation = useUpdatePlanned();
   const toast = useToast();
+  const { data: accounts = [] } = useAccounts();
+  const { data: defaultAccount } = useDefaultAccount();
 
   const [formData, setFormData] = useState<CreatePlannedTransactionDTO>({
     amount: 0,
@@ -33,6 +37,7 @@ export default function PlannedFormModal({
     categoryId: '',
     plannedDate: new Date().toISOString().split('T')[0],
     notes: '',
+    accountId: defaultAccount?.id ?? '',
   });
 
   useEffect(() => {
@@ -44,6 +49,7 @@ export default function PlannedFormModal({
         categoryId: editingItem.categoryId || '',
         plannedDate: editingItem.plannedDate.split('T')[0],
         notes: editingItem.notes || '',
+        accountId: editingItem.accountId ?? defaultAccount?.id ?? '',
       });
     } else if (!editingItem && isOpen) {
       setFormData({
@@ -53,6 +59,7 @@ export default function PlannedFormModal({
         categoryId: '',
         plannedDate: new Date().toISOString().split('T')[0],
         notes: '',
+        accountId: defaultAccount?.id ?? '',
       });
     }
   }, [editingItem, isOpen]);
@@ -184,6 +191,15 @@ export default function PlannedFormModal({
             placeholder="Eventuali note..." />
           <FieldError message={errors.notes} />
         </div>
+
+        {accounts.length > 1 && (
+          <AccountSelector
+            accounts={accounts}
+            value={formData.accountId ?? ''}
+            onChange={(id) => setFormData({ ...formData, accountId: id })}
+            label="Conto"
+          />
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-ghost btn-md">

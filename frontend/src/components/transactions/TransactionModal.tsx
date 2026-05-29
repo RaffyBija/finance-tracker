@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext';
 import type { Transaction, Category, CreateTransactionDTO } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import AccountSelector from '../accounts/AccountSelector';
+import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -27,6 +29,8 @@ export default function TransactionModal({
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const toast = useToast();
+  const { data: accounts = [] } = useAccounts();
+  const { data: defaultAccount } = useDefaultAccount();
 
   const [formData, setFormData] = useState<CreateTransactionDTO>({
     amount: editingTransactionData?.amount ?? 0,
@@ -34,6 +38,7 @@ export default function TransactionModal({
     description: editingTransactionData?.description ?? '',
     date: editingTransactionData?.date.split('T')[0] ?? new Date().toISOString().split('T')[0],
     categoryId: editingTransactionData?.categoryId ?? '',
+    accountId: editingTransactionData?.accountId ?? defaultAccount?.id ?? '',
   });
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
@@ -181,6 +186,15 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
           </select>
           <FieldError message={errors.categoryId} />
         </div>
+
+        {accounts.length > 1 && (
+          <AccountSelector
+            accounts={accounts}
+            value={formData.accountId ?? ''}
+            onChange={(id) => setFormData({ ...formData, accountId: id })}
+            label="Conto"
+          />
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-ghost btn-md">

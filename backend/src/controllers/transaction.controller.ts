@@ -7,7 +7,7 @@ import { analyticsCache } from '../utils/analyticsCache';
 export const getTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { type, categoryId, startDate, endDate, search, limit, offset } = req.query;
+    const { type, categoryId, accountId, startDate, endDate, search, limit, offset } = req.query;
 
     // Build filter
     const where: any = { userId };
@@ -18,6 +18,10 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
 
     if (categoryId) {
       where.categoryId = categoryId as string;
+    }
+
+    if (accountId) {
+      where.accountId = accountId as string;
     }
 
     if (startDate || endDate) {
@@ -44,6 +48,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       where,
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
       orderBy: {
         date: 'desc',
@@ -72,6 +77,7 @@ export const getTransaction = async (req: AuthRequest, res: Response) => {
       },
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
     });
 
@@ -90,7 +96,7 @@ export const getTransaction = async (req: AuthRequest, res: Response) => {
 export const createTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { amount, type, description, date, categoryId }: CreateTransactionDTO = req.body;
+    const { amount, type, description, date, categoryId, accountId }: CreateTransactionDTO & { accountId?: string } = req.body;
 
     // Validazione
     if (!amount || amount <= 0) {
@@ -128,9 +134,11 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
         date: date ? new Date(date) : new Date(),
         categoryId,
         userId,
+        ...(accountId && { accountId }),
       },
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
     });
 
@@ -147,7 +155,7 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { amount, type, description, date, categoryId } = req.body;
+    const { amount, type, description, date, categoryId, accountId } = req.body;
 
     // Verifica che la transazione esista e appartenga all'utente
     const existingTransaction = await prisma.transaction.findFirst({
@@ -198,9 +206,11 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
         ...(description !== undefined && { description }),
         ...(date && { date: new Date(date) }),
         ...(categoryId !== undefined && { categoryId }),
+        ...(accountId !== undefined && { accountId: accountId ?? null }),
       },
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
     });
 

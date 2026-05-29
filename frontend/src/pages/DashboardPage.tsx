@@ -7,6 +7,7 @@ import {
   useMonthlyTrend,
   useRecentTransactions,
 } from '../hooks/useDashboard';
+import { useAccounts } from '../hooks/useAccounts';
 import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -103,6 +104,7 @@ export default function DashboardPage() {
   const { data: categoryStats = [], isLoading: statsLoading }        = useCategoryStats(monthRange);
   const { data: monthlyTrend = [],  isLoading: trendLoading }        = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading }  = useRecentTransactions(5);
+  const { data: accounts = [] }                                       = useAccounts();
 
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
@@ -117,22 +119,31 @@ export default function DashboardPage() {
     [monthlyTrend]
   );
 
-  const totalBalance = totalSummary?.balance ?? 0;
-  const isPositive = totalBalance >= 0;
+  const multiAccount = accounts.length > 1;
+  const netWorth = accounts.reduce((s, a) => s + a.balance, 0);
+
+  const heroValue = multiAccount ? netWorth : (totalSummary?.balance ?? 0);
+  const heroLoading = multiAccount ? false : totalSummaryLoading;
+  const heroPositive = heroValue >= 0;
+
+  const fmt = (n: number) =>
+    Math.abs(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="container-custom">
 
-      {/* ── Hero: Saldo Complessivo ── */}
-      <div className="dashboard-hero mb-6">
+      {/* ── Hero ── */}
+      <div className="dashboard-hero mb-6" data-tour="dashboard-hero">
         <div className="dashboard-hero-top">
           <div>
-            <p className="dashboard-hero-label">Saldo Complessivo</p>
-            {totalSummaryLoading ? (
+            <p className="dashboard-hero-label">
+              {multiAccount ? 'Patrimonio netto' : 'Saldo Complessivo'}
+            </p>
+            {heroLoading ? (
               <div className="dashboard-hero-value-skeleton animate-pulse" />
             ) : (
-              <p className={`dashboard-hero-value${!isPositive ? ' is-negative' : ''}`}>
-                {isPositive ? '+' : '−'}€{Math.abs(totalBalance).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <p className={`dashboard-hero-value${!heroPositive ? ' is-negative' : ''}`}>
+                {heroPositive ? '+' : '−'}€{fmt(heroValue)}
               </p>
             )}
           </div>
@@ -153,6 +164,26 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Breakdown per conto (solo multi-account) */}
+        {multiAccount && (
+          <div className="dashboard-hero-accounts">
+            {accounts.map((a) => (
+              <div key={a.id} className="dashboard-hero-account-row">
+                <span className="dashboard-hero-account-name">
+                  <span
+                    className="dashboard-hero-account-dot"
+                    style={{ backgroundColor: a.color }}
+                  />
+                  {a.name}
+                </span>
+                <span className={`dashboard-hero-account-amount${a.balance < 0 ? ' is-negative' : ''}`}>
+                  {a.balance >= 0 ? '+' : '−'}€{fmt(a.balance)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div key={format(currentMonth, 'yyyy-MM')} className="dashboard-hero-stats dashboard-stats-reveal">
           {summaryLoading ? (

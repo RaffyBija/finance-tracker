@@ -26,8 +26,45 @@ model User {
   budgets                Budget[]
   recurringTransactions  RecurringTransaction[]
   plannedTransactions    PlannedTransaction[]
+  accounts               Account[]
 
   @@map("users")
+}
+
+model Account {
+  id              String      @id @default(uuid())
+  userId          String
+  name            String
+  type            AccountType
+  color           String      @default("#0d9488")
+  icon            String?
+  isDefault       Boolean     @default(false)
+  openingBalance  Decimal     @default(0) @db.Decimal(10, 2)
+
+  // Solo CREDIT_CARD
+  creditLimit     Decimal?    @db.Decimal(10, 2)
+  billingDay      Int?
+  linkedAccountId String?
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccount   Account?    @relation("CCLink", fields: [linkedAccountId], references: [id], onDelete: SetNull)
+  linkedCC        Account[]   @relation("CCLink")
+
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
+  plannedTransactions   PlannedTransaction[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("accounts")
+}
+
+enum AccountType {
+  BANK
+  CREDIT_CARD
 }
 
 model Category {
@@ -59,14 +96,17 @@ model Transaction {
   categoryId      String?
   userId          String
   fromRecurringId String?
+  accountId       String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@index([userId, type])
+  @@index([userId, accountId])
   @@map("transactions")
 }
 
@@ -96,17 +136,19 @@ model RecurringTransaction {
   description String
   categoryId  String?
   frequency   Frequency       @default(MONTHLY)
-  dayOfMonth  Int?            // 1-31 per mensili
+  dayOfMonth  Int?
   startDate   DateTime
   endDate     DateTime?
   isActive         Boolean         @default(true)
   lastExecutedDate DateTime?
   userId           String
+  accountId        String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, isActive])
   @@map("recurring_transactions")
@@ -122,11 +164,13 @@ model PlannedTransaction {
   isPaid      Boolean         @default(false)
   notes       String?
   userId      String
+  accountId   String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, plannedDate])
   @@index([userId, isPaid])

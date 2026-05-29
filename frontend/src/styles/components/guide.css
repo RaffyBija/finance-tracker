@@ -1,0 +1,120 @@
+/* ============================================
+   GUIDE MODAL — accordion help sections
+   ============================================ */
+
+.guide-intro {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.guide-accordion {
+  border-top: 1px solid #e2e8f0;
+}
+
+.guide-item {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.guide-item-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 10px;
+  color: #0f172a;
+  transition: color 0.15s ease;
+}
+
+.guide-item-btn:hover {
+  color: #0d9488;
+}
+
+.guide-item.is-open .guide-item-btn {
+  color: #0d9488;
+}
+
+.guide-item-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.guide-item-emoji {
+  font-size: 1.0625rem;
+  line-height: 1;
+  min-width: 1.25rem;
+  text-align: center;
+}
+
+.guide-item-chevron {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform 0.22s ease-out, color 0.15s ease;
+}
+
+.guide-item.is-open .guide-item-chevron {
+  transform: rotate(180deg);
+  color: #0d9488;
+}
+
+/* Accordion: grid-template-rows trick — no max-height guess needed */
+.guide-item-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease-out;
+}
+
+.guide-item-body.is-open {
+  grid-template-rows: 1fr;
+}
+
+.guide-item-body-inner {
+  overflow: hidden;
+}
+
+.guide-item-content {
+  padding-bottom: 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.guide-item-content p + p {
+  margin-top: 0.5rem;
+}
+
+.guide-item-content strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* Scroll wrapper */
+.guide-scroll {
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+/* Dark mode */
+.dark .guide-intro { color: #64748b; }
+
+.dark .guide-accordion,
+.dark .guide-item { border-color: #334155; }
+
+.dark .guide-item-btn { color: #f1f5f9; }
+.dark .guide-item-btn:hover { color: #2dd4bf; }
+.dark .guide-item.is-open .guide-item-btn { color: #2dd4bf; }
+.dark .guide-item-chevron { color: #475569; }
+.dark .guide-item.is-open .guide-item-chevron { color: #2dd4bf; }
+
+.dark .guide-item-content { color: #94a3b8; }
+.dark .guide-item-content strong { color: #e2e8f0; }

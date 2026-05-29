@@ -134,6 +134,7 @@ export const getRecurringTransactions = async (req: AuthRequest, res: Response) 
       where,
       include: {
         category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
       },
       orderBy: {
         createdAt: 'desc',
@@ -156,7 +157,10 @@ export const getRecurringTransaction = async (req: AuthRequest, res: Response) =
 
     const recurring = await prisma.recurringTransaction.findFirst({
       where: { id: fixedId, userId },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     if (!recurring) {
@@ -174,16 +178,17 @@ export const getRecurringTransaction = async (req: AuthRequest, res: Response) =
 export const createRecurringTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { 
-      amount, 
-      type, 
-      description, 
-      categoryId, 
-      frequency, 
-      dayOfMonth, 
-      startDate, 
-      endDate 
-    }: CreateRecurringTransactionDTO = req.body;
+    const {
+      amount,
+      type,
+      description,
+      categoryId,
+      frequency,
+      dayOfMonth,
+      startDate,
+      endDate,
+      accountId,
+    }: CreateRecurringTransactionDTO & { accountId?: string } = req.body;
 
     if (!amount || amount <= 0 || !type || !description || !frequency || !startDate) {
       return res.status(400).json({ error: 'Dati non validi' });
@@ -220,8 +225,12 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         userId,
+        ...(accountId && { accountId }),
       },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     analyticsCache.onRecurringMutated(userId);
@@ -237,7 +246,7 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { amount, description, categoryId, frequency, dayOfMonth, startDate, endDate, isActive } = req.body;
+    const { amount, description, categoryId, frequency, dayOfMonth, startDate, endDate, isActive, accountId } = req.body;
 
     const fixedId = Array.isArray(id) ? id[0] : id;
 
@@ -276,8 +285,12 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(isActive !== undefined && { isActive }),
+        ...(accountId !== undefined && { accountId: accountId ?? null }),
       },
-      include: { category: true },
+      include: {
+        category: true,
+        account: { select: { id: true, name: true, color: true, type: true } },
+      },
     });
 
     analyticsCache.onRecurringMutated(userId);
@@ -397,6 +410,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
           date: dueDate,
           userId,
           fromRecurringId: r.id,
+          ...(r.accountId && { accountId: r.accountId }),
         },
         include: { category: true },
       });
@@ -444,6 +458,7 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
         date: today,
         userId,
         fromRecurringId: recurringId,
+        ...(recurring.accountId && { accountId: recurring.accountId }),
       },
       include: { category: true },
     });

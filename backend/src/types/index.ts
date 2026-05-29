@@ -81,3 +81,15 @@ export interface CreatePlannedTransactionDTO {
   plannedDate: Date;
   notes?: string;
 }
+
+// Account DTOs
+export interface CreateAccountDTO {
+  name: string;
+  type: 'BANK' | 'CREDIT_CARD';
+  color?: string;
+  icon?: string;
+  openingBalance?: number;
+  creditLimit?: number;
+  billingDay?: number;
+  linkedAccountId?: string;
+}

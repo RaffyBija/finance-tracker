@@ -32,10 +32,12 @@ export interface Transaction {
   description?: string;
   date: string;
   categoryId?: string;
+  accountId?: string | null;
   userId: string;
   createdAt: string;
   updatedAt: string;
   category?: Category;
+  account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
 }
 
 export interface CreateTransactionDTO {
@@ -44,6 +46,7 @@ export interface CreateTransactionDTO {
   description?: string;
   date?: string;
   categoryId?: string;
+  accountId?: string;
 }
 
 export interface UpdateTransactionDTO {
@@ -52,6 +55,7 @@ export interface UpdateTransactionDTO {
   description?: string;
   date?: string;
   categoryId?: string;
+  accountId?: string | null;
 }
 
 // Category types
@@ -155,6 +159,7 @@ export interface RecurringTransaction {
   type: TransactionType;
   description: string;
   categoryId?: string;
+  accountId?: string | null;
   frequency: Frequency;
   dayOfMonth?: number;
   startDate: string;
@@ -165,6 +170,7 @@ export interface RecurringTransaction {
   createdAt: string;
   updatedAt: string;
   category?: Category;
+  account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
 }
 
 export interface RecurringDueItem extends RecurringTransaction {
@@ -191,6 +197,7 @@ export interface CreateRecurringTransactionDTO {
   dayOfMonth?: number;
   startDate: string;
   endDate?: string;
+  accountId?: string;
 }
 
 // API Error
@@ -205,6 +212,7 @@ export interface PlannedTransaction {
   type: TransactionType;
   description: string;
   categoryId?: string;
+  accountId?: string | null;
   plannedDate: string;
   isPaid: boolean;
   notes?: string;
@@ -212,6 +220,7 @@ export interface PlannedTransaction {
   createdAt: string;
   updatedAt: string;
   category?: Category;
+  account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
 }
 
 export interface CreatePlannedTransactionDTO {
@@ -221,6 +230,7 @@ export interface CreatePlannedTransactionDTO {
   categoryId?: string;
   plannedDate: string;
   notes?: string;
+  accountId?: string;
 }
 
 //Alert Interface
@@ -231,6 +241,49 @@ export interface AlertPopUp{
   tipo: AlertType;
   messaggio: string;
   checked: boolean;
+}
+
+// Account types
+export type AccountType = 'BANK' | 'CREDIT_CARD';
+
+export interface Account {
+  id: string;
+  userId: string;
+  name: string;
+  type: AccountType;
+  color: string;
+  icon?: string;
+  isDefault: boolean;
+  openingBalance: number;
+  creditLimit?: number | null;
+  billingDay?: number | null;
+  linkedAccountId?: string | null;
+  linkedAccount?: { id: string; name: string } | null;
+  balance: number;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { transactions: number };
+}
+
+export interface CreateAccountDTO {
+  name: string;
+  type: AccountType;
+  color?: string;
+  icon?: string;
+  openingBalance?: number;
+  creditLimit?: number;
+  billingDay?: number;
+  linkedAccountId?: string;
+}
+
+export interface UpdateAccountDTO {
+  name?: string;
+  color?: string;
+  icon?: string;
+  openingBalance?: number;
+  creditLimit?: number | null;
+  billingDay?: number | null;
+  linkedAccountId?: string | null;
 }
 
 // Analytics

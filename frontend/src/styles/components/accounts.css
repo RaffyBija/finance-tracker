@@ -1,0 +1,429 @@
+/* ============================================
+   ACCOUNTS
+   ============================================ */
+
+@layer components {
+
+  /* ── Account card ─────────────────────────────── */
+
+  .account-card {
+    @apply bg-white rounded-lg shadow-card p-5;
+    @apply hover:shadow-card-hover transition-all duration-200;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .account-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .account-card-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .account-card-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .account-card-name-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .account-card-name {
+    @apply text-base font-semibold text-neutral-900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .account-card-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── Balance ──────────────────────────────────── */
+
+  .account-card-balance {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .account-card-balance-label {
+    @apply text-xs text-neutral-500;
+    letter-spacing: 0.01em;
+  }
+
+  .account-card-balance-amount {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply text-2xl font-bold;
+    line-height: 1.15;
+  }
+
+  .account-card-balance-amount.is-positive {
+    @apply text-primary-700;
+  }
+
+  .account-card-balance-amount.is-negative {
+    @apply text-danger-600;
+  }
+
+  .account-card-balance-amount.is-zero {
+    @apply text-neutral-500;
+  }
+
+  /* ── CC bar ───────────────────────────────────── */
+
+  .account-card-bar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .account-card-bar-meta {
+    display: flex;
+    justify-content: space-between;
+    @apply text-xs text-neutral-500;
+  }
+
+  .account-card-bar-track {
+    height: 6px;
+    @apply bg-neutral-100 rounded-full;
+    overflow: hidden;
+  }
+
+  .account-card-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s var(--ease-out-quart);
+  }
+
+  .account-card-bar-fill.is-ok {
+    @apply bg-primary-500;
+  }
+
+  .account-card-bar-fill.is-warn {
+    @apply bg-warning-400;
+  }
+
+  .account-card-bar-fill.is-danger {
+    @apply bg-danger-500;
+  }
+
+  /* ── Footer ───────────────────────────────────── */
+
+  .account-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    @apply text-xs text-neutral-500;
+    padding-top: 4px;
+    border-top: 1px solid;
+    @apply border-neutral-100;
+  }
+
+  .account-card-billing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .account-card-billing-today {
+    @apply text-warning-600 font-medium;
+  }
+
+  /* ── Locked slot ──────────────────────────────── */
+
+  .account-card-locked {
+    @apply rounded-lg p-5;
+    border: 2px dashed;
+    @apply border-neutral-200;
+    @apply bg-neutral-50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 160px;
+    text-align: center;
+  }
+
+  .account-card-locked-icon {
+    @apply w-10 h-10 rounded-full bg-neutral-100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    @apply text-neutral-400;
+  }
+
+  .account-card-locked-title {
+    @apply text-sm font-medium text-neutral-500;
+  }
+
+  .account-card-locked-desc {
+    @apply text-xs text-neutral-400;
+    max-width: 160px;
+  }
+
+  .account-card-locked-badge {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full;
+    @apply bg-primary-50 text-primary-700;
+    border: 1px solid;
+    @apply border-primary-200;
+  }
+
+  /* ── Net worth summary ────────────────────────── */
+
+  .account-net-worth {
+    @apply bg-white rounded-lg shadow-card p-5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .account-net-worth-label {
+    @apply text-sm text-neutral-600 font-medium;
+  }
+
+  .account-net-worth-amount {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply text-2xl font-bold text-neutral-900;
+  }
+
+  .account-net-worth-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+  }
+
+  .account-net-worth-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    @apply text-sm text-neutral-600;
+  }
+
+  .account-net-worth-row-amount {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply font-medium;
+  }
+
+  .account-net-worth-row-amount.is-asset { @apply text-primary-700; }
+  .account-net-worth-row-amount.is-liability { @apply text-danger-600; }
+
+  /* ── Form: color picker ───────────────────────── */
+
+  .account-color-picker {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .account-color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .account-color-swatch:hover {
+    transform: scale(1.1);
+  }
+
+  .account-color-swatch.is-selected {
+    border-color: #1e293b;
+    transform: scale(1.15);
+  }
+
+  /* ── Account filter pills (TransactionsPage) ─── */
+
+  .account-filter-pills {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    margin-bottom: 12px;
+  }
+
+  .account-filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .account-filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    border: 1.5px solid;
+    @apply border-neutral-200 bg-white text-neutral-600;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .account-filter-pill:hover {
+    @apply border-primary-300 bg-primary-50 text-primary-700;
+  }
+
+  .account-filter-pill.is-active {
+    @apply border-primary-500 bg-primary-50 text-primary-700;
+  }
+
+  .account-filter-pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Account selector (form) ──────────────────── */
+
+  .account-selector-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .account-selector-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+
+  .account-selector-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  /* ── Form: type toggle ────────────────────────── */
+
+  .account-type-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .account-type-option {
+    @apply rounded-lg border-2 p-3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    @apply border-neutral-200 bg-white text-neutral-600;
+  }
+
+  .account-type-option:hover {
+    @apply border-primary-300 bg-primary-50;
+  }
+
+  .account-type-option.is-selected {
+    @apply border-primary-500 bg-primary-50 text-primary-700;
+  }
+
+  .account-type-option-icon {
+    @apply text-2xl;
+  }
+
+  .account-type-option-label {
+    @apply text-xs font-medium;
+  }
+}
+
+/* ── Dark mode ─────────────────────────────────── */
+
+.dark .account-card {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+.dark .account-card-footer {
+  border-color: #334155;
+}
+
+.dark .account-card-name { color: #f1f5f9; }
+.dark .account-card-balance-label { color: #64748b; }
+.dark .account-card-billing { color: #64748b; }
+.dark .account-card-bar-track { background-color: #334155; }
+
+.dark .account-card-locked {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+.dark .account-card-locked-icon {
+  background-color: #0f172a;
+  color: #475569;
+}
+
+.dark .account-card-locked-title { color: #64748b; }
+.dark .account-card-locked-desc  { color: #475569; }
+
+.dark .account-net-worth {
+  background-color: #1e293b;
+}
+
+.dark .account-net-worth-label  { color: #94a3b8; }
+.dark .account-net-worth-amount { color: #f1f5f9; }
+.dark .account-net-worth-row    { color: #94a3b8; }
+
+.dark .account-type-option {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.dark .account-type-option:hover,
+.dark .account-type-option.is-selected {
+  background-color: #0d2929;
+  border-color: #0d9488;
+  color: #5eead4;
+}
+
+.dark .account-color-swatch.is-selected {
+  border-color: #f1f5f9;
+}
+
+.dark .account-filter-pill {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.dark .account-filter-pill:hover,
+.dark .account-filter-pill.is-active {
+  background-color: #0d2929;
+  border-color: #0d9488;
+  color: #5eead4;
+}

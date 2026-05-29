@@ -6,6 +6,9 @@
 @import './components/forms.css';
 @import './components/badges.css';
 @import './components/calendar.css';
+@import './components/accounts.css';
+@import './components/tour.css';
+@import './components/guide.css';
 
 @import './utilities/utilities.css';
 

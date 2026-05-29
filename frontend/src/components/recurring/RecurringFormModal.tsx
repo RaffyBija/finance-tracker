@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext';
 import type { RecurringTransaction, Category, CreateRecurringTransactionDTO, Frequency } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import AccountSelector from '../accounts/AccountSelector';
+import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
 interface RecurringFormModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export default function RecurringFormModal({
   const createMutation = useCreateRecurring();
   const updateMutation = useUpdateRecurring();
   const toast = useToast();
+  const { data: accounts = [] } = useAccounts();
+  const { data: defaultAccount } = useDefaultAccount();
 
   const [formData, setFormData] = useState<CreateRecurringTransactionDTO>({
     amount: 0,
@@ -35,6 +39,7 @@ export default function RecurringFormModal({
     dayOfMonth: 1,
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
+    accountId: defaultAccount?.id ?? '',
   });
 
   useEffect(() => {
@@ -48,6 +53,7 @@ export default function RecurringFormModal({
         dayOfMonth: editingItem.dayOfMonth || 1,
         startDate: editingItem.startDate.split('T')[0],
         endDate: editingItem.endDate ? editingItem.endDate.split('T')[0] : '',
+        accountId: editingItem.accountId ?? defaultAccount?.id ?? '',
       });
     } else if (!editingItem && isOpen) {
       setFormData({
@@ -59,6 +65,7 @@ export default function RecurringFormModal({
         dayOfMonth: 1,
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
+        accountId: defaultAccount?.id ?? '',
       });
     }
   }, [editingItem, isOpen]);
@@ -223,6 +230,15 @@ export default function RecurringFormModal({
             <FieldError message={errors.endDate} />
           </div>
         </div>
+
+        {accounts.length > 1 && (
+          <AccountSelector
+            accounts={accounts}
+            value={formData.accountId ?? ''}
+            onChange={(id) => setFormData({ ...formData, accountId: id })}
+            label="Conto"
+          />
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-ghost btn-md">
