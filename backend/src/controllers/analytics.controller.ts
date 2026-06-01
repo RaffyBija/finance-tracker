@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { countOccurrences } from './dashboard.controller';
+import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
 
 const HIST_MONTHS = 3;
 
@@ -34,8 +35,7 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     const [
       currentMonthTx,
       historicalTx,
-      incAgg,
-      expAgg,
+      accounts,
       recurringActive,
       plannedRemaining,
     ] = await Promise.all([
@@ -45,16 +45,9 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
       }),
       prisma.transaction.findMany({
         where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null },
-        include: { category: { select: { id: true, name: true } } },
+        include: { category: { select: { id: true, name: true, icon: true, color: true } } },
       }),
-      prisma.transaction.aggregate({
-        where: { userId, type: 'INCOME' },
-        _sum: { amount: true },
-      }),
-      prisma.transaction.aggregate({
-        where: { userId, type: 'EXPENSE' },
-        _sum: { amount: true },
-      }),
+      getAccountsWithBalances(userId),
       prisma.recurringTransaction.findMany({
         where: { userId, isActive: true },
       }),
@@ -67,9 +60,9 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
       }),
     ]);
 
-    // ── Saldo corrente (all-time) ──
-    const currentBalance =
-      Number(incAgg._sum.amount || 0) - Number(expAgg._sum.amount || 0);
+    // ── Saldo corrente = liquidità reale (solo conti BANK, opening balance incluso) ──
+    //   Coerente con l'hero e la proiezione: le CC non sono liquidità.
+    const currentBalance = await getLiquidBalance(userId, accounts);
 
     // ── Attuale mese corrente ──
     const actualIncome = currentMonthTx
@@ -104,15 +97,23 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     // (non per i mesi in cui appare): una categoria presente 1/3 dei mesi pesa 1/3.
     // Stima rimanente = max(0, avg_mensile - già_speso_questo_mese).
 
-    type CatInfo = { id?: string; name: string };
+    type CatInfo = { id?: string; name: string; icon?: string; color?: string };
     const catInfoMap = new Map<string, CatInfo>();
     const histCatMonthMap = new Map<string, Map<string, number>>(); // catKey → monthKey → totale
+    const histCatCount = new Map<string, number>();                 // catKey → n. movimenti nello storico
 
     historicalTx.forEach((t) => {
       if (t.type !== 'EXPENSE') return;
       const catKey = t.categoryId || 'no-category';
       if (!catInfoMap.has(catKey))
-        catInfoMap.set(catKey, { id: t.categoryId ?? undefined, name: t.category?.name || 'Senza categoria' });
+        catInfoMap.set(catKey, {
+          id: t.categoryId ?? undefined,
+          name: t.category?.name || 'Senza categoria',
+          icon: t.category?.icon ?? undefined,
+          color: t.category?.color ?? undefined,
+        });
+
+      histCatCount.set(catKey, (histCatCount.get(catKey) || 0) + 1);
 
       const d = new Date(t.date);
       const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
@@ -127,6 +128,27 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
       const total = Array.from(mm.values()).reduce((s, v) => s + v, 0);
       catAvgMap.set(catKey, total / HIST_MONTHS);
     });
+
+    // ── Spese più frequenti — per NUMERO di movimenti, non per importo ──
+    //   Risponde a "quali spese ricorrono spesso" (carburante, supermercato…).
+    //   Esclude "Senza categoria": non è una spesa concreta.
+    //   perMonth = movimenti/mese; avgMonthly = importo medio mensile (informativo).
+    const frequentExpenses = Array.from(histCatCount.entries())
+      .filter(([catKey]) => catKey !== 'no-category')
+      .map(([catKey, count]) => {
+        const info = catInfoMap.get(catKey);
+        return {
+          categoryId: info?.id,
+          categoryName: info?.name || 'Senza categoria',
+          icon: info?.icon ?? null,
+          color: info?.color ?? null,
+          count,
+          perMonth: Math.round((count / HIST_MONTHS) * 10) / 10,
+          avgMonthly: Math.round((catAvgMap.get(catKey) ?? 0) * 100) / 100,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
 
     // Spesa mese corrente per categoria (aggiorna anche catInfoMap per categorie nuove)
     const currentCatSpend = new Map<string, number>();
@@ -194,6 +216,13 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
       else knownRemainingExpenses += Number(p.amount);
     }
 
+    // Debito CC del ciclo aperto con billing entro fine mese → impegno noto rimanente
+    // (currentBalance esclude le CC: lo re-introduciamo come uscita futura).
+    if (daysRemaining > 0) {
+      const ccDue = openCCObligations(accounts, tomorrowStart, monthEnd, now);
+      knownRemainingExpenses += ccDue.total;
+    }
+
     // ── Proiezione ──
     // Spese: stima per categoria se disponibile storico, altrimenti pace giornaliero.
     // Income: solo impegni noti (ricorrenti + pianificate) — il pace income distorce
@@ -237,6 +266,7 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
         hasData: hasHistoricalData,
         categories: habitualCategories.slice(0, 5),
       },
+      frequentExpenses,
       projectedEndBalance: Math.round(projectedEndBalance * 100) / 100,
     };
 

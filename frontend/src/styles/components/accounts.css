@@ -192,9 +192,24 @@
   .account-net-worth {
     @apply bg-white rounded-lg shadow-card p-5;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .account-net-worth-first {
+    margin-top: 24px;
+  }
+
+  .account-net-worth-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .account-net-worth-total {
+    flex-shrink: 0;
+    text-align: right;
   }
 
   .account-net-worth-label {
@@ -205,12 +220,17 @@
     font-family: 'DM Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     @apply text-2xl font-bold text-neutral-900;
+    margin-top: 4px;
+    white-space: nowrap;
   }
+
+  .account-net-worth-amount.is-asset { @apply text-primary-600; }
+  .account-net-worth-amount.is-liability { @apply text-danger-500; }
 
   .account-net-worth-rows {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     margin-top: 12px;
   }
 
@@ -218,17 +238,70 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     @apply text-sm text-neutral-600;
+  }
+
+  .account-net-worth-row-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .account-net-worth-row-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .account-net-worth-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
   }
 
   .account-net-worth-row-amount {
     font-family: 'DM Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
     @apply font-medium;
   }
 
   .account-net-worth-row-amount.is-asset { @apply text-primary-700; }
   .account-net-worth-row-amount.is-liability { @apply text-danger-600; }
+
+  /* Header count pill */
+  .account-count-pill {
+    @apply text-sm text-neutral-500;
+  }
+
+  /* Mobile: impila riepilogo (rows sopra, totale sotto a tutta larghezza) */
+  @media (max-width: 540px) {
+    .account-net-worth {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .account-net-worth-total {
+      text-align: left;
+      width: 100%;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid;
+      @apply border-neutral-100;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .account-net-worth-total .account-net-worth-amount {
+      margin-top: 0;
+    }
+  }
 
   /* ── Form: color picker ───────────────────────── */
 
@@ -397,6 +470,14 @@
 .dark .account-net-worth-label  { color: #94a3b8; }
 .dark .account-net-worth-amount { color: #f1f5f9; }
 .dark .account-net-worth-row    { color: #94a3b8; }
+
+/* I totali colorati mantengono la semantica anche in dark (asset teal, liability rosso) */
+.dark .account-net-worth-amount.is-asset     { color: #2dd4bf; }
+.dark .account-net-worth-amount.is-liability { color: #f87171; }
+
+@media (max-width: 540px) {
+  .dark .account-net-worth-total { border-color: #334155; }
+}
 
 .dark .account-type-option {
   background-color: #1e293b;

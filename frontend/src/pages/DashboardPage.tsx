@@ -15,8 +15,7 @@ import {
 } from 'recharts';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { it } from 'date-fns/locale';
-import ProjectedDetailCard from '../components/dashboard/ProjectedDetailCard';
-import ForecastCard from '../components/dashboard/ForecastCard';
+import BalanceOutlookCard from '../components/dashboard/BalanceOutlookCard';
 import SubscriptionCostCard from '../components/dashboard/SubscriptionCostCard';
 import {
   SkeletonChart,
@@ -104,7 +103,7 @@ export default function DashboardPage() {
   const { data: categoryStats = [], isLoading: statsLoading }        = useCategoryStats(monthRange);
   const { data: monthlyTrend = [],  isLoading: trendLoading }        = useMonthlyTrend(6);
   const { data: recentTransactions = [], isLoading: recentLoading }  = useRecentTransactions(5);
-  const { data: accounts = [] }                                       = useAccounts();
+  const { data: accounts = [], isLoading: accountsLoading }           = useAccounts();
 
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
@@ -123,8 +122,12 @@ export default function DashboardPage() {
   const multiAccount = liquidAccounts.length > 1;
   const netWorth = liquidAccounts.reduce((s, a) => s + a.balance, 0);
 
-  const heroValue = liquidAccounts.length > 0 ? netWorth : (totalSummary?.balance ?? 0);
-  const heroLoading = liquidAccounts.length > 0 ? false : totalSummaryLoading;
+  // Finché i conti non sono caricati non sappiamo se mostrare netWorth (liquidità
+  // BANK) o il saldo all-time: mostrare quest'ultimo a metà caricamento causa un
+  // flicker (include le CC). Aspettiamo i conti prima di decidere.
+  const hasAccounts = liquidAccounts.length > 0;
+  const heroValue = hasAccounts ? netWorth : (totalSummary?.balance ?? 0);
+  const heroLoading = accountsLoading || (!hasAccounts && totalSummaryLoading);
   const heroPositive = heroValue >= 0;
 
   const fmt = (n: number) =>
@@ -138,7 +141,7 @@ export default function DashboardPage() {
         <div className="dashboard-hero-top">
           <div>
             <p className="dashboard-hero-label">
-              {multiAccount ? 'Patrimonio netto' : 'Saldo Complessivo'}
+              {multiAccount ? 'Liquidità totale' : 'Liquidità disponibile'}
             </p>
             {heroLoading ? (
               <div className="dashboard-hero-value-skeleton animate-pulse" />
@@ -217,14 +220,19 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+
+        {!summaryLoading && (
+          <p className="dashboard-hero-stats-caption">
+            Movimenti del mese · tutti i conti (CC inclusa)
+          </p>
+        )}
       </div>
 
-      {/* ── Proiezione — gestisce il proprio skeleton internamente ── */}
-      <ProjectedDetailCard />
+      {/* ── Andamento del saldo (impegni certi / stima realistica) ── */}
+      <BalanceOutlookCard />
 
-      {/* ── Previsione fine mese + Abbonamenti ── */}
+      {/* ── Spese ricorrenti ── */}
       <div className="dashboard-analytics-grid">
-        <ForecastCard />
         <SubscriptionCostCard />
       </div>
 

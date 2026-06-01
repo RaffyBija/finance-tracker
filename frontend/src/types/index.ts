@@ -301,6 +301,16 @@ export interface ForecastHabitualCategory {
   estimated: number;
 }
 
+export interface ForecastFrequentExpense {
+  categoryId?: string;
+  categoryName: string;
+  icon?: string | null;
+  color?: string | null;
+  count: number;
+  perMonth: number;
+  avgMonthly: number;
+}
+
 export interface Forecast {
   daysElapsed: number;
   daysInMonth: number;
@@ -315,5 +325,6 @@ export interface Forecast {
     hasData: boolean;
     categories: ForecastHabitualCategory[];
   };
+  frequentExpenses: ForecastFrequentExpense[];
   projectedEndBalance: number;
 }

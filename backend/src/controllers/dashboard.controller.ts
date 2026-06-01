@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
 
@@ -294,14 +295,10 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'La data di inizio deve essere precedente a quella di fine' });
     }
 
-    // ── Saldo corrente (tutte le transazioni registrate fino ad oggi) ──
-    const [incomeAgg, expenseAgg] = await Promise.all([
-      prisma.transaction.aggregate({ where: { userId, type: 'INCOME' }, _sum: { amount: true } }),
-      prisma.transaction.aggregate({ where: { userId, type: 'EXPENSE' }, _sum: { amount: true } }),
-    ]);
-
-    const currentBalance =
-      Number(incomeAgg._sum.amount || 0) - Number(expenseAgg._sum.amount || 0);
+    // ── Saldo corrente = liquidità reale (solo conti BANK, opening balance incluso) ──
+    //   Identico al netWorth dell'hero: le CC non sono liquidità e vengono escluse.
+    const accounts       = await getAccountsWithBalances(userId);
+    const currentBalance = await getLiquidBalance(userId, accounts);
 
     // ── Ricorrenti attive che si sovrappongono al range ──
     const recurringTransactions = await prisma.recurringTransaction.findMany({
@@ -357,6 +354,12 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       if (p.type === 'INCOME') projectedIncome  += Number(p.amount);
       else                     projectedExpense += Number(p.amount);
     }
+
+    // ── Debito CC del ciclo ancora aperto → uscita futura al prossimo billing day ──
+    //   currentBalance esclude le CC (non è liquidità): qui re-introduciamo il debito
+    //   come obbligo futuro, così la proiezione non risulta ottimistica.
+    const ccObligations = openCCObligations(accounts, rangeStart, rangeEnd, now);
+    projectedExpense += ccObligations.total;
 
     const result = {
       currentBalance,

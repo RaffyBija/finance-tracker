@@ -75,7 +75,8 @@ const SECTIONS: Section[] = [
     emoji: '📊',
     content: (
       <>
-        <p>La Dashboard mostra: saldo/patrimonio netto, entrate/uscite del mese, trend mensile (bar chart), spese per categoria (pie chart), proiezione saldo futura, previsione spese di fine mese e costo abbonamenti.</p>
+        <p>La Dashboard mostra: liquidità disponibile, entrate/uscite del mese, trend mensile (bar chart), spese per categoria (pie chart), la card <strong>Andamento del saldo</strong> e le spese ricorrenti.</p>
+        <p>La card <strong>Andamento del saldo</strong> ha due modalità: <strong>Impegni certi</strong> (solo ricorrenti, pianificate e addebiti CC programmati) e <strong>Stima realistica</strong> (aggiunge una stima delle spese abituali per categoria a fine mese).</p>
         <p>Usa le frecce per navigare i mesi storici e confrontare i trend.</p>
       </>
     ),

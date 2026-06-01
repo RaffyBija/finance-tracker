@@ -85,7 +85,7 @@ export default function AccountsPage() {
           <>
             <div className="page-header">
               <h1 className="page-header-title">I tuoi conti</h1>
-              <span style={{ fontSize: 13, color: 'var(--color-neutral-500, #64748b)' }}>
+              <span className="account-count-pill">
                 {accounts.length}/{maxAccounts} conti attivi
               </span>
             </div>
@@ -130,17 +130,19 @@ export default function AccountsPage() {
 
             {/* Riepilogo conti */}
             {bankAccounts.length > 0 && (
-              <div className="account-net-worth" style={{ marginTop: 24 }}>
-                <div>
+              <div className="account-net-worth account-net-worth-first">
+                <div className="account-net-worth-main">
                   <div className="account-net-worth-label">Liquidità</div>
                   <div className="account-net-worth-rows">
                     {bankAccounts.map((a) => (
                       <div key={a.id} className="account-net-worth-row">
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: a.color, display: 'inline-block', flexShrink: 0 }} />
-                          {a.name}
+                        <span className="account-net-worth-row-name">
+                          <span
+                            className="account-net-worth-dot"
+                            style={{ backgroundColor: a.color }}
+                          />
+                          <span className="account-net-worth-row-label">{a.name}</span>
                         </span>
-                        <span style={{padding:'0 10px'}} />
                         <span className="account-net-worth-row-amount is-asset">
                           {formatCurrency(a.balance)}
                         </span>
@@ -148,9 +150,9 @@ export default function AccountsPage() {
                     ))}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div className="account-net-worth-label" style={{ marginBottom: 4 }}>Totale</div>
-                  <div className="account-net-worth-amount" style={{ color: '#0d9488' }}>
+                <div className="account-net-worth-total">
+                  <div className="account-net-worth-label">Totale</div>
+                  <div className="account-net-worth-amount is-asset">
                     {formatCurrency(liquidity)}
                   </div>
                 </div>
@@ -158,17 +160,19 @@ export default function AccountsPage() {
             )}
 
             {ccAccounts.length > 0 && (
-              <div className="account-net-worth" style={{ marginTop: 12 }}>
-                <div>
+              <div className="account-net-worth">
+                <div className="account-net-worth-main">
                   <div className="account-net-worth-label">Esposizione CC</div>
                   <div className="account-net-worth-rows">
                     {ccAccounts.map((a) => (
                       <div key={a.id} className="account-net-worth-row">
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: a.color, display: 'inline-block', flexShrink: 0 }} />
-                          {a.name}
+                        <span className="account-net-worth-row-name">
+                          <span
+                            className="account-net-worth-dot"
+                            style={{ backgroundColor: a.color }}
+                          />
+                          <span className="account-net-worth-row-label">{a.name}</span>
                         </span>
-                        <span style={{padding:'0 10px'}} />
                         <span className={`account-net-worth-row-amount ${a.balance < 0 ? 'is-liability' : 'is-asset'}`}>
                           {formatCurrency(a.balance)}
                         </span>
@@ -176,9 +180,9 @@ export default function AccountsPage() {
                     ))}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div className="account-net-worth-label" style={{ marginBottom: 4 }}>Totale</div>
-                  <div className="account-net-worth-amount" style={{ color: ccExposure < 0 ? '#ef4444' : '#0d9488' }}>
+                <div className="account-net-worth-total">
+                  <div className="account-net-worth-label">Totale</div>
+                  <div className={`account-net-worth-amount ${ccExposure < 0 ? 'is-liability' : 'is-asset'}`}>
                     {formatCurrency(ccExposure)}
                   </div>
                 </div>

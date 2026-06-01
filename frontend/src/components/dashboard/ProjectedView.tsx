@@ -1,8 +1,12 @@
-import { Calendar, TrendingUp, TrendingDown, ArrowRight, SlidersHorizontal, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRight, SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useProjectedBalance } from '../../hooks/useDashboard';
+
+// Vista "Impegni certi" della card Andamento del saldo.
+// Mostra solo impegni programmati: ricorrenti + pianificate + debito CC.
+// Il chrome della card e il titolo sono forniti dal genitore (BalanceOutlookCard).
 
 type Mode = 'months' | 'custom';
 
@@ -24,15 +28,7 @@ function projectedLabel(mode: Mode, months: number, endDate: string): string {
 
 function ProjectedSkeleton() {
   return (
-    <div className="projection-card animate-pulse">
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'center' }}>
-        <div style={{ height: '1rem', width: '10rem', background: '#e7e5e4', borderRadius: '0.25rem' }} />
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} style={{ height: '1.625rem', width: '2.5rem', background: '#e7e5e4', borderRadius: '9999px' }} />
-          ))}
-        </div>
-      </div>
+    <div className="animate-pulse">
       <div style={{ background: '#fafaf9', borderRadius: '0.5rem', padding: '1.25rem 1.5rem', marginBottom: '1rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1.25rem', alignItems: 'center' }}>
           <div>
@@ -50,7 +46,7 @@ function ProjectedSkeleton() {
   );
 }
 
-export default function ProjectedDetailCard() {
+export default function ProjectedView() {
   const [mode, setMode] = useState<Mode>('months');
   const [selectedMonths, setSelectedMonths] = useState(3);
   const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });
@@ -92,22 +88,14 @@ export default function ProjectedDetailCard() {
     setShowCustom(false);
   };
 
-  if (isFetching && !data) return <ProjectedSkeleton />;
-
   const delta = (data?.projectedBalance ?? 0) - (data?.currentBalance ?? 0);
   const isPositiveDelta = delta >= 0;
   const label = projectedLabel(mode, selectedMonths, customRange.endDate);
 
   return (
-    <div className="projection-card">
-
-      {/* ── Header: titolo + pills ── */}
+    <>
+      {/* ── Controlli: pillole orizzonte + range personalizzato ── */}
       <div className="projection-header">
-        <h2 className="projection-title">
-          <Calendar size={15} />
-          Proiezione del saldo
-        </h2>
-
         <div className="projection-pills">
           {MONTH_OPTIONS.map((m) => (
             <button
@@ -172,7 +160,9 @@ export default function ProjectedDetailCard() {
       </div>
 
       {/* ── Contenuto ── */}
-      {isFetching ? (
+      {isFetching && !data ? (
+        <ProjectedSkeleton />
+      ) : isFetching ? (
         <div style={{ background: '#fafaf9', borderRadius: '0.5rem', padding: '1.25rem 1.5rem', marginBottom: '1rem', opacity: 0.6 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1.25rem', alignItems: 'center' }}>
             <div>
@@ -240,6 +230,6 @@ export default function ProjectedDetailCard() {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }
