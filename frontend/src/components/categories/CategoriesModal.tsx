@@ -168,18 +168,15 @@ export default function CategoriesModal({
 
         <div className="form-group">
           <label className="form-label">Colore</label>
-          <div className="flex flex-wrap gap-2">
+          <div className="color-swatch-grid">
             {COLORS.map((color) => (
               <button
                 key={color}
                 type="button"
                 onClick={() => setFormData({ ...formData, color })}
-                className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: color,
-                  borderColor: formData.color === color ? '#1e293b' : 'transparent',
-                  transform: formData.color === color ? 'scale(1.15)' : undefined,
-                }}
+                className={`color-swatch${formData.color === color ? ' is-selected' : ''}`}
+                style={{ backgroundColor: color }}
+                aria-label={color}
               />
             ))}
           </div>
@@ -187,17 +184,13 @@ export default function CategoriesModal({
 
         <div className="form-group">
           <label className="form-label">Icona</label>
-          <div className="flex flex-wrap gap-2">
+          <div className="icon-swatch-grid">
             {ICONS.map((icon) => (
               <button
                 key={icon}
                 type="button"
                 onClick={() => setFormData({ ...formData, icon })}
-                className={`w-10 h-10 rounded-lg text-lg transition-all ${
-                  formData.icon === icon
-                    ? 'bg-primary-100 border-2 border-primary-400 scale-110'
-                    : 'bg-neutral-100 border-2 border-transparent hover:bg-neutral-200'
-                }`}
+                className={`icon-swatch${formData.icon === icon ? ' is-selected' : ''}`}
               >
                 {icon}
               </button>

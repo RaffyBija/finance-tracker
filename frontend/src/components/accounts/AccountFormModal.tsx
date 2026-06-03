@@ -173,12 +173,12 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
         {/* Colore */}
         <div className="form-group">
           <label className="form-label">Colore</label>
-          <div className="account-color-picker">
+          <div className="color-swatch-grid">
             {COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
-                className={`account-color-swatch${formData.color === c ? ' is-selected' : ''}`}
+                className={`color-swatch${formData.color === c ? ' is-selected' : ''}`}
                 style={{ backgroundColor: c }}
                 onClick={() => set('color', c)}
                 aria-label={c}
