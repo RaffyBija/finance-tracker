@@ -1,5 +1,5 @@
 import api from './client';
-import type { Account, CreateAccountDTO, UpdateAccountDTO } from '../types';
+import type { Account, BillingCycle, CreateAccountDTO, UpdateAccountDTO } from '../types';
 
 export const accountsAPI = {
   getAll: async (): Promise<Account[]> => {
@@ -35,8 +35,13 @@ export const accountsAPI = {
     return data;
   },
 
-  closeBillingCycle: async (id: string): Promise<{ cycled: boolean; debtAmount?: number; billingDate?: string; created?: boolean }> => {
+  closeBillingCycle: async (id: string): Promise<{ cycled: boolean; debtAmount?: number; billingDate?: string; cycleLabel?: string; alreadyClosed?: boolean }> => {
     const { data } = await api.post(`/accounts/${id}/close-billing-cycle`);
+    return data;
+  },
+
+  getCycles: async (id: string): Promise<BillingCycle[]> => {
+    const { data } = await api.get<BillingCycle[]>(`/accounts/${id}/cycles`);
     return data;
   },
 };

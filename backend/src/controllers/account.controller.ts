@@ -2,6 +2,15 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import {
+  currentCycleWindow,
+  effectiveClosingDay,
+  computeCycleDebt,
+  ensureOpenCycle,
+  syncCyclePlanned,
+  cycleLabel,
+  nextBillingDate,
+} from '../utils/billingCycle';
 
 const MAX_FREE_ACCOUNTS = 3;
 const MAX_PRO_ACCOUNTS  = 10;
@@ -35,12 +44,27 @@ export const getAccounts = async (req: AuthRequest, res: Response) => {
       if (row.type === 'EXPENSE') balanceMap[row.accountId].expense = Number(row._sum.amount ?? 0);
     }
 
+    // Per le CC il saldo è il debito del solo ciclo OPEN corrente (i cicli chiusi
+    // sono già diventati pianificate): finestra basata su closingDay.
+    const ccDebt: Record<string, number> = {};
+    await Promise.all(
+      accounts
+        .filter((a) => a.type === 'CREDIT_CARD')
+        .map(async (a) => {
+          const { periodStart, periodEnd } = currentCycleWindow(effectiveClosingDay(a));
+          ccDebt[a.id] = await computeCycleDebt(a.id, periodStart, periodEnd);
+        }),
+    );
+
     const accountsWithBalance = accounts.map((account) => {
-      const { income = 0, expense = 0 } = balanceMap[account.id] ?? {};
-      // Per CC: openingBalance è il debito iniziale (positivo nel DB), il saldo è negativo
-      const balance = account.type === 'CREDIT_CARD'
-        ? -Number(account.openingBalance) + income - expense
-        : Number(account.openingBalance) + income - expense;
+      let balance: number;
+      if (account.type === 'CREDIT_CARD') {
+        // openingBalance = debito iniziale residuo; debito del ciclo aperto positivo
+        balance = -Number(account.openingBalance) - (ccDebt[account.id] ?? 0);
+      } else {
+        const { income = 0, expense = 0 } = balanceMap[account.id] ?? {};
+        balance = Number(account.openingBalance) + income - expense;
+      }
       return {
         ...account,
         openingBalance: Number(account.openingBalance),
@@ -242,31 +266,28 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
     const linkedAccount = await prisma.account.findFirst({ where: { id: account.linkedAccountId, userId } });
     if (!linkedAccount) return res.status(400).json({ error: 'Conto collegato non trovato' });
 
-    const incomeAgg = await prisma.transaction.aggregate({ where: { accountId: account.id, type: 'INCOME' }, _sum: { amount: true } });
-    const expenseAgg = await prisma.transaction.aggregate({ where: { accountId: account.id, type: 'EXPENSE' }, _sum: { amount: true } });
-
-    const income = Number(incomeAgg._sum.amount ?? 0);
-    const expense = Number(expenseAgg._sum.amount ?? 0);
-    const balance = -Number(account.openingBalance) + income - expense;
-
-    if (balance >= 0) return res.status(400).json({ error: 'Nessun debito da saldare', balance });
-
-    const debtAmount = Math.abs(balance);
     const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    // Salda i pagamenti dovuti: le pianificate di billing dei cicli CHIUSI non
+    // ancora pagate e scadute (plannedDate ≤ oggi).
+    const duePlanned = await prisma.plannedTransaction.findMany({
+      where: { userId, ccAccountId: account.id, isPaid: false, plannedDate: { lte: endOfToday } },
+    });
+
+    const debtAmount = duePlanned.reduce((sum, p) => sum + Number(p.amount), 0);
+    if (debtAmount <= 0) return res.status(400).json({ error: 'Nessun addebito da saldare' });
+
     const monthYear = now.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 
     const { categoryId } = req.body;
-
     if (categoryId) {
       const category = await prisma.category.findFirst({ where: { id: categoryId, userId } });
       if (!category) return res.status(404).json({ error: 'Categoria non trovata' });
       if (category.type !== 'EXPENSE') return res.status(400).json({ error: 'La categoria deve essere di tipo Uscita' });
     }
 
-    // newOpeningBalance che azzera il saldo CC senza creare transazioni sulla CC:
-    // balance = -newOB + income - expense = 0  →  newOB = income - expense
-    const newCCOpeningBalance = income - expense;
-
+    // Crea l'addebito reale sul conto bancario e marca pagate le pianificate.
     const [bankTransaction] = await prisma.$transaction([
       prisma.transaction.create({
         data: {
@@ -279,26 +300,14 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
           ...(categoryId && { categoryId }),
         },
       }),
-      prisma.account.update({
-        where: { id: account.id },
-        data: { openingBalance: newCCOpeningBalance },
+      prisma.plannedTransaction.updateMany({
+        where: { id: { in: duePlanned.map((p) => p.id) } },
+        data: { isPaid: true },
       }),
     ]);
 
-    // Marca come pagata la pianificata di billing CC per questo mese (se esiste)
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    await prisma.plannedTransaction.updateMany({
-      where: {
-        userId,
-        ccAccountId: account.id,
-        isPaid: false,
-        plannedDate: { gte: startOfMonth, lte: endOfMonth },
-      },
-      data: { isPaid: true },
-    });
-
     analyticsCache.onTransactionMutated(userId);
+    analyticsCache.onPlannedMutated(userId);
 
     res.status(201).json({
       transaction: { ...bankTransaction, amount: Number(bankTransaction.amount) },
@@ -310,10 +319,14 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Chiude il ciclo di billing della CC:
-//   1. Azzera il saldo CC (il plafond torna disponibile per il nuovo ciclo)
-//   2. Crea la pianificata per il pagamento al billingDay del mese corrente/successivo
-// Idempotente: se la pianificata esiste già per il mese corrente non crea duplicati.
+// Chiude il ciclo di billing della CC.
+//   • Determina il ciclo che si conclude (quello che chiude oggi sul closingDay,
+//     o il ciclo già concluso ancora aperto se chiamato dopo).
+//   • Calcola il debito dalle transazioni nella finestra del ciclo.
+//   • Crea/collega la PlannedTransaction (pagamento) dovuta al billingDay.
+//   • Marca il ciclo CLOSED e apre il ciclo successivo.
+// Non manipola più openingBalance: il saldo carta si ricalcola dal solo ciclo aperto.
+// Idempotente: se il ciclo è già chiuso non duplica nulla.
 export const closeBillingCycle = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
@@ -324,65 +337,67 @@ export const closeBillingCycle = async (req: AuthRequest, res: Response) => {
     if (account.type !== 'CREDIT_CARD') return res.status(400).json({ error: 'Solo carte di credito' });
     if (!account.linkedAccountId) return res.status(400).json({ error: 'Nessun conto collegato' });
 
-    // Calcola il debito corrente del ciclo che si sta chiudendo
-    const incomeAgg  = await prisma.transaction.aggregate({ where: { accountId: id, type: 'INCOME'  }, _sum: { amount: true } });
-    const expenseAgg = await prisma.transaction.aggregate({ where: { accountId: id, type: 'EXPENSE' }, _sum: { amount: true } });
-    const income  = Number(incomeAgg._sum.amount  ?? 0);
-    const expense = Number(expenseAgg._sum.amount ?? 0);
-    const balance = -Number(account.openingBalance) + income - expense;
+    const now = new Date();
+    const closingDay = effectiveClosingDay(account);
+    const current = currentCycleWindow(closingDay, now);
 
-    if (balance >= 0) {
-      return res.json({ cycled: false, message: 'Nessun debito da chiudere' });
+    // Il ciclo da chiudere è quello che si conclude oggi (closingDay) oppure, se
+    // chiamato in un altro giorno, il ciclo precedente già concluso.
+    const sameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    let closeWin = current;
+    if (!sameDay(current.periodEnd, now)) {
+      const before = new Date(current.periodStart);
+      before.setDate(before.getDate() - 1);
+      closeWin = currentCycleWindow(closingDay, before);
     }
 
-    const debtAmount = Math.abs(balance);
-    const now = new Date();
-
-    // Idempotente: controlla se la pianificata di questo mese esiste già
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const existing = await prisma.plannedTransaction.findFirst({
-      where: { userId, ccAccountId: id, isPaid: false, plannedDate: { gte: startOfMonth, lte: endOfMonth } },
+    // Trova/crea il ciclo da chiudere
+    const cycle = await prisma.billingCycle.upsert({
+      where: { accountId_periodStart: { accountId: id, periodStart: closeWin.periodStart } },
+      update: {},
+      create: {
+        userId,
+        accountId: id,
+        periodStart: closeWin.periodStart,
+        periodEnd: closeWin.periodEnd,
+        status: 'OPEN',
+      },
     });
 
-    // Calcola la data di scadenza: billingDay del mese corrente (se non ancora passato) o del prossimo
-    const billingDay = account.billingDay ?? 15;
-    const billingDate = new Date(now.getFullYear(), now.getMonth(), billingDay);
-    if (billingDate <= now) billingDate.setMonth(billingDate.getMonth() + 1);
+    // Apri sempre il ciclo successivo (idempotente)
+    const dayAfter = new Date(closeWin.periodEnd);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    dayAfter.setHours(12, 0, 0, 0);
+    await ensureOpenCycle(userId, account, dayAfter);
 
-    // Mese di riferimento del ciclo che si chiude (es. "maggio 2026")
-    const cycleMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-
-    let planned = existing;
-    if (!existing) {
-      planned = await prisma.plannedTransaction.create({
-        data: {
-          userId,
-          type: 'EXPENSE',
-          amount: debtAmount,
-          description: `Addebito ${account.name} - ${cycleMonth}`,
-          plannedDate: billingDate,
-          accountId: account.linkedAccountId,
-          ccAccountId: id,
-        },
-      });
+    if (cycle.status === 'CLOSED') {
+      // Già chiuso: ricalcola comunque la pianificata per sicurezza
+      const debt = await computeCycleDebt(id, closeWin.periodStart, closeWin.periodEnd);
+      const synced = await syncCyclePlanned(cycle, account, debt);
+      analyticsCache.onPlannedMutated(userId);
+      return res.json({ cycled: false, alreadyClosed: true, debtAmount: synced });
     }
 
-    // Azzera il saldo CC: il nuovo ciclo inizia da 0 (plafond completamente libero)
-    // Il debito è ora "frozen" nella pianificata — non nelle transazioni della CC
-    const newOpeningBalance = income - expense; // → saldo = 0
-    await prisma.account.update({ where: { id }, data: { openingBalance: newOpeningBalance } });
+    const debt = await computeCycleDebt(id, closeWin.periodStart, closeWin.periodEnd);
+    const billingDate = nextBillingDate(account.billingDay ?? 15, closeWin.periodEnd);
+
+    // Marca chiuso, poi crea/collega la pianificata col debito calcolato
+    const closed = await prisma.billingCycle.update({
+      where: { id: cycle.id },
+      data: { status: 'CLOSED', closedAt: now, billingDate },
+    });
+    const debtAmount = await syncCyclePlanned(closed, account, debt);
 
     analyticsCache.onTransactionMutated(userId);
     analyticsCache.onPlannedMutated(userId);
 
     res.status(201).json({
-      cycled: true,
+      cycled: debtAmount > 0,
       debtAmount,
       billingDate,
-      created: !existing,
-      planned: planned ? { ...planned, amount: Number(planned.amount) } : null,
+      cycleLabel: cycleLabel(closeWin.periodEnd),
     });
   } catch (error) {
     console.error('Close billing cycle error:', error);
@@ -408,6 +423,55 @@ export const setDefaultAccount = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Conto principale aggiornato' });
   } catch (error) {
     console.error('Set default account error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Storico dei cicli di fatturazione di una CC. Per il ciclo OPEN il debito è
+// calcolato live dalle transazioni; per i cicli CLOSED si usa il valore congelato.
+export const getBillingCycles = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const account = await prisma.account.findFirst({ where: { id, userId } });
+    if (!account) return res.status(404).json({ error: 'Conto non trovato' });
+    if (account.type !== 'CREDIT_CARD') return res.status(400).json({ error: 'Solo carte di credito' });
+
+    // Garantisce l'esistenza del ciclo corrente prima di restituire lo storico
+    await ensureOpenCycle(userId, account);
+
+    const cycles = await prisma.billingCycle.findMany({
+      where: { accountId: id },
+      orderBy: { periodStart: 'desc' },
+      include: {
+        planned: { select: { id: true, amount: true, isPaid: true, plannedDate: true } },
+      },
+    });
+
+    const result = await Promise.all(
+      cycles.map(async (c) => {
+        const debt = c.status === 'OPEN'
+          ? await computeCycleDebt(id, c.periodStart, c.periodEnd)
+          : Number(c.debtAmount);
+        return {
+          id: c.id,
+          periodStart: c.periodStart,
+          periodEnd: c.periodEnd,
+          status: c.status,
+          closedAt: c.closedAt,
+          billingDate: c.billingDate,
+          debtAmount: Math.round(debt * 100) / 100,
+          planned: c.planned
+            ? { ...c.planned, amount: Number(c.planned.amount) }
+            : null,
+        };
+      }),
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get billing cycles error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

@@ -5,7 +5,7 @@ import { broadcastInvalidation } from '../utils/syncChannel';
 import type { Account, CreateAccountDTO, UpdateAccountDTO } from '../types';
 
 const ACCOUNT_KEYS = ['accounts'];
-const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar'];
+const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles'];
 
 const invalidateAccounts = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {
   keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
@@ -17,6 +17,15 @@ export const useAccounts = () => {
     queryKey: ['accounts'],
     queryFn: () => accountsAPI.getAll(),
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useBillingCycles = (accountId: string | null, enabled = true) => {
+  return useQuery({
+    queryKey: ['billing-cycles', accountId],
+    queryFn: () => accountsAPI.getCycles(accountId as string),
+    enabled: enabled && !!accountId,
+    staleTime: 60 * 1000,
   });
 };
 
@@ -81,6 +90,7 @@ export const useCloseBillingCycle = () => {
       queryClient.invalidateQueries({ queryKey: ['calendar'] });
       queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['billing-cycles'] });
     },
   });
 };

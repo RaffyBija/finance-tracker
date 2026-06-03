@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 
 // Ottieni tutte le transazioni dell'utente
 export const getTransactions = async (req: AuthRequest, res: Response) => {
@@ -142,6 +143,16 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Riconcilia eventuali cicli CC chiusi toccati da questa transazione retroattiva
+    if (transaction.accountId) {
+      await reconcileCcChanges(userId, [{
+        accountId: transaction.accountId,
+        date: transaction.date,
+        signed: debtContribution(transaction.type, Number(transaction.amount)),
+      }]);
+      analyticsCache.onPlannedMutated(userId);
+    }
+
     analyticsCache.onTransactionMutated(userId);
     res.status(201).json(transaction);
   } catch (error) {
@@ -214,6 +225,23 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Riconcilia i cicli CC interessati: vecchio stato (rimosso) e nuovo (aggiunto).
+    if (existingTransaction.accountId || transaction.accountId) {
+      await reconcileCcChanges(userId, [
+        {
+          accountId: existingTransaction.accountId,
+          date: existingTransaction.date,
+          signed: -debtContribution(existingTransaction.type, Number(existingTransaction.amount)),
+        },
+        {
+          accountId: transaction.accountId,
+          date: transaction.date,
+          signed: debtContribution(transaction.type, Number(transaction.amount)),
+        },
+      ]);
+      analyticsCache.onPlannedMutated(userId);
+    }
+
     analyticsCache.onTransactionMutated(userId);
     res.json(transaction);
   } catch (error) {
@@ -243,6 +271,16 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
     await prisma.transaction.delete({
       where: { id },
     });
+
+    // Riconcilia il ciclo CC eventualmente toccato dalla rimozione
+    if (transaction.accountId) {
+      await reconcileCcChanges(userId, [{
+        accountId: transaction.accountId,
+        date: transaction.date,
+        signed: -debtContribution(transaction.type, Number(transaction.amount)),
+      }]);
+      analyticsCache.onPlannedMutated(userId);
+    }
 
     analyticsCache.onTransactionMutated(userId);
     res.json({ message: 'Transazione eliminata con successo' });

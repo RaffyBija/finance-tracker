@@ -15,8 +15,9 @@ const SECTIONS: Section[] = [
     content: (
       <>
         <p>Vai su <strong>Gestione → Conti</strong> per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
-        <p>Per le <strong>carte di credito</strong>: imposta il limite, il giorno di addebito mensile e il conto collegato. L'app ti avvisa automaticamente quando è il momento di registrare il pagamento mensile, azzerando il saldo della carta.</p>
-        <p>Nella pagina Conti trovi due riquadri separati: <strong>Liquidità</strong> (somma dei conti bancari, denaro realmente disponibile) e <strong>Esposizione CC</strong> (spese sulla carta ancora da addebitare). La Dashboard mostra solo la liquidità perché quei fondi sono effettivamente tuoi — l'impatto futuro della CC è già visibile nella card Proiezione.</p>
+        <p>Per le <strong>carte di credito</strong>: imposta il limite, il <strong>giorno di chiusura</strong> del ciclo, il giorno di addebito e il conto collegato. Al giorno di chiusura l'app chiude il ciclo (le spese diventano un addebito pianificato) e ne apre uno nuovo; al giorno di addebito ti avvisa di registrare il pagamento.</p>
+        <p>Ogni spesa appartiene al <strong>ciclo della sua data</strong>: se inserisci o modifichi una transazione vecchia, finisce nel ciclo giusto. Se quel ciclo era già stato pagato, la differenza viene riportata come <strong>conguaglio</strong> nel ciclo corrente. Dal pulsante <strong>Storico cicli</strong> (icona orologio sulla carta) vedi tutti i cicli, i loro importi e lo stato.</p>
+        <p>Nella pagina Conti trovi due riquadri separati: <strong>Liquidità</strong> (somma dei conti bancari, denaro realmente disponibile) e <strong>Esposizione CC</strong> (debito del ciclo aperto, ancora da addebitare). La Dashboard mostra solo la liquidità perché quei fondi sono effettivamente tuoi — l'impatto futuro della CC è già visibile nella card Proiezione.</p>
       </>
     ),
   },

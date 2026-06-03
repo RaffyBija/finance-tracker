@@ -307,26 +307,32 @@
 
   .account-color-picker {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
   }
 
   .account-color-swatch {
-    width: 32px;
-    height: 32px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 34px;
+    height: 34px;
+    padding: 0;
     border-radius: 50%;
-    border: 3px solid transparent;
+    border: none;
     cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
   .account-color-swatch:hover {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
 
+  /* Anello di selezione via box-shadow: non altera dimensione né forma */
   .account-color-swatch.is-selected {
-    border-color: #1e293b;
-    transform: scale(1.15);
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #1e293b;
+    transform: scale(1.08);
   }
 
   /* ── Account filter pills (TransactionsPage) ─── */
@@ -493,7 +499,7 @@
 }
 
 .dark .account-color-swatch.is-selected {
-  border-color: #f1f5f9;
+  box-shadow: 0 0 0 2px #1e293b, 0 0 0 4px #5eead4;
 }
 
 .dark .account-filter-pill {

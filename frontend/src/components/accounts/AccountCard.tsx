@@ -1,4 +1,4 @@
-import { Pencil, Trash2, CreditCard, Landmark, Star } from 'lucide-react';
+import { Pencil, Trash2, CreditCard, Landmark, Star, History } from 'lucide-react';
 import type { Account } from '../../types';
 
 interface AccountCardProps {
@@ -6,6 +6,7 @@ interface AccountCardProps {
   onEdit: (account: Account) => void;
   onDelete: (id: string) => void;
   onSetDefault: (id: string) => void;
+  onShowCycles?: (account: Account) => void;
 }
 
 function formatCurrency(amount: number) {
@@ -33,7 +34,7 @@ function BarFill({ pct }: { pct: number }) {
   );
 }
 
-export default function AccountCard({ account, onEdit, onDelete, onSetDefault }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onShowCycles }: AccountCardProps) {
   const isCC = account.type === 'CREDIT_CARD';
   const balance = account.balance;
   const debt = isCC ? Math.abs(balance) : null;
@@ -64,6 +65,15 @@ export default function AccountCard({ account, onEdit, onDelete, onSetDefault }:
           </div>
         </div>
         <div className="account-card-actions">
+          {isCC && onShowCycles && (
+            <button
+              onClick={() => onShowCycles(account)}
+              className="btn-icon-primary"
+              title="Storico cicli di fatturazione"
+            >
+              <History className="icon-sm" />
+            </button>
+          )}
           {!account.isDefault && (
             <button
               onClick={() => onSetDefault(account.id)}

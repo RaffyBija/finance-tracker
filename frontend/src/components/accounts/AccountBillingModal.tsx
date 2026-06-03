@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CreditCard, Landmark, ArrowRight } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
-import { useSettleAccount } from '../../hooks/useAccounts';
+import { useSettleAccount, useBillingCycles } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
 import type { Account } from '../../types';
@@ -26,11 +26,20 @@ export default function AccountBillingModal({
   const settleMutation = useSettleAccount();
   const toast = useToast();
   const { data: categories = [] } = useCategories('EXPENSE');
+  const { data: cycles = [] } = useBillingCycles(account?.id ?? null, isOpen);
   const [categoryId, setCategoryId] = useState('');
 
   if (!isOpen || !account) return null;
 
-  const debt = Math.abs(account.balance);
+  // L'addebito dovuto = somma delle pianificate dei cicli CHIUSI non ancora pagate
+  // e scadute (data di addebito ≤ oggi). Non è il debito del ciclo aperto.
+  const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+  const debt = cycles.reduce((sum, c) => {
+    if (c.status === 'CLOSED' && c.planned && !c.planned.isPaid && new Date(c.planned.plannedDate) <= endOfToday) {
+      return sum + c.planned.amount;
+    }
+    return sum;
+  }, 0);
   const linkedAccount = allAccounts.find((a) => a.id === account.linkedAccountId) ?? null;
   const today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
 
@@ -135,7 +144,7 @@ export default function AccountBillingModal({
           <button
             type="button"
             onClick={handleSettle}
-            disabled={settleMutation.isPending}
+            disabled={settleMutation.isPending || debt <= 0}
             className="btn btn-primary btn-md"
           >
             {settleMutation.isPending ? 'Registrazione...' : 'Registra addebito'}

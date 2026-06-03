@@ -1,4 +1,7 @@
 import prisma from './prisma';
+import { currentCycleWindow, effectiveClosingDay, computeCycleDebt, nextBillingDate } from './billingCycle';
+
+export { nextBillingDate };
 
 // ── Fonte di verità unica per i saldi ──────────────────────────────────────────
 //
@@ -17,6 +20,7 @@ export type AccountBalance = {
   type: 'BANK' | 'CREDIT_CARD';
   openingBalance: number;
   billingDay: number | null;
+  closingDay: number | null;
   linkedAccountId: string | null;
   balance: number;
 };
@@ -26,7 +30,7 @@ export type AccountBalance = {
 export async function getAccountsWithBalances(userId: string): Promise<AccountBalance[]> {
   const accounts = await prisma.account.findMany({
     where: { userId },
-    select: { id: true, type: true, openingBalance: true, billingDay: true, linkedAccountId: true },
+    select: { id: true, type: true, openingBalance: true, billingDay: true, closingDay: true, linkedAccountId: true },
   });
 
   if (accounts.length === 0) return [];
@@ -46,15 +50,36 @@ export async function getAccountsWithBalances(userId: string): Promise<AccountBa
     if (row.type === 'EXPENSE') map[row.accountId].expense = Number(row._sum.amount ?? 0);
   }
 
+  // Per le CC il saldo è il debito del solo ciclo OPEN corrente (finestra basata
+  // su closingDay): i cicli chiusi sono già diventati pianificate, quindi non
+  // vanno ricontati nel saldo carta. Una query windowed per CC (poche per utente).
+  const ccDebt: Record<string, number> = {};
+  await Promise.all(
+    accounts
+      .filter((a) => a.type === 'CREDIT_CARD')
+      .map(async (a) => {
+        const { periodStart, periodEnd } = currentCycleWindow(effectiveClosingDay(a));
+        ccDebt[a.id] = await computeCycleDebt(a.id, periodStart, periodEnd);
+      }),
+  );
+
   return accounts.map((a) => {
-    const { income = 0, expense = 0 } = map[a.id] ?? {};
     const ob = Number(a.openingBalance);
-    const balance = a.type === 'CREDIT_CARD' ? -ob + income - expense : ob + income - expense;
+    let balance: number;
+    if (a.type === 'CREDIT_CARD') {
+      // debito del ciclo aperto (positivo) → saldo negativo; openingBalance =
+      // eventuale debito iniziale residuo non ancora assegnato a un ciclo.
+      balance = -ob - (ccDebt[a.id] ?? 0);
+    } else {
+      const { income = 0, expense = 0 } = map[a.id] ?? {};
+      balance = ob + income - expense;
+    }
     return {
       id: a.id,
       type: a.type as 'BANK' | 'CREDIT_CARD',
       openingBalance: ob,
       billingDay: a.billingDay,
+      closingDay: a.closingDay,
       linkedAccountId: a.linkedAccountId,
       balance,
     };
@@ -83,21 +108,6 @@ export async function getLiquidBalance(
   return accts
     .filter((a) => a.type !== 'CREDIT_CARD')
     .reduce((sum, a) => sum + a.balance, 0);
-}
-
-// Prossima data di addebito (billingDay) a partire da `from`, con clamping per
-// i mesi corti (es. billingDay 31 → ultimo giorno del mese).
-export function nextBillingDate(billingDay: number, from: Date): Date {
-  const build = (year: number, month: number) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    return new Date(year, month, Math.min(billingDay, daysInMonth));
-  };
-
-  let candidate = build(from.getFullYear(), from.getMonth());
-  if (candidate < from) {
-    candidate = build(from.getFullYear(), from.getMonth() + 1);
-  }
-  return candidate;
 }
 
 // Debiti dei cicli CC ancora aperti, proiettati come uscite future alla prossima

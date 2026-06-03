@@ -40,22 +40,26 @@
   width: 100%;
   max-width: 460px;
   max-height: 88vh;
+  max-height: 88dvh;
   display: flex;
   flex-direction: column;
   animation: modal-fadeIn 0.24s var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1)) forwards;
   overflow: hidden;
 }
 
-/* ── Tablet: più largo, padding per il bottom nav ── */
+/* ── Tablet: più largo e più alto, padding per il bottom nav + safe-area iOS ── */
 @media (min-width: 541px) and (max-width: 1023px) {
   .modal-overlay {
     align-items: center;
-    padding: 1rem 1.5rem calc(3.5rem + 1.5rem);
+    padding: 0.75rem 1.25rem calc(3.5rem + 0.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .modal-container {
-    max-width: 600px;
-    max-height: calc(100vh - 3.5rem - 3rem);
+    max-width: 720px;
+    /* dvh: esclude le toolbar dinamiche di Safari iOS (altrimenti i bottoni
+       finiscono sotto la piega). Fallback vh per browser più vecchi. */
+    max-height: calc(100vh - 3.5rem - 1.5rem);
+    max-height: calc(100dvh - 3.5rem - 1.5rem - env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -68,6 +72,7 @@
   .modal-container {
     max-width: 600px;
     max-height: calc(100vh - 4rem - 3rem);
+    max-height: calc(100dvh - 4rem - 3rem);
   }
 }
 
@@ -185,15 +190,23 @@
   cursor: pointer;
 }
 
-/* ── Form actions (bottoni) ── */
+/* ── Form actions (bottoni) ──
+   Sticky in fondo all'area scrollabile (.modal-content): i bottoni restano
+   sempre visibili e raggiungibili anche quando il form è più alto del modal,
+   senza dover scorrere. I margini negativi fanno arrivare lo sfondo ai bordi e
+   annullano il padding-bottom del content così l'elemento si ancora a filo. */
 .form-actions,
 .modal-buttons {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 0.5rem;
-  padding-top: 1rem;
+  margin: 0.5rem -1.5rem -1.5rem;
+  padding: 1rem 1.5rem 1.5rem;
   border-top: 1px solid #f1f5f9;
+  background: #ffffff;
 }
 
 /* ── Footer separato (opzionale) ── */
@@ -606,7 +619,7 @@
   box-shadow: 0 0 0 3px rgba(13,148,136,0.2);
 }
 .dark .form-actions,
-.dark .modal-buttons { border-top-color: #334155; }
+.dark .modal-buttons { border-top-color: #334155; background: #1e293b; }
 .dark .modal-footer { border-top-color: #334155; }
 .dark .modal-section-title { color: #94a3b8; }
 .dark .modal-section-divider { border-color: #334155; }

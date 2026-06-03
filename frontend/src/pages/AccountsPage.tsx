@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AccountCard from '../components/accounts/AccountCard';
 import AccountFormModal from '../components/accounts/AccountFormModal';
+import CycleHistoryModal from '../components/accounts/CycleHistoryModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
 import type { Account } from '../types';
@@ -16,6 +17,7 @@ function formatCurrency(amount: number) {
 export default function AccountsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [cyclesAccount, setCyclesAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { user } = useAuth();
@@ -98,6 +100,7 @@ export default function AccountsPage() {
                   onEdit={handleEdit}
                   onDelete={(id) => setDeletingId(id)}
                   onSetDefault={handleSetDefault}
+                  onShowCycles={setCyclesAccount}
                 />
               ))}
 
@@ -203,6 +206,12 @@ export default function AccountsPage() {
         isOpen={showModal}
         onClose={() => { setShowModal(false); setEditingAccount(null); }}
         editingAccount={editingAccount}
+      />
+
+      <CycleHistoryModal
+        isOpen={!!cyclesAccount}
+        account={cyclesAccount}
+        onClose={() => setCyclesAccount(null)}
       />
 
       <ConfirmModal

@@ -268,6 +268,22 @@ export interface Account {
   _count?: { transactions: number };
 }
 
+export interface BillingCycle {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  status: 'OPEN' | 'CLOSED';
+  closedAt: string | null;
+  billingDate: string | null;
+  debtAmount: number;
+  planned: {
+    id: string;
+    amount: number;
+    isPaid: boolean;
+    plannedDate: string;
+  } | null;
+}
+
 export interface CreateAccountDTO {
   name: string;
   type: AccountType;
