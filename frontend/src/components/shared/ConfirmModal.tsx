@@ -24,7 +24,7 @@ export default function ConfirmModal({
   return (
     <BaseModal isOpen={isOpen} title={title} onClose={onClose}>
       <div className="modal-form">
-        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem', color: '#334155' }}>
+        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
           {message}
         </p>
         <div className="form-actions">

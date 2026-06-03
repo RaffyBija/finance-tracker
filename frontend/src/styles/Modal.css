@@ -47,32 +47,33 @@
   overflow: hidden;
 }
 
-/* ── Tablet: più largo e più alto, padding per il bottom nav + safe-area iOS ── */
+/* ── Tablet: più largo e più alto ──
+   L'overlay (z-index 110) copre già navbar e bottom bar, quindi non serve
+   riservare spazio per loro: margini piccoli e simmetrici → massima altezza.
+   dvh esclude le toolbar dinamiche di Safari iOS. Safe-area per l'home indicator. */
 @media (min-width: 541px) and (max-width: 1023px) {
   .modal-overlay {
     align-items: center;
-    padding: 0.75rem 1.25rem calc(3.5rem + 0.75rem + env(safe-area-inset-bottom, 0px));
+    padding: 1.25rem 1.5rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   .modal-container {
     max-width: 720px;
-    /* dvh: esclude le toolbar dinamiche di Safari iOS (altrimenti i bottoni
-       finiscono sotto la piega). Fallback vh per browser più vecchi. */
-    max-height: calc(100vh - 3.5rem - 1.5rem);
-    max-height: calc(100dvh - 3.5rem - 1.5rem - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - 2.5rem);
+    max-height: calc(100dvh - 2.5rem - env(safe-area-inset-bottom, 0px));
   }
 }
 
-/* ── Desktop: più largo, padding per la navbar top ── */
+/* ── Desktop: centrato, margini simmetrici (l'overlay copre la navbar) ── */
 @media (min-width: 1024px) {
   .modal-overlay {
-    padding: calc(4rem + 1.5rem) 1.5rem 1.5rem;
+    padding: 1.75rem 1.5rem;
   }
 
   .modal-container {
     max-width: 600px;
-    max-height: calc(100vh - 4rem - 3rem);
-    max-height: calc(100dvh - 4rem - 3rem);
+    max-height: calc(100vh - 3.5rem);
+    max-height: calc(100dvh - 3.5rem);
   }
 }
 
@@ -198,7 +199,7 @@
 .form-actions,
 .modal-buttons {
   position: sticky;
-  bottom: 0;
+  bottom: -1.5rem; /* copre il padding-bottom del content: nessun campo trapela sotto la barra */
   z-index: 1;
   display: flex;
   gap: 0.75rem;
@@ -280,9 +281,10 @@
 
 .recurring-due-subtitle {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: #475569;
   margin: -0.25rem 0 0;
 }
+.dark .recurring-due-subtitle { color: #94a3b8; }
 
 .recurring-due-list {
   display: flex;

@@ -56,7 +56,7 @@ export default function AccountBillingModal({
   return (
     <BaseModal isOpen={isOpen} title="Addebito carta di credito" onClose={onDismiss}>
       <div className="modal-form">
-        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem', color: '#475569' }}>
+        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
           Oggi è il giorno di addebito della tua carta. Vuoi registrare il pagamento?
         </p>
 

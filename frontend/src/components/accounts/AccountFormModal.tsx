@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CreditCard, Landmark } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
+import { InputDecimal } from '../layout/InputNumberDecimal';
 import FieldError from '../shared/FieldError';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import { useCreateAccount, useUpdateAccount, useAccounts } from '../../hooks/useAccounts';
@@ -28,8 +29,8 @@ interface FormData {
   name: string;
   type: AccountType;
   color: string;
-  openingBalance: string;
-  creditLimit: string;
+  openingBalance: number;
+  creditLimit: number;
   billingDay: string;
   closingDay: string;
   linkedAccountId: string;
@@ -49,12 +50,8 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
     name: editingAccount?.name ?? '',
     type: editingAccount?.type ?? 'BANK',
     color: editingAccount?.color ?? COLORS[0],
-    openingBalance: editingAccount
-      ? String(editingAccount.openingBalance ?? 0)
-      : '0',
-    creditLimit: editingAccount?.creditLimit != null
-      ? String(editingAccount.creditLimit)
-      : '',
+    openingBalance: Number(editingAccount?.openingBalance ?? 0),
+    creditLimit: Number(editingAccount?.creditLimit ?? 0),
     billingDay: editingAccount?.billingDay != null
       ? String(editingAccount.billingDay)
       : '',
@@ -191,37 +188,26 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
         </div>
 
         {/* Saldo / Debito iniziale */}
-        <div className="form-group">
-          <label className="form-label">
-            {isCC ? 'Debito attuale' : 'Saldo iniziale'}
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.openingBalance}
-            onChange={(e) => set('openingBalance', e.target.value)}
-            className="form-input"
-            placeholder="0,00"
-          />
-        </div>
+        <InputDecimal
+          setFormData={setFormData}
+          formData={formData}
+          field="openingBalance"
+          allowNegative
+          label={isCC ? 'Debito attuale' : 'Saldo iniziale'}
+          placeholder="0,00"
+        />
 
         {/* Campi CC */}
         {isCC && (
           <>
             <div className="modal-form-row">
-              <div className="form-group">
-                <label className="form-label">Limite di credito</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.creditLimit}
-                  onChange={(e) => set('creditLimit', e.target.value)}
-                  className="form-input"
-                  placeholder="Es. 1500"
-                />
-              </div>
+              <InputDecimal
+                setFormData={setFormData}
+                formData={formData}
+                field="creditLimit"
+                label="Limite di credito"
+                placeholder="Es. 1500"
+              />
               <div className="form-group">
                 <label className="form-label">Giorno di addebito</label>
                 <select
@@ -236,6 +222,9 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                 </select>
                 <FieldError message={errors.billingDay} />
               </div>
+            </div>
+
+            <div className="modal-form-row">
               <div className="form-group">
                 <label className="form-label">Giorno di chiusura ciclo</label>
                 <select
@@ -248,23 +237,23 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                   ))}
                 </select>
               </div>
-            </div>
 
-            {bankAccounts.length > 0 && (
-              <div className="form-group">
-                <label className="form-label">Conto collegato per l'addebito</label>
-                <select
-                  value={formData.linkedAccountId}
-                  onChange={(e) => set('linkedAccountId', e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">-- Nessuno --</option>
-                  {bankAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+              {bankAccounts.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Conto collegato per l'addebito</label>
+                  <select
+                    value={formData.linkedAccountId}
+                    onChange={(e) => set('linkedAccountId', e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="">-- Nessuno --</option>
+                    {bankAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </>
         )}
 

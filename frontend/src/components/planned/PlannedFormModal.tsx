@@ -153,31 +153,33 @@ export default function PlannedFormModal({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Descrizione</label>
-          <input type="text" value={formData.description}
-            onChange={(e) => {
-              setFormData({ ...formData, description: e.target.value });
-              clearError('description');
-            }}
-            className="form-input" />
-          <FieldError message={errors.description} />
-        </div>
+        <div className="modal-form-row">
+          <div className="form-group">
+            <label className="form-label">Descrizione</label>
+            <input type="text" value={formData.description}
+              onChange={(e) => {
+                setFormData({ ...formData, description: e.target.value });
+                clearError('description');
+              }}
+              className="form-input" />
+            <FieldError message={errors.description} />
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Categoria</label>
-          <select value={formData.categoryId}
-            onChange={(e) => {
-              setFormData({ ...formData, categoryId: e.target.value })
-              clearError('categoryId');
-            }}
-            className="form-select">
-            <option value="">--Seleziona una categoria--</option>
-            {filteredCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-            ))}
-          </select>
-          <FieldError message={errors.categoryId} />
+          <div className="form-group">
+            <label className="form-label">Categoria</label>
+            <select value={formData.categoryId}
+              onChange={(e) => {
+                setFormData({ ...formData, categoryId: e.target.value })
+                clearError('categoryId');
+              }}
+              className="form-select">
+              <option value="">--Seleziona una categoria--</option>
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+              ))}
+            </select>
+            <FieldError message={errors.categoryId} />
+          </div>
         </div>
 
         <div className="form-group">

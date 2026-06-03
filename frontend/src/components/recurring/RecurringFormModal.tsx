@@ -168,43 +168,57 @@ export default function RecurringFormModal({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Descrizione</label>
-          <input type="text" value={formData.description}
-            onChange={(e) => {
-              setFormData({ ...formData, description: e.target.value })
-              clearError('description');
-            }}
-            className="form-input" />
-          <FieldError message={errors.description} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Categoria</label>
-          <select value={formData.categoryId}
-            onChange={(e) => {
-              setFormData({ ...formData, categoryId: e.target.value })
-              clearError('categoryId');
-            }}
-            className="form-select">
-            <option value="">--Seleziona una categoria--</option>
-            {filteredCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-            ))}
-          </select>
-          <FieldError message={errors.categoryId} />
-        </div>
-
-        {formData.frequency === 'MONTHLY' && (
+        <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">Giorno del mese</label>
-            <input type="number" min={1} max={31} value={formData.dayOfMonth}
+            <label className="form-label">Descrizione</label>
+            <input type="text" value={formData.description}
               onChange={(e) => {
-                setFormData({ ...formData, dayOfMonth: parseInt(e.target.value) })
-                clearError('dayOfMonth');
+                setFormData({ ...formData, description: e.target.value })
+                clearError('description');
               }}
               className="form-input" />
-            <FieldError message={errors.dayOfMonth} />
+            <FieldError message={errors.description} />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Categoria</label>
+            <select value={formData.categoryId}
+              onChange={(e) => {
+                setFormData({ ...formData, categoryId: e.target.value })
+                clearError('categoryId');
+              }}
+              className="form-select">
+              <option value="">--Seleziona una categoria--</option>
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+              ))}
+            </select>
+            <FieldError message={errors.categoryId} />
+          </div>
+        </div>
+
+        {(formData.frequency === 'MONTHLY' || accounts.length > 1) && (
+          <div className="modal-form-row">
+            {formData.frequency === 'MONTHLY' && (
+              <div className="form-group">
+                <label className="form-label">Giorno del mese</label>
+                <input type="number" min={1} max={31} value={formData.dayOfMonth}
+                  onChange={(e) => {
+                    setFormData({ ...formData, dayOfMonth: parseInt(e.target.value) })
+                    clearError('dayOfMonth');
+                  }}
+                  className="form-input" />
+                <FieldError message={errors.dayOfMonth} />
+              </div>
+            )}
+            {accounts.length > 1 && (
+              <AccountSelector
+                accounts={accounts}
+                value={formData.accountId ?? ''}
+                onChange={(id) => setFormData({ ...formData, accountId: id })}
+                label="Conto"
+              />
+            )}
           </div>
         )}
 
@@ -230,15 +244,6 @@ export default function RecurringFormModal({
             <FieldError message={errors.endDate} />
           </div>
         </div>
-
-        {accounts.length > 1 && (
-          <AccountSelector
-            accounts={accounts}
-            value={formData.accountId ?? ''}
-            onChange={(id) => setFormData({ ...formData, accountId: id })}
-            label="Conto"
-          />
-        )}
 
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-ghost btn-md">

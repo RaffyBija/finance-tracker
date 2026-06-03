@@ -32,7 +32,7 @@ export default function CycleHistoryModal({ isOpen, account, onClose }: CycleHis
   return (
     <BaseModal isOpen={isOpen} title={`Cicli di fatturazione · ${account.name}`} onClose={onClose}>
       <div className="modal-form">
-        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem', color: '#475569' }}>
+        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
           Ogni spesa appartiene al ciclo della sua data. I cicli chiusi diventano addebiti
           pianificati; il ciclo aperto è il debito che stai accumulando.
         </p>

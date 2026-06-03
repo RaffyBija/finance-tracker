@@ -4,43 +4,55 @@ interface InputDecimalProps {
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   formData: any;
   label: string;
+  /** Campo di formData da gestire. Default 'amount' (retro-compatibilità). */
+  field?: string;
+  /** Consente valori negativi (es. saldo iniziale in scoperto / credito CC). */
+  allowNegative?: boolean;
+  placeholder?: string;
 }
 
-export const InputDecimal = ({ setFormData, formData, label }: InputDecimalProps) => {
-  const [rawAmount, setRawAmount] = useState<string>(
-    formData.amount !== 0 ? formData.amount.toString().replace(".", ",") : ""
-  );
+export const InputDecimal = ({
+  setFormData,
+  formData,
+  label,
+  field = 'amount',
+  allowNegative = false,
+  placeholder,
+}: InputDecimalProps) => {
+  const toRaw = (v: any) =>
+    v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
+
+  const [rawAmount, setRawAmount] = useState<string>(toRaw(formData[field]));
   const [isFocused, setIsFocused] = useState(false);
 
   // Sincronizza con formData SOLO quando il campo non è in focus
   useEffect(() => {
-    if (!isFocused) {
-      setRawAmount(
-        formData.amount !== 0 ? formData.amount.toString().replace(".", ",") : ""
-      );
-    }
-  }, [formData.amount, isFocused]);
+    if (!isFocused) setRawAmount(toRaw(formData[field]));
+  }, [formData[field], isFocused]);
 
-  //Handle per correggere l'input numerico decimale al blur
+  // Handle per correggere l'input numerico decimale al blur
   const handleFixNumberInput = () => {
     setIsFocused(false);
     let value = rawAmount.trim();
-    if (!value) {
-      setFormData({ ...formData, amount: 0 });
+    if (!value || value === '-') {
+      setFormData({ ...formData, [field]: 0 });
+      setRawAmount('');
       return;
     }
-    value = value.replace(",", ".");
+    value = value.replace(',', '.');
     const parsed = Number(value);
     if (!Number.isNaN(parsed)) {
-      setFormData({ ...formData, amount: parsed });
-      setRawAmount(parsed.toString().replace(".", ","));
+      setFormData({ ...formData, [field]: parsed });
+      setRawAmount(parsed.toString().replace('.', ','));
     }
   };
 
-  //Handle per normalizzare l'input numerico decimale
+  // Handle per normalizzare l'input numerico decimale
   const handleNormalizeNumberInput = (value: string) => {
-    //regex per accettare solo numeri e una virgola o punto e due numeri decimali
-    const regex = /^[0-9]*[.,]?[0-9]{0,2}$/;
+    // regex: numeri, una virgola/punto, max due decimali; eventuale meno iniziale
+    const regex = allowNegative
+      ? /^-?[0-9]*[.,]?[0-9]{0,2}$/
+      : /^[0-9]*[.,]?[0-9]{0,2}$/;
     if (!regex.test(value)) return rawAmount;
     return value;
   };
@@ -58,8 +70,9 @@ export const InputDecimal = ({ setFormData, formData, label }: InputDecimalProps
           if (e.target.value === '0') setRawAmount('');
         }}
         className="form-input"
-        pattern="[0-9]*[.,]?[0-9]*"
+        pattern={allowNegative ? '-?[0-9]*[.,]?[0-9]*' : '[0-9]*[.,]?[0-9]*'}
         inputMode="decimal"
+        placeholder={placeholder}
       />
     </div>
   );
