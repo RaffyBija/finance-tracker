@@ -7,6 +7,7 @@ interface AccountCardProps {
   onDelete: (id: string) => void;
   onSetDefault: (id: string) => void;
   onShowCycles?: (account: Account) => void;
+  onOpen?: (account: Account) => void;
 }
 
 function formatCurrency(amount: number) {
@@ -34,7 +35,7 @@ function BarFill({ pct }: { pct: number }) {
   );
 }
 
-export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onShowCycles }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onShowCycles, onOpen }: AccountCardProps) {
   const isCC = account.type === 'CREDIT_CARD';
   const balance = account.balance;
   const debt = isCC ? Math.abs(balance) : null;
@@ -49,7 +50,13 @@ export default function AccountCard({ account, onEdit, onDelete, onSetDefault, o
   const billing = isCC && account.billingDay ? daysUntilBilling(account.billingDay) : null;
 
   return (
-    <div className="account-card">
+    <div
+      className={`account-card${onOpen ? ' is-clickable' : ''}`}
+      onClick={onOpen ? () => onOpen(account) : undefined}
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(account); } } : undefined}
+    >
       {/* Top row */}
       <div className="account-card-top">
         <div className="account-card-identity">
@@ -59,12 +66,23 @@ export default function AccountCard({ account, onEdit, onDelete, onSetDefault, o
           />
           <div className="account-card-name-group">
             <span className="account-card-name">{account.name}</span>
-            <span className={isCC ? 'badge badge-info' : 'badge badge-neutral'}>
-              {isCC ? 'Carta di credito' : 'Conto'}
+            <span className="account-card-badges">
+              <span className={isCC ? 'badge badge-info' : 'badge badge-neutral'}>
+                {isCC ? 'Carta di credito' : 'Conto'}
+              </span>
+              {!isCC && (account.linkedCC?.length ?? 0) > 0 && (
+                <span
+                  className="account-card-cc-chip"
+                  title={`${account.linkedCC!.length} carta/e collegata/e`}
+                >
+                  <CreditCard className="icon-xs" />
+                  {account.linkedCC!.length}
+                </span>
+              )}
             </span>
           </div>
         </div>
-        <div className="account-card-actions">
+        <div className="account-card-actions" onClick={(e) => e.stopPropagation()}>
           {isCC && onShowCycles && (
             <button
               onClick={() => onShowCycles(account)}

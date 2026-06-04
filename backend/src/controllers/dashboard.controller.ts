@@ -263,10 +263,11 @@ export function countOccurrences(
 export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { months, startDate, endDate } = req.query;
+    const { months, startDate, endDate, accountId } = req.query;
+    const scopeId = typeof accountId === 'string' && accountId ? accountId : null;
 
-    // Chiave cache composita sui parametri della richiesta
-    const paramSuffix = months ? `m${months}` : `${startDate}_${endDate}`;
+    // Chiave cache composita sui parametri della richiesta (incluso lo scope per conto)
+    const paramSuffix = `${months ? `m${months}` : `${startDate}_${endDate}`}${scopeId ? `_a${scopeId}` : ''}`;
     const cacheKey    = analyticsCache.keys.projectedBalance(userId, paramSuffix);
     const cached      = analyticsCache.get<object>(cacheKey);
     if (cached) return res.json(cached);
@@ -295,15 +296,19 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'La data di inizio deve essere precedente a quella di fine' });
     }
 
-    // ── Saldo corrente = liquidità reale (solo conti BANK, opening balance incluso) ──
-    //   Identico al netWorth dell'hero: le CC non sono liquidità e vengono escluse.
+    // ── Saldo corrente ──
+    //   Globale: liquidità reale (solo conti BANK). Per-conto (scopeId): saldo del
+    //   singolo conto.
     const accounts       = await getAccountsWithBalances(userId);
-    const currentBalance = await getLiquidBalance(userId, accounts);
+    const currentBalance = scopeId
+      ? (accounts.find((a) => a.id === scopeId)?.balance ?? 0)
+      : await getLiquidBalance(userId, accounts);
 
-    // ── Ricorrenti attive che si sovrappongono al range ──
+    // ── Ricorrenti attive che si sovrappongono al range (eventualmente del solo conto) ──
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
         userId,
+        ...(scopeId ? { accountId: scopeId } : {}),
         isActive: true,
         startDate: { lte: rangeEnd },          // iniziate prima della fine del range
         OR: [
@@ -343,6 +348,7 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     const plannedTransactions = await prisma.plannedTransaction.findMany({
       where: {
         userId,
+        ...(scopeId ? { accountId: scopeId } : {}),
         isPaid: false,
         plannedDate: { gte: rangeStart, lte: rangeEnd },
       },
@@ -358,8 +364,12 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     // ── Debito CC del ciclo ancora aperto → uscita futura al prossimo billing day ──
     //   currentBalance esclude le CC (non è liquidità): qui re-introduciamo il debito
     //   come obbligo futuro, così la proiezione non risulta ottimistica.
-    const ccObligations = openCCObligations(accounts, rangeStart, rangeEnd, now);
-    projectedExpense += ccObligations.total;
+    //   Solo nella proiezione globale: per-conto BANK il debito CC non è dovuto da
+    //   questo saldo, quindi lo escludiamo per non falsare la proiezione del conto.
+    if (!scopeId) {
+      const ccObligations = openCCObligations(accounts, rangeStart, rangeEnd, now);
+      projectedExpense += ccObligations.total;
+    }
 
     const result = {
       currentBalance,

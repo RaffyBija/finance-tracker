@@ -10,6 +10,7 @@ interface ProjectedBalanceParams {
   months?: number;
   startDate?: string;
   endDate?: string;
+  accountId?: string;
 }
 
 // staleTime: 0 + refetchOnMount: true → refetch garantito ad ogni mount (override del default globale false)

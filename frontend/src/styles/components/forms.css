@@ -425,14 +425,20 @@
 .color-swatch-grid {
   display: flex;
   flex-wrap: wrap;
+  align-items: center; /* evita lo stretch verticale dei flex item su WebKit */
   gap: 12px;
 }
 .color-swatch {
+  /* Dimensioni bloccate in modo RIGIDO: niente aspect-ratio (su WebKit dentro un
+     flex item viene risolto male e produce ovali). min+max su entrambe le assi. */
   flex: 0 0 2.125rem;
   width: 2.125rem;
   height: 2.125rem;
   min-width: 2.125rem;
-  aspect-ratio: 1 / 1;
+  max-width: 2.125rem;
+  min-height: 2.125rem;
+  max-height: 2.125rem;
+  box-sizing: border-box;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -454,14 +460,19 @@
 .icon-swatch-grid {
   display: flex;
   flex-wrap: wrap;
+  align-items: center; /* evita lo stretch verticale dei flex item su WebKit */
   gap: 8px;
 }
 .icon-swatch {
+  /* Dimensioni rigide, niente aspect-ratio: vedi nota su .color-swatch */
   flex: 0 0 2.5rem;
   width: 2.5rem;
   height: 2.5rem;
   min-width: 2.5rem;
-  aspect-ratio: 1 / 1;
+  max-width: 2.5rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;

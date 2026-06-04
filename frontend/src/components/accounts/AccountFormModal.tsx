@@ -93,7 +93,8 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
       name: formData.name.trim(),
       type: formData.type,
       color: formData.color,
-      openingBalance: formData.openingBalance ? Number(formData.openingBalance) : 0,
+      // openingBalance solo alla creazione: in modifica non si tocca il saldo di partenza
+      ...(!editingAccount && { openingBalance: formData.openingBalance ? Number(formData.openingBalance) : 0 }),
       ...(isCC && formData.creditLimit && { creditLimit: Number(formData.creditLimit) }),
       ...(isCC && formData.billingDay && { billingDay: Number(formData.billingDay) }),
       ...(isCC && formData.closingDay && { closingDay: Number(formData.closingDay) }),
@@ -187,15 +188,19 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
           </div>
         </div>
 
-        {/* Saldo / Debito iniziale */}
-        <InputDecimal
-          setFormData={setFormData}
-          formData={formData}
-          field="openingBalance"
-          allowNegative
-          label={isCC ? 'Debito attuale' : 'Saldo iniziale'}
-          placeholder="0,00"
-        />
+        {/* Saldo / Debito iniziale — solo in creazione: è la configurazione di partenza.
+            In modifica si tiene fuori per non alterare il saldo senza una transazione
+            (il saldo è derivato: saldo iniziale + transazioni). */}
+        {!editingAccount && (
+          <InputDecimal
+            setFormData={setFormData}
+            formData={formData}
+            field="openingBalance"
+            allowNegative
+            label={isCC ? 'Debito iniziale' : 'Saldo iniziale'}
+            placeholder="0,00"
+          />
+        )}
 
         {/* Campi CC */}
         {isCC && (

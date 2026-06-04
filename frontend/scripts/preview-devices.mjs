@@ -23,12 +23,20 @@ const API = process.env.PREVIEW_API || 'http://localhost:3000/api';
 const EMAIL = process.env.PREVIEW_EMAIL || 'raffy96@msn.com';
 const PASSWORD = process.env.PREVIEW_PASSWORD || '123456';
 const THEMES = (process.env.PREVIEW_THEMES || 'light,dark').split(',').map((t) => t.trim());
+// Filtri opzionali per scoping: testa solo ciò che serve, senza rilanciare tutta la matrice.
+//   PREVIEW_DEVICES=iphone        → solo i device il cui slug contiene "iphone"
+//   PREVIEW_MODALS=categoria,conto → solo questi modal (match sul label)
+const DEVICE_FILTER = (process.env.PREVIEW_DEVICES || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+const MODAL_FILTER = (process.env.PREVIEW_MODALS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+// PREVIEW_ROUTES=/accounts,/accounts/<id> → cattura le PAGINE (no modal), utile per
+// verificare layout responsive e pagine di dettaglio. Se impostato, salta i modal.
+const ROUTE_FILTER = (process.env.PREVIEW_ROUTES || '').split(',').map((s) => s.trim()).filter(Boolean);
 const OUT = 'device-previews';
 const TODAY = new Date().toISOString().slice(0, 10);
 
 // Matrice device: WebKit copre iOS/Safari (il caso critico), Chromium un Android.
 const TARGETS = [
-  { engine: webkit,   engineName: 'safari',  device: 'iPhone 14',     landscape: false },
+  { engine: webkit,   engineName: 'safari',  device: 'iPhone 15 Pro',  landscape: false },
   { engine: webkit,   engineName: 'safari',  device: 'iPad (gen 7)',  landscape: false },
   { engine: webkit,   engineName: 'safari',  device: 'iPad (gen 7)',  landscape: true  },
   { engine: chromium, engineName: 'android', device: 'Pixel 7',       landscape: false },
@@ -54,6 +62,13 @@ function deviceOptions(name, landscape) {
 
 const slug = (s) => s.replace(/[^a-z0-9]+/gi, '-').replace(/(^-|-$)/g, '').toLowerCase();
 
+// Disabilita animazioni/transizioni: gli screenshot catturano lo stato FINALE
+// (modal opaco, niente slide a metà). Va iniettato ad ogni load.
+const NO_ANIM = '*,*::before,*::after{transition:none!important;animation:none!important;}';
+async function killAnimations(page) {
+  try { await page.addStyleTag({ content: NO_ANIM }); } catch {}
+}
+
 // Login via API una sola volta: niente UI flaky né rate-limit; il token viene
 // iniettato in localStorage di ogni contesto.
 async function fetchToken() {
@@ -70,7 +85,8 @@ async function fetchToken() {
 
 async function openOnce(page, route, file, title) {
   await page.goto(BASE + route, { waitUntil: 'domcontentloaded' });
-  await page.locator('.fab').first().waitFor({ state: 'attached', timeout: 15000 });
+  await killAnimations(page);
+  await page.locator('.fab').first().waitFor({ state: 'attached', timeout: 25000 });
   await page.waitForTimeout(600);
   // 1) chiudi eventuali popup automatici (ricorrenti/CC in scadenza)
   await page.evaluate(() => {
@@ -80,9 +96,14 @@ async function openOnce(page, route, file, title) {
   await page.waitForTimeout(300);
   // 2) apri il create modal via evaluate (bypassa i check di cliccabilità del FAB)
   await page.evaluate(() => document.querySelector('.fab')?.click());
-  // 3) attendi il TITOLO SPECIFICO di questo modal → nessun falso positivo
+  // 3) il modal DEVE essere effettivamente aperto (no falsi positivi: se resta la
+  //    pagina, .modal-overlay non compare e parte il retry)
+  await page.locator('.modal-overlay').first().waitFor({ state: 'visible', timeout: 10000 });
+  // 4) e deve mostrare il TITOLO specifico di questo modal
   await page.getByText(title, { exact: false }).first().waitFor({ state: 'visible', timeout: 10000 });
-  await page.waitForTimeout(400);
+  // 5) attendi la fine dell'animazione di apertura (slideUp + background-color) così
+  //    lo screenshot non cattura overlay semi-trasparente / pannello a metà
+  await page.waitForTimeout(900);
   await page.screenshot({ path: file });
 }
 
@@ -95,6 +116,19 @@ async function captureModal(page, route, file, title) {
   }
 }
 
+// Cattura una pagina intera (no modal): attende il caricamento e chiude eventuali popup.
+async function captureRoute(page, route, file) {
+  await page.goto(BASE + route, { waitUntil: 'domcontentloaded' });
+  await killAnimations(page);
+  await page.waitForTimeout(900);
+  await page.evaluate(() => {
+    const x = document.querySelector('.modal-overlay .modal-close-btn');
+    if (x) x.click();
+  });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: file, fullPage: true });
+}
+
 async function run() {
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
@@ -102,7 +136,13 @@ async function run() {
   const token = await fetchToken();
   console.log('Login OK (token ottenuto via API)\n');
 
-  for (const t of TARGETS) {
+  const targets = TARGETS.filter((t) => {
+    const name = `${t.engineName}-${slug(t.device)}${t.landscape ? '-landscape' : ''}`;
+    return DEVICE_FILTER.length === 0 || DEVICE_FILTER.some((f) => name.includes(f));
+  });
+  const modals = MODALS.filter((m) => MODAL_FILTER.length === 0 || MODAL_FILTER.includes(m.label));
+
+  for (const t of targets) {
     const browser = await t.engine.launch();
     const devName = `${t.engineName}-${slug(t.device)}${t.landscape ? '-landscape' : ''}`;
     for (const theme of THEMES) {
@@ -122,13 +162,27 @@ async function run() {
 
       const page = await context.newPage();
       page.setDefaultTimeout(20000);
-      for (const m of MODALS) {
-        const file = `${OUT}/${devName}-${theme}-${m.label}.png`;
-        try {
-          await captureModal(page, m.route, file, m.title);
-          console.log('✓', file);
-        } catch (e) {
-          console.log('✗', file, '—', e.message.split('\n')[0]);
+      if (ROUTE_FILTER.length > 0) {
+        // Modalità cattura pagine: una screenshot full-page per ogni rotta.
+        for (const route of ROUTE_FILTER) {
+          const label = slug(route) || 'home';
+          const file = `${OUT}/${devName}-${theme}-page-${label}.png`;
+          try {
+            await captureRoute(page, route, file);
+            console.log('✓', file);
+          } catch (e) {
+            console.log('✗', file, '—', e.message.split('\n')[0]);
+          }
+        }
+      } else {
+        for (const m of modals) {
+          const file = `${OUT}/${devName}-${theme}-${m.label}.png`;
+          try {
+            await captureModal(page, m.route, file, m.title);
+            console.log('✓', file);
+          } catch (e) {
+            console.log('✗', file, '—', e.message.split('\n')[0]);
+          }
         }
       }
       await context.close();

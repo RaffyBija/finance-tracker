@@ -15,9 +15,11 @@ const SECTIONS: Section[] = [
     content: (
       <>
         <p>Vai su <strong>Gestione → Conti</strong> per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
+        <p>La pagina principale elenca i tuoi <strong>conti bancari</strong>; un conto con una carta collegata mostra una piccola icona <strong>💳</strong>. Le carte non associate ad alcun conto compaiono in una sezione <strong>Carte di credito</strong> a parte. <strong>Tocca un conto</strong> per aprire la sua pagina dedicata: saldo, entrate/uscite del mese, proiezione di fine mese, ultime transazioni e le carte collegate.</p>
         <p>Per le <strong>carte di credito</strong>: imposta il limite, il <strong>giorno di chiusura</strong> del ciclo, il giorno di addebito e il conto collegato. Al giorno di chiusura l'app chiude il ciclo (le spese diventano un addebito pianificato) e ne apre uno nuovo; al giorno di addebito ti avvisa di registrare il pagamento.</p>
-        <p>Ogni spesa appartiene al <strong>ciclo della sua data</strong>: se inserisci o modifichi una transazione vecchia, finisce nel ciclo giusto. Se quel ciclo era già stato pagato, la differenza viene riportata come <strong>conguaglio</strong> nel ciclo corrente. Dal pulsante <strong>Storico cicli</strong> (icona orologio sulla carta) vedi tutti i cicli, i loro importi e lo stato.</p>
-        <p>Nella pagina Conti trovi due riquadri separati: <strong>Liquidità</strong> (somma dei conti bancari, denaro realmente disponibile) e <strong>Esposizione CC</strong> (debito del ciclo aperto, ancora da addebitare). La Dashboard mostra solo la liquidità perché quei fondi sono effettivamente tuoi — l'impatto futuro della CC è già visibile nella card Proiezione.</p>
+        <p>Tocca una carta (dalla pagina del conto o dalla sezione Carte) per la sua <strong>pagina dedicata</strong>: debito attuale, utilizzo del limite, prossimo addebito, ultime transazioni e lo <strong>Storico cicli</strong> direttamente in pagina. La chiusura del ciclo e l'avviso di pagamento sono <strong>automatici</strong> (al giorno di chiusura e al giorno di addebito).</p>
+        <p>Ogni spesa appartiene al <strong>ciclo della sua data</strong>: se inserisci o modifichi una transazione vecchia, finisce nel ciclo giusto. Se quel ciclo era già stato pagato, la differenza viene riportata come <strong>conguaglio</strong> nel ciclo corrente.</p>
+        <p>La <strong>Liquidità</strong> (somma dei conti bancari) è il denaro realmente disponibile; il debito delle carte è la tua <strong>esposizione</strong>, ancora da addebitare. La Dashboard mostra solo la liquidità perché quei fondi sono effettivamente tuoi — l'impatto futuro della CC è già visibile nella card Proiezione.</p>
       </>
     ),
   },

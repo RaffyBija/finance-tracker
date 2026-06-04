@@ -23,6 +23,7 @@ import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
 import CalendarPage from "./pages/CalendarPage";
 import AccountsPage from "./pages/AccountsPage";
+import AccountDetailPage from "./pages/AccountDetailPage";
 
 inject();
 
@@ -147,6 +148,17 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <AccountsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/accounts/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AccountDetailPage />
                   </Layout>
                 </ProtectedRoute>
               }

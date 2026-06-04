@@ -4,6 +4,19 @@
 
 @layer components {
 
+  /* ── Section title ────────────────────────────── */
+
+  .account-section-title {
+    @apply text-sm font-semibold text-neutral-500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 28px 0 12px;
+  }
+
+  .account-section-title:first-of-type {
+    margin-top: 20px;
+  }
+
   /* ── Account card ─────────────────────────────── */
 
   .account-card {
@@ -19,6 +32,22 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .account-card-badges {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .account-card-cc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    @apply text-xs font-medium px-1.5 py-0.5 rounded-full;
+    @apply bg-info-50 text-info-700;
   }
 
   .account-card-identity {
@@ -408,6 +437,223 @@
   .account-type-option-label {
     @apply text-xs font-medium;
   }
+
+  /* ── Card cliccabile (home → dettaglio) ───────── */
+
+  .account-card.is-clickable {
+    cursor: pointer;
+  }
+
+  .account-card.is-clickable:hover {
+    @apply shadow-card-hover;
+    transform: translateY(-1px);
+  }
+
+  /* ══ Pagina dettaglio conto ══════════════════════ */
+
+  .account-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    @apply text-sm font-medium text-neutral-500;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .account-detail-back:hover { @apply text-primary-600; }
+
+  .account-detail-error {
+    @apply text-sm text-neutral-500;
+    margin-top: 24px;
+  }
+
+  .account-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .account-detail-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .account-detail-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .account-detail-name-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .account-detail-name {
+    @apply text-2xl font-bold text-neutral-900;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .account-detail-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* Hero saldo */
+  .account-detail-hero {
+    @apply bg-white rounded-lg shadow-card p-5;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 20px;
+  }
+
+  .account-detail-hero-label {
+    @apply text-xs text-neutral-500;
+  }
+
+  .account-detail-hero-amount {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply text-4xl font-bold;
+    line-height: 1.1;
+  }
+  .account-detail-hero-amount.is-positive { @apply text-primary-700; }
+  .account-detail-hero-amount.is-negative { @apply text-danger-600; }
+  .account-detail-hero-amount.is-zero { @apply text-neutral-500; }
+
+  .account-detail-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    @apply text-xs text-neutral-500;
+    margin-top: 2px;
+  }
+
+  .account-detail-hero-bar {
+    margin-top: 12px;
+  }
+
+  /* Flashcards */
+  .account-flashcards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .account-flashcard {
+    @apply bg-white rounded-lg shadow-card p-4;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .account-flashcard-label {
+    @apply text-xs text-neutral-500;
+  }
+
+  .account-flashcard-value {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply text-xl font-bold text-neutral-900;
+  }
+  .account-flashcard-value.is-income { @apply text-success-600; }
+  .account-flashcard-value.is-expense { @apply text-danger-600; }
+
+  /* Section title (dettaglio) */
+  .account-detail-section-title {
+    @apply text-sm font-semibold text-neutral-500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 28px 0 12px;
+  }
+
+  .account-detail-cycles {
+    padding: 16px;
+  }
+
+  /* Carte collegate */
+  .account-linked-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .account-linked-card {
+    @apply bg-white rounded-lg shadow-card p-4;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+  .account-linked-card:hover {
+    @apply shadow-card-hover;
+    transform: translateY(-1px);
+  }
+
+  .account-linked-card-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  .account-linked-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .account-linked-card-name {
+    @apply text-sm font-semibold text-neutral-900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .account-linked-card-debt {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    @apply text-sm font-medium text-danger-600;
+  }
+
+  /* Banner "in arrivo" */
+  .account-soon-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    @apply text-sm text-primary-700 bg-primary-50 rounded-lg;
+    border: 1px dashed;
+    @apply border-primary-200;
+    padding: 14px 16px;
+    margin: 28px 0 8px;
+  }
+
+  /* Flashcards / linked cards: multi-colonna da tablet in su */
+  @media (min-width: 640px) {
+    .account-flashcards { grid-template-columns: repeat(3, 1fr); }
+    .account-linked-cards { grid-template-columns: repeat(2, 1fr); }
+  }
 }
 
 /* ── Dark mode ─────────────────────────────────── */
@@ -421,6 +667,8 @@
   border-color: #334155;
 }
 
+.dark .account-section-title { color: #94a3b8; }
+.dark .account-card-cc-chip { background-color: rgba(14, 165, 233, 0.15); color: #7dd3fc; }
 .dark .account-card-name { color: #f1f5f9; }
 .dark .account-card-balance-label { color: #64748b; }
 .dark .account-card-billing { color: #64748b; }
@@ -478,5 +726,31 @@
 .dark .account-filter-pill.is-active {
   background-color: #0d2929;
   border-color: #0d9488;
+  color: #5eead4;
+}
+
+/* ── Dark: pagina dettaglio ───────────────────── */
+.dark .account-detail-back { color: #94a3b8; }
+.dark .account-detail-back:hover { color: #2dd4bf; }
+.dark .account-detail-error { color: #64748b; }
+.dark .account-detail-name { color: #f1f5f9; }
+.dark .account-detail-section-title { color: #94a3b8; }
+
+.dark .account-detail-hero,
+.dark .account-flashcard,
+.dark .account-linked-card {
+  background-color: #1e293b;
+}
+.dark .account-detail-hero-label,
+.dark .account-flashcard-label { color: #64748b; }
+.dark .account-detail-hero-meta { color: #64748b; }
+.dark .account-detail-hero-amount.is-zero { color: #64748b; }
+.dark .account-detail-hero-amount.is-positive { color: #2dd4bf; }
+.dark .account-flashcard-value { color: #f1f5f9; }
+.dark .account-linked-card-name { color: #f1f5f9; }
+
+.dark .account-soon-banner {
+  background-color: rgba(13, 148, 136, 0.12);
+  border-color: #155e57;
   color: #5eead4;
 }

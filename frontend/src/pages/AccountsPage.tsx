@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Lock, Plus } from 'lucide-react';
 import { useAccounts, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +21,7 @@ export default function AccountsPage() {
   const [cyclesAccount, setCyclesAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isPro = user?.isPro ?? false;
   const maxAccounts = isPro ? 10 : 3;
@@ -32,7 +34,9 @@ export default function AccountsPage() {
   const atLimit = accounts.length >= maxAccounts;
 
   const bankAccounts = accounts.filter((a) => a.type !== 'CREDIT_CARD');
-  const ccAccounts   = accounts.filter((a) => a.type === 'CREDIT_CARD');
+  // In home mostriamo solo le CC NON associate a un conto: quelle collegate vivono
+  // nel dettaglio del conto d'appoggio (vedi pagina dettaglio conto).
+  const ccAccounts   = accounts.filter((a) => a.type === 'CREDIT_CARD' && !a.linkedAccountId);
   const liquidity    = bankAccounts.reduce((sum, a) => sum + a.balance, 0);
   const ccExposure   = ccAccounts.reduce((sum, a) => sum + a.balance, 0);
 
@@ -92,8 +96,10 @@ export default function AccountsPage() {
               </span>
             </div>
 
+            {/* ── Conti bancari ── */}
+            <h2 className="account-section-title">Conti</h2>
             <div className="card-grid-3">
-              {accounts.map((account) => (
+              {bankAccounts.map((account) => (
                 <AccountCard
                   key={account.id}
                   account={account}
@@ -101,6 +107,7 @@ export default function AccountsPage() {
                   onDelete={(id) => setDeletingId(id)}
                   onSetDefault={handleSetDefault}
                   onShowCycles={setCyclesAccount}
+                  onOpen={(a) => navigate(`/accounts/${a.id}`)}
                 />
               ))}
 
@@ -160,6 +167,26 @@ export default function AccountsPage() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ── Carte di credito ── */}
+            {ccAccounts.length > 0 && (
+              <>
+                <h2 className="account-section-title">Carte di credito</h2>
+                <div className="card-grid-3">
+                  {ccAccounts.map((account) => (
+                    <AccountCard
+                      key={account.id}
+                      account={account}
+                      onEdit={handleEdit}
+                      onDelete={(id) => setDeletingId(id)}
+                      onSetDefault={handleSetDefault}
+                      onShowCycles={setCyclesAccount}
+                      onOpen={(a) => navigate(`/accounts/${a.id}`)}
+                    />
+                  ))}
+                </div>
+              </>
             )}
 
             {ccAccounts.length > 0 && (

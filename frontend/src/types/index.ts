@@ -262,6 +262,7 @@ export interface Account {
   closingDay?: number | null;
   linkedAccountId?: string | null;
   linkedAccount?: { id: string; name: string } | null;
+  linkedCC?: { id: string; name: string; color: string }[];
   balance: number;
   createdAt: string;
   updatedAt: string;

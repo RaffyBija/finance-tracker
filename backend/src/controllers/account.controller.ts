@@ -11,6 +11,7 @@ import {
   cycleLabel,
   nextBillingDate,
 } from '../utils/billingCycle';
+import { getAccountsWithBalances } from '../utils/balance';
 
 const MAX_FREE_ACCOUNTS = 3;
 const MAX_PRO_ACCOUNTS  = 10;
@@ -24,6 +25,7 @@ export const getAccounts = async (req: AuthRequest, res: Response) => {
       include: {
         _count: { select: { transactions: true } },
         linkedAccount: { select: { id: true, name: true } },
+        linkedCC: { select: { id: true, name: true, color: true } },
       },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
@@ -89,7 +91,12 @@ export const getAccount = async (req: AuthRequest, res: Response) => {
       where: { id, userId },
       include: {
         linkedAccount: { select: { id: true, name: true } },
-        linkedCC: { select: { id: true, name: true } },
+        linkedCC: {
+          select: {
+            id: true, name: true, color: true, type: true,
+            creditLimit: true, billingDay: true, closingDay: true, openingBalance: true,
+          },
+        },
       },
     });
 
@@ -97,10 +104,21 @@ export const getAccount = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
 
+    // Saldi calcolati centralizzati (stessa logica della lista): mappa id → balance.
+    const balances = await getAccountsWithBalances(userId);
+    const balanceById = new Map(balances.map((b) => [b.id, b.balance]));
+
     res.json({
       ...account,
       openingBalance: Number(account.openingBalance),
       creditLimit: account.creditLimit ? Number(account.creditLimit) : null,
+      balance: balanceById.get(account.id) ?? 0,
+      linkedCC: account.linkedCC.map((cc) => ({
+        ...cc,
+        openingBalance: Number(cc.openingBalance),
+        creditLimit: cc.creditLimit ? Number(cc.creditLimit) : null,
+        balance: balanceById.get(cc.id) ?? 0,
+      })),
     });
   } catch (error) {
     console.error('Get account error:', error);
@@ -175,7 +193,9 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { name, color, icon, openingBalance, creditLimit, billingDay, closingDay, linkedAccountId } = req.body;
+    // openingBalance NON è modificabile: è la configurazione di partenza. Il saldo si
+    // cambia solo con transazioni, così resta tracciabile e non manipolabile a forza.
+    const { name, color, icon, creditLimit, billingDay, closingDay, linkedAccountId } = req.body;
 
     const existing = await prisma.account.findFirst({ where: { id, userId } });
     if (!existing) {
@@ -211,7 +231,6 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
         ...(name && { name: name.trim() }),
         ...(color !== undefined && { color }),
         ...(icon !== undefined && { icon }),
-        ...(openingBalance !== undefined && { openingBalance }),
         ...(creditLimit !== undefined && { creditLimit: creditLimit ?? null }),
         ...(billingDay  !== undefined && { billingDay:  billingDay  ? Number(billingDay)  : null }),
         ...(closingDay  !== undefined && { closingDay:  closingDay  ? Number(closingDay)  : null }),

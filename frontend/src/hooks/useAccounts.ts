@@ -20,6 +20,15 @@ export const useAccounts = () => {
   });
 };
 
+export const useAccount = (id: string | undefined) => {
+  return useQuery({
+    queryKey: ['accounts', id],
+    queryFn: () => accountsAPI.getById(id as string),
+    enabled: !!id,
+    staleTime: 60 * 1000,
+  });
+};
+
 export const useBillingCycles = (accountId: string | null, enabled = true) => {
   return useQuery({
     queryKey: ['billing-cycles', accountId],

@@ -107,6 +107,7 @@ export const transactionAPI = {
   getAll: async (params?: {
     type?: string;
     categoryId?: string;
+    accountId?: string;
     startDate?: string;
     endDate?: string;
     search?: string;
@@ -209,7 +210,7 @@ export const dashboardAPI = {
     return data;
   },
 
-  getProjectedBalance: async (params: { months?: number; startDate?: string; endDate?: string }) => {
+  getProjectedBalance: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string }) => {
   const response = await api.get<ProjectedBalance>('/dashboard/projected-balance', { params });
   return response.data;
 },
