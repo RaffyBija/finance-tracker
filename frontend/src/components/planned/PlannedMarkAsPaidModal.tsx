@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import type { PlannedTransaction } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface PlannedMarkAsPaidModalProps {
   item: PlannedTransaction | null;
@@ -16,6 +16,7 @@ export default function PlannedMarkAsPaidModal({
   onConfirm,
   onClose,
 }: PlannedMarkAsPaidModalProps) {
+  const { formatSignedCurrency } = useFormatCurrency();
   if (!item) return null;
 
   const isIncome = item.type === 'INCOME';

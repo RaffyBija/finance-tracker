@@ -3,13 +3,14 @@ import { usePending } from '../../contexts/PendingContext';
 import { useMarkAsPaid } from '../../hooks/usePlannedTransactions';
 import { useToast } from '../../contexts/ToastContext';
 import type { PlannedTransaction } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 function DueItem({ item, onRegister, isPending }: {
   item: PlannedTransaction;
   onRegister: (id: string) => void;
   isPending: boolean;
 }) {
+  const { formatSignedCurrency } = useFormatCurrency();
   const isOverdue = new Date(item.plannedDate) < new Date(new Date().setHours(0, 0, 0, 0));
   const dateLabel = new Date(item.plannedDate).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
 

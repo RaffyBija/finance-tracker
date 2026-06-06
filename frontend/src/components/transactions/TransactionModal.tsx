@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { Transaction, Category, CreateTransactionDTO } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
@@ -24,8 +25,6 @@ export default function TransactionModal({
   onClose,
   sentFeed,
 }: TransactionModalProps) {
-  if (!isOpen) return null;
-
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const toast = useToast();
@@ -33,13 +32,40 @@ export default function TransactionModal({
   const { data: defaultAccount } = useDefaultAccount();
 
   const [formData, setFormData] = useState<CreateTransactionDTO>({
-    amount: editingTransactionData?.amount ?? 0,
-    type: editingTransactionData?.type ?? 'EXPENSE',
-    description: editingTransactionData?.description ?? '',
-    date: editingTransactionData?.date.split('T')[0] ?? new Date().toISOString().split('T')[0],
-    categoryId: editingTransactionData?.categoryId ?? '',
-    accountId: editingTransactionData?.accountId ?? defaultAccount?.id ?? '',
+    amount: 0,
+    type: 'EXPENSE',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    categoryId: '',
+    accountId: '',
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Sincronizza il form all'apertura (nuovo vs modifica). Gli hook girano sempre:
+  // l'early-return per !isOpen sta DOPO gli hook, mai prima (Rules of Hooks).
+  useEffect(() => {
+    if (!isOpen) return;
+    if (editingTransactionData) {
+      setFormData({
+        amount: editingTransactionData.amount,
+        type: editingTransactionData.type,
+        description: editingTransactionData.description ?? '',
+        date: editingTransactionData.date.split('T')[0],
+        categoryId: editingTransactionData.categoryId ?? '',
+        accountId: editingTransactionData.accountId ?? defaultAccount?.id ?? '',
+      });
+    } else {
+      setFormData({
+        amount: 0,
+        type: 'EXPENSE',
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+        categoryId: '',
+        accountId: defaultAccount?.id ?? '',
+      });
+    }
+    setSubmitError(null);
+  }, [isOpen, editingTransactionData, defaultAccount]);
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -67,7 +93,8 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate(formData)) return; 
+    setSubmitError(null);
+    if (!validate(formData)) return;
     try {
       if (editingTransactionData) {
         const unchanged =
@@ -92,9 +119,11 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
       onClose();
       sentFeed();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <BaseModal
@@ -103,6 +132,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
       onClose={onClose}
     >
       <form className="modal-form" onSubmit={handleSubmit}>
+        <FormError message={submitError} />
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
@@ -133,11 +163,12 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
               setFormData={(data) => { setFormData(data); clearError('amount'); }}
               formData={formData}
               label="Importo (€)"
+              required
             />
             <FieldError message={errors.amount} />
           </div>
           <div className="form-group">
-            <label className="form-label">Data</label>
+            <label className="form-label form-label-required">Data</label>
             <input
               type="date"
               value={formData.date}
@@ -168,7 +199,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
         </div>
 
         <div className="form-group">
-          <label className="form-label">Categoria</label>
+          <label className="form-label form-label-required">Categoria</label>
           <select
             value={formData.categoryId}
             onChange={(e) => {

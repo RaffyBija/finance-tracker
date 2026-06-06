@@ -4,7 +4,7 @@ import BaseModal from '../layout/ModalBase';
 import { useSettleAccount, useBillingCycles } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import type { Account } from '../../types';
 
 interface AccountBillingModalProps {
@@ -25,6 +25,7 @@ export default function AccountBillingModal({
   const { data: categories = [] } = useCategories('EXPENSE');
   const { data: cycles = [] } = useBillingCycles(account?.id ?? null, isOpen);
   const [categoryId, setCategoryId] = useState('');
+  const { formatCurrency } = useFormatCurrency();
 
   if (!isOpen || !account) return null;
 

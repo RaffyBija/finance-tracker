@@ -3,7 +3,7 @@ import { recurringApi } from '../../api/recurring';
 import type { RecurringTransaction } from '../../types';
 import { SkeletonCard } from '../shared/Skeleton';
 import { RepeatIcon } from 'lucide-react';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 function toMonthly(rec: RecurringTransaction): number {
   const amount = Number(rec.amount);
@@ -21,6 +21,7 @@ const freqLabel: Record<string, string> = {
 };
 
 export default function SubscriptionCostCard() {
+  const { formatCurrency } = useFormatCurrency();
   const { data: recurring = [], isLoading } = useQuery({
     queryKey: ['recurring'],
     queryFn: () => recurringApi.getAll(),

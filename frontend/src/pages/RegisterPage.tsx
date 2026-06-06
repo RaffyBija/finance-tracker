@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
+import { detectBrowserCurrency, CURRENCY_OPTIONS } from '../utils/currency';
 
 export default function RegisterPage() {
   const [name, setName]                       = useState('');
   const [email, setEmail]                     = useState('');
   const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [currency, setCurrency]               = useState(() => detectBrowserCurrency());
   const [showPass, setShowPass]               = useState(false);
   const [showConfirm, setShowConfirm]         = useState(false);
   const [error, setError]                     = useState('');
@@ -32,7 +34,7 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      await register({ email, password, name });
+      await register({ email, password, name, currency });
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante la registrazione');
@@ -97,6 +99,23 @@ export default function RegisterPage() {
                 className="form-input"
                 placeholder="mario.rossi@email.com"
               />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="currency" className="form-label">Valuta</label>
+            <div className="auth-field-wrap">
+              <span className="auth-field-icon"><Coins size={15} /></span>
+              <select
+                id="currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="form-select"
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 

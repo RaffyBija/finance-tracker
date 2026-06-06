@@ -5,7 +5,8 @@ import { authAPI } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { useFormValidation } from '../hooks/useFormValidation';
 import FieldError from '../components/shared/FieldError';
-import { User, Lock, Trash2, ChevronRight, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import { User, Lock, Trash2, ChevronRight, ShieldAlert, Sparkles, Check, Coins } from 'lucide-react';
+import { CURRENCY_OPTIONS } from '../utils/currency';
 
 // ── Sezione: Piano ───────────────────────────────────────────────────────────
 
@@ -460,6 +461,58 @@ function DangerZoneSection() {
   );
 }
 
+// ── Sezione: Preferenze (valuta) ─────────────────────────────────────────────
+
+function PreferencesSection() {
+  const { user, updateUser } = useAuth();
+  const toast = useToast();
+  const [isPending, setIsPending] = useState(false);
+
+  const handleChange = async (currency: string) => {
+    if (currency === user?.currency) return;
+    setIsPending(true);
+    try {
+      const res = await authAPI.updateProfile({ currency });
+      updateUser(res.user ?? res);
+      toast.success('Valuta aggiornata');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="card p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <Coins className="icon-md text-primary-600" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">Preferenze</h2>
+          <p className="text-sm text-neutral-500">Valuta usata in tutta l'app</p>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="currency-select">Valuta</label>
+        <select
+          id="currency-select"
+          className="form-select"
+          value={user?.currency ?? 'EUR'}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={isPending}
+        >
+          {CURRENCY_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
+        <p className="form-help">Cambia simbolo e formato degli importi ovunque, all'istante.</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Pagina principale ────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -499,6 +552,7 @@ export default function ProfilePage() {
       <div className="space-y-6">
         <PlanSection />
         <div id="dati"><AccountSection /></div>
+        <div id="preferenze"><PreferencesSection /></div>
         <div id="sicurezza"><SecuritySection /></div>
         <DangerZoneSection />
       </div>

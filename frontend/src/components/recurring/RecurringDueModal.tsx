@@ -4,7 +4,7 @@ import BaseModal from '../layout/ModalBase';
 import { useExecuteRecurring } from '../../hooks/useRecurringTransactions';
 import { useToast } from '../../contexts/ToastContext';
 import type { RecurringDueResponse } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface RecurringDueModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
   const [selected, setSelected] = useState<Set<string>>(() => new Set(allItems.map((i) => i.id)));
   const executeMutation = useExecuteRecurring();
   const toast = useToast();
+  const { formatSignedCurrency } = useFormatCurrency();
 
   if (!isOpen || allItems.length === 0) return null;
 

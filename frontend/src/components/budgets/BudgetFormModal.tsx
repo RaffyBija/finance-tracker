@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import FormError from '../shared/FormError';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -34,8 +35,10 @@ export default function BudgetFormModal({
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
+    setSubmitError(null);
     if (editingItem && isOpen) {
       setFormData({
         name: editingItem.name,
@@ -81,15 +84,15 @@ export default function BudgetFormModal({
     }
     return null;
   },
-  categoryId: (value) => {
-    if(!value) return 'La categoria è obbligatoria';
-    return null;
-  }
+  // La categoria è OPZIONALE: un budget senza categoria è un budget complessivo
+  // (Prisma categoryId String?, backend gestisce `if (categoryId)`). La label dice
+  // "(opzionale)" — niente validazione required qui.
 });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate(formData)) return; 
+    setSubmitError(null);
+    if (!validate(formData)) return;
     try {
       if (editingItem) {
         await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
@@ -101,7 +104,7 @@ export default function BudgetFormModal({
       onClose();
       onSuccess();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
     }
   };
 
@@ -114,8 +117,9 @@ export default function BudgetFormModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="modal-form">
+        <FormError message={submitError} />
         <div className="form-group">
-          <label className="form-label">Nome</label>
+          <label className="form-label form-label-required">Nome</label>
           <input
             type="text"
             value={formData.name}
@@ -134,6 +138,7 @@ export default function BudgetFormModal({
               setFormData={(data) => { setFormData(data); clearError('amount'); }}
               formData={formData}
               label="Importo Budget (€)"
+              required
             />
             <FieldError message={errors.amount} />
           </div>
@@ -172,7 +177,7 @@ export default function BudgetFormModal({
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Data Inizio</label>
+            <label className="form-label form-label-required">Data Inizio</label>
             <input
               type="date"
               value={formData.startDate}

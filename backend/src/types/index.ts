@@ -10,6 +10,7 @@ export interface RegisterDTO {
   email: string;
   password: string;
   name: string;
+  currency?: string;
 }
 
 // DTO per login
@@ -49,6 +50,7 @@ export interface AuthResponse {
     name: string;
     isPro: boolean;
     tourCompleted: boolean;
+    currency: string;
   };
 }
 

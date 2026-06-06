@@ -1,6 +1,6 @@
 import { Trash2, Pencil, TrendingUp, TrendingDown, CheckCircle2, StickyNote } from 'lucide-react';
 import type { PlannedTransaction } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface PlannedListItemProps {
   planned: PlannedTransaction;
@@ -18,6 +18,7 @@ export default function PlannedListItem({
   onDelete,
   onMarkAsPaid,
 }: PlannedListItemProps) {
+  const { formatSignedCurrency } = useFormatCurrency();
   return (
     <div className="list-card-item">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

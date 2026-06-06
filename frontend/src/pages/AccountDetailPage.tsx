@@ -14,11 +14,12 @@ import CycleHistoryList from '../components/accounts/CycleHistoryList';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import TransactionRow from '../components/shared/TransactionRow';
 import Skeleton, { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
-import { formatCurrency } from '../utils/format';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { daysUntilBilling } from '../utils/billing';
 import type { Account } from '../types';
 
 export default function AccountDetailPage() {
+  const { formatCurrency } = useFormatCurrency();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();

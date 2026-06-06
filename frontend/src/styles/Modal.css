@@ -157,6 +157,16 @@
   gap: 0.4rem;
 }
 
+/* Campo obbligatorio: l'asterisco (::after di .form-label-required) deve stare
+   DI FIANCO al testo, non a capo. Le label del modale sono flex-column, quindi
+   per questa variante forziamo la riga. Specificità ≥ di `.modal-form label`. */
+.modal-form label.form-label-required,
+.form-label.form-label-required {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0;
+}
+
 .modal-form input,
 .modal-form select,
 .form-input,

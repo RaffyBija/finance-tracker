@@ -1,6 +1,7 @@
 import BaseModal from '../layout/ModalBase';
+import FormError from '../shared/FormError';
 import type { CreateCategoryDTO, Category } from '../../types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCreateCategory, useUpdateCategory } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
@@ -65,18 +66,30 @@ export default function CategoriesModal({
   sentFeed,
   editingCategory,
 }: CategoriesModalProps) {
-  if (!isOpen) return null;
-
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
   const toast = useToast();
 
   const [formData, setFormData] = useState<CreateCategoryDTO>({
-    name: editingCategory?.name ?? '',
-    type: editingCategory?.type ?? 'EXPENSE',
-    color: editingCategory?.color ?? COLORS[0],
-    icon: editingCategory?.icon ?? ICONS[0],
+    name: '',
+    type: 'EXPENSE',
+    color: COLORS[0],
+    icon: ICONS[0],
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Sincronizza il form all'apertura (nuovo vs modifica). Gli hook girano sempre:
+  // l'early-return per !isOpen sta DOPO gli hook, mai prima (Rules of Hooks).
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData({
+      name: editingCategory?.name ?? '',
+      type: editingCategory?.type ?? 'EXPENSE',
+      color: editingCategory?.color ?? COLORS[0],
+      icon: editingCategory?.icon ?? ICONS[0],
+    });
+    setSubmitError(null);
+  }, [isOpen, editingCategory]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -91,6 +104,7 @@ export default function CategoriesModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if(!validate(formData)) return;
 
     try {
@@ -115,9 +129,11 @@ export default function CategoriesModal({
       onClose();
       sentFeed();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <BaseModal
@@ -126,8 +142,9 @@ export default function CategoriesModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="modal-form">
+        <FormError message={submitError} />
         <div className="form-group">
-          <label className="form-label">Nome</label>
+          <label className="form-label form-label-required">Nome</label>
           <input
             type="text"
             value={formData.name}

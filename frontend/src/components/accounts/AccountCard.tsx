@@ -1,5 +1,5 @@
 import { Pencil, Trash2, CreditCard, Landmark, Star } from 'lucide-react';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { daysUntilBilling } from '../../utils/billing';
 import type { Account } from '../../types';
 
@@ -24,6 +24,7 @@ function BarFill({ pct }: { pct: number }) {
 }
 
 export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onOpen }: AccountCardProps) {
+  const { formatCurrency } = useFormatCurrency();
   const isCC = account.type === 'CREDIT_CARD';
   const balance = account.balance;
   const debt = isCC ? Math.abs(balance) : null;

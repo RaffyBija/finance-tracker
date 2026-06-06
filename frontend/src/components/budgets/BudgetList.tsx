@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { Budget } from '../../types';
 import EmptyState from '../shared/EmptyState';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface BudgetListProps {
   budgets: Budget[];
@@ -21,6 +21,7 @@ export default function BudgetList({
   onDelete,
   onOpenModal,
 }: BudgetListProps) {
+  const { formatCurrency } = useFormatCurrency();
   const getProgressColor = (percentage: number) => {
     if (percentage >= 100) return 'bg-danger-500';
     if (percentage >= 80) return 'bg-warning-500';

@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown, Repeat } from 'lucide-react';
 import { useForecast } from '../../hooks/useAnalytics';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 // Vista "Stima realistica" della card Andamento del saldo.
 // Layout a waterfall: Oggi → +entrate → −spese fisse → −spese abituali → fine mese.
@@ -21,6 +21,7 @@ function ForecastSkeleton() {
 }
 
 export default function ForecastView() {
+  const { formatCurrency } = useFormatCurrency();
   const { data: forecast, isLoading } = useForecast();
 
   if (isLoading) return <ForecastSkeleton />;

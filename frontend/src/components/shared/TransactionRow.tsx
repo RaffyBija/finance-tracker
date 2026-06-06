@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import type { Transaction } from '../../types';
 
 /** Riga transazione read-only (icona + descrizione/categoria·data + importo).
@@ -10,6 +10,7 @@ import type { Transaction } from '../../types';
  *  non da utility inline. Le superfici con riga più ricca (TransactionsPage:
  *  data, chip conto, azioni, espansione) restano autonome di proposito. */
 export default function TransactionRow({ transaction }: { transaction: Transaction }) {
+  const { formatSignedCurrency } = useFormatCurrency();
   const isIncome = transaction.type === 'INCOME';
   return (
     <div className="transaction-card">

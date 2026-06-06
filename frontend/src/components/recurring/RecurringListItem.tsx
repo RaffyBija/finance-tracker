@@ -2,7 +2,7 @@ import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar, PlayCircle }
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { RecurringTransaction, Frequency, RecurringDueItem } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface RecurringListItemProps {
   recurring: RecurringTransaction;
@@ -24,6 +24,7 @@ export default function RecurringListItem({
   onToggle,
   onRequestExecute,
 }: RecurringListItemProps) {
+  const { formatSignedCurrency } = useFormatCurrency();
   const getFrequencyLabel = (freq: Frequency, dayOfMonth?: number) => {
     switch (freq) {
       case 'WEEKLY':

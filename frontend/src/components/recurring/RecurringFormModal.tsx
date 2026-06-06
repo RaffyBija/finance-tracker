@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { RecurringTransaction, Category, CreateRecurringTransactionDTO, Frequency } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
@@ -41,8 +42,10 @@ export default function RecurringFormModal({
     endDate: '',
     accountId: defaultAccount?.id ?? '',
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
+    setSubmitError(null);
     if (editingItem && isOpen) {
       setFormData({
         amount: Number(editingItem.amount),
@@ -108,6 +111,7 @@ export default function RecurringFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if(!validate(formData)) return;
     try {
       if (editingItem) {
@@ -120,7 +124,7 @@ export default function RecurringFormModal({
       onClose();
       onSuccess();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
     }
   };
 
@@ -133,6 +137,7 @@ export default function RecurringFormModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="modal-form">
+        <FormError message={submitError} />
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
@@ -153,6 +158,7 @@ export default function RecurringFormModal({
               setFormData={(data) => { setFormData(data); clearError('amount'); }}
               formData={formData}
               label="Importo (€)"
+              required
             />
             <FieldError message={errors.amount} />
           </div>
@@ -170,7 +176,7 @@ export default function RecurringFormModal({
 
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">Descrizione</label>
+            <label className="form-label form-label-required">Descrizione</label>
             <input type="text" value={formData.description}
               onChange={(e) => {
                 setFormData({ ...formData, description: e.target.value })
@@ -181,7 +187,7 @@ export default function RecurringFormModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Categoria</label>
+            <label className="form-label form-label-required">Categoria</label>
             <select value={formData.categoryId}
               onChange={(e) => {
                 setFormData({ ...formData, categoryId: e.target.value })
@@ -201,7 +207,7 @@ export default function RecurringFormModal({
           <div className="modal-form-row">
             {formData.frequency === 'MONTHLY' && (
               <div className="form-group">
-                <label className="form-label">Giorno del mese</label>
+                <label className="form-label form-label-required">Giorno del mese</label>
                 <input type="number" min={1} max={31} value={formData.dayOfMonth}
                   onChange={(e) => {
                     setFormData({ ...formData, dayOfMonth: parseInt(e.target.value) })
@@ -224,7 +230,7 @@ export default function RecurringFormModal({
 
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">Data inizio</label>
+            <label className="form-label form-label-required">Data inizio</label>
             <input type="date" value={formData.startDate}
               onChange={(e) => {
                 setFormData({ ...formData, startDate: e.target.value })

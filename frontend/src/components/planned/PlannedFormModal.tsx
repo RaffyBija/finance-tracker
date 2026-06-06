@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { PlannedTransaction, Category, CreatePlannedTransactionDTO } from '../../types';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
+import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 
@@ -39,8 +40,10 @@ export default function PlannedFormModal({
     notes: '',
     accountId: defaultAccount?.id ?? '',
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
+    setSubmitError(null);
     if (editingItem && isOpen) {
       setFormData({
         amount: Number(editingItem.amount),
@@ -93,6 +96,7 @@ export default function PlannedFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if(!validate(formData)) return;
     try {
       if (editingItem) {
@@ -105,7 +109,7 @@ export default function PlannedFormModal({
       onClose();
       onSuccess();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
     }
   };
 
@@ -118,6 +122,7 @@ export default function PlannedFormModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="modal-form">
+        <FormError message={submitError} />
         <div className="form-group">
           <label className="form-label">Tipo</label>
           <div className="form-button-group">
@@ -138,11 +143,12 @@ export default function PlannedFormModal({
               setFormData={(value) => { setFormData(value); clearError('amount'); }}
               formData={formData}
               label="Importo (€)"
+              required
             />
             <FieldError message={errors.amount} />
           </div>
           <div className="form-group">
-            <label className="form-label">Data pianificata</label>
+            <label className="form-label form-label-required">Data pianificata</label>
             <input type="date" value={formData.plannedDate}
               onChange={(e) => {
                 setFormData({ ...formData, plannedDate: e.target.value })
@@ -155,7 +161,7 @@ export default function PlannedFormModal({
 
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">Descrizione</label>
+            <label className="form-label form-label-required">Descrizione</label>
             <input type="text" value={formData.description}
               onChange={(e) => {
                 setFormData({ ...formData, description: e.target.value });
@@ -166,7 +172,7 @@ export default function PlannedFormModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Categoria</label>
+            <label className="form-label form-label-required">Categoria</label>
             <select value={formData.categoryId}
               onChange={(e) => {
                 setFormData({ ...formData, categoryId: e.target.value })

@@ -9,6 +9,8 @@ interface InputDecimalProps {
   /** Consente valori negativi (es. saldo iniziale in scoperto / credito CC). */
   allowNegative?: boolean;
   placeholder?: string;
+  /** Mostra il marcatore di campo obbligatorio (asterisco) sulla label. */
+  required?: boolean;
 }
 
 export const InputDecimal = ({
@@ -18,6 +20,7 @@ export const InputDecimal = ({
   field = 'amount',
   allowNegative = false,
   placeholder,
+  required = false,
 }: InputDecimalProps) => {
   const toRaw = (v: any) =>
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
@@ -25,9 +28,12 @@ export const InputDecimal = ({
   const [rawAmount, setRawAmount] = useState<string>(toRaw(formData[field]));
   const [isFocused, setIsFocused] = useState(false);
 
-  // Sincronizza con formData SOLO quando il campo non è in focus
+  // Sincronizza con formData quando il campo non è in focus, oppure quando è
+  // vuoto (popolamento all'apertura del modale: il campo può essere già
+  // auto-focato ma senza valore digitato, quindi va comunque riempito).
+  // Mentre l'utente digita (rawAmount non vuoto + focus) non viene clobberato.
   useEffect(() => {
-    if (!isFocused) setRawAmount(toRaw(formData[field]));
+    if (!isFocused || rawAmount === '') setRawAmount(toRaw(formData[field]));
   }, [formData[field], isFocused]);
 
   // Handle per correggere l'input numerico decimale al blur
@@ -59,7 +65,7 @@ export const InputDecimal = ({
 
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
+      <label className={`form-label${required ? ' form-label-required' : ''}`}>{label}</label>
       <input
         type="text"
         value={rawAmount}

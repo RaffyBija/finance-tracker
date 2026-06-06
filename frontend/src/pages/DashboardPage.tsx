@@ -23,7 +23,7 @@ import {
   SkeletonPieChart,
   SkeletonList,
 } from '../components/shared/Skeleton';
-import { formatCurrency } from '../utils/format';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 // ── Costanti colori ───────────────────────────────────────────────────────────
 
@@ -84,6 +84,7 @@ const CustomPieLegend = memo(({ data }: { data: any[] }) => (
 // ── Componente principale ─────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { formatCurrency } = useFormatCurrency();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthRange = useMemo(() => ({

@@ -13,9 +13,10 @@ import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
 import { useState, useMemo, useEffect } from 'react';
-import { formatSignedCurrency } from '../utils/format';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 export default function TransactionsPage() {
+  const { formatSignedCurrency } = useFormatCurrency();
   // ── Filtri inviati al backend ──
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });

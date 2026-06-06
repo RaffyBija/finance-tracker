@@ -5,6 +5,7 @@ export interface User {
   name: string;
   isPro: boolean;
   tourCompleted: boolean;
+  currency: string;
   createdAt: string;
 }
 
@@ -22,6 +23,7 @@ export interface RegisterCredentials {
   email: string;
   password: string;
   name: string;
+  currency?: string;
 }
 
 // Transaction types

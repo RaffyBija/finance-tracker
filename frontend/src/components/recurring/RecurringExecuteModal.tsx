@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import type { RecurringDueItem } from '../../types';
-import { formatSignedCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface RecurringExecuteModalProps {
   item: RecurringDueItem | null;
@@ -16,6 +16,7 @@ export default function RecurringExecuteModal({
   onConfirm,
   onClose,
 }: RecurringExecuteModalProps) {
+  const { formatSignedCurrency } = useFormatCurrency();
   if (!item) return null;
 
   const isIncome = item.type === 'INCOME';

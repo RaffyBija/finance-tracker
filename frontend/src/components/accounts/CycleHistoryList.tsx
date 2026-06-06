@@ -1,6 +1,6 @@
 import { CalendarClock, CheckCircle2, CircleDashed } from 'lucide-react';
 import { useBillingCycles } from '../../hooks/useAccounts';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import Skeleton from '../shared/Skeleton';
 
 interface CycleHistoryListProps {
@@ -31,6 +31,7 @@ function projectedBilling(periodEnd: string, billingDay: number) {
 /** Lista riusabile dello storico cicli di fatturazione di una CC.
  *  Montata inline nella pagina dettaglio carta (/accounts/:id). */
 export default function CycleHistoryList({ accountId, enabled = true, showIntro = true, billingDay }: CycleHistoryListProps) {
+  const { formatCurrency } = useFormatCurrency();
   const { data: cycles = [], isLoading } = useBillingCycles(accountId, enabled);
 
   return (

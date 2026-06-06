@@ -8,10 +8,11 @@ import AccountCard from '../components/accounts/AccountCard';
 import AccountFormModal from '../components/accounts/AccountFormModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
-import { formatCurrency } from '../utils/format';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import type { Account } from '../types';
 
 export default function AccountsPage() {
+  const { formatCurrency } = useFormatCurrency();
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

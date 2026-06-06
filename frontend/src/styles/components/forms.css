@@ -207,6 +207,20 @@
     @apply text-xs text-success-600 mt-1;
   }
 
+  /* Banner errore a livello di form (fallimenti di submit) */
+  .form-error-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 8px;
+    @apply bg-danger-50 text-danger-700;
+    border: 1px solid;
+    @apply border-danger-200;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
   /* ============================
      FIELDSET
      ============================ */
@@ -494,3 +508,9 @@
 .dark .icon-swatch { background: #1c1917; }
 .dark .icon-swatch:hover { background: #292524; }
 .dark .icon-swatch.is-selected { background: rgba(19, 78, 74, 0.45); border-color: #14b8a6; }
+
+.dark .form-error-banner {
+  background-color: #450a0a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}

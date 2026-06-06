@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useProjectedBalance } from '../../hooks/useDashboard';
-import { formatCurrency } from '../../utils/format';
+import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 // Vista "Impegni certi" della card Andamento del saldo.
 // Mostra solo impegni programmati: ricorrenti + pianificate + debito CC.
@@ -48,6 +48,7 @@ function ProjectedSkeleton() {
 }
 
 export default function ProjectedView() {
+  const { formatCurrency } = useFormatCurrency();
   const [mode, setMode] = useState<Mode>('months');
   const [selectedMonths, setSelectedMonths] = useState(3);
   const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });

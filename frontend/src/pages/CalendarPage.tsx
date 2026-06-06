@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { useCalendar } from '../hooks/useCalendar';
 import type { CalendarDay, CalendarEvent } from '../api/calendar';
-import { formatCurrency } from '../utils/format';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const MONTHS   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
@@ -16,6 +16,7 @@ function barH(amount: number, max: number): number {
 }
 
 export default function CalendarPage() {
+  const { formatCurrency } = useFormatCurrency();
   const today    = new Date();
   const [year, setYear]   = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1); // 1-indexed

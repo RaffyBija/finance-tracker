@@ -10,11 +10,13 @@ import {
   sendEmailChangeVerification, } from "../utils/email";
 import { AuthRequest } from "../types";
 
+// Valute supportate (codici ISO 4217). Tieni allineato col frontend (utils/currency).
+export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
 
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name }: RegisterDTO = req.body;
+    const { email, password, name, currency }: RegisterDTO = req.body;
     // Validazione base
     if (!email.trim() || !password.trim() || !name.trim()) {
       return res
@@ -46,6 +48,7 @@ export const register = async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         name,
+        ...(currency && SUPPORTED_CURRENCIES.includes(currency) && { currency }),
         emailVerifyToken: verifyToken,
         emailVerifyExpires: verifyExpires,
       },
@@ -235,6 +238,7 @@ export const login = async (req: Request, res: Response) => {
         name: user.name,
         isPro: user.isPro,
         tourCompleted: user.tourCompleted,
+        currency: user.currency,
       },
     };
 
@@ -258,6 +262,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         name: true,
         isPro: true,
         tourCompleted: true,
+        currency: true,
         createdAt: true,
       },
     });
@@ -277,10 +282,14 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, email } = req.body;
+    const { name, email, currency } = req.body;
 
-    if (!name?.trim() && !email?.trim()) {
+    if (!name?.trim() && !email?.trim() && !currency) {
       return res.status(400).json({ error: 'Fornisci almeno un campo da aggiornare' });
+    }
+
+    if (currency && !SUPPORTED_CURRENCIES.includes(currency)) {
+      return res.status(400).json({ error: 'Valuta non supportata' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -341,9 +350,17 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Aggiornamento valuta (indipendente da nome/email)
+    if (currency) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { currency },
+      });
+    }
+
     const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, createdAt: true },
+      select: { id: true, name: true, email: true, currency: true, createdAt: true },
     });
 
     res.json({
