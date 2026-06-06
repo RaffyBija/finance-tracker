@@ -124,9 +124,9 @@
   color: #44403c;
 }
 
-.modal-close-btn:focus {
+.modal-close-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.45);
 }
 
 /* ── Content (scrollabile) ── */
@@ -220,51 +220,9 @@
   flex-shrink: 0;
 }
 
-/* ── Buttons ── */
-.modal-btn {
-  padding: 0.55rem 1.4rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
-}
-
-.modal-btn-primary {
-  background-color: #4f46e5;
-  color: white;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
-}
-
-.modal-btn-primary:hover {
-  background-color: #4338ca;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
-}
-
-.modal-btn-primary:active {
-  transform: translateY(0);
-}
-
-.modal-btn-primary:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
-}
-
-.modal-btn-secondary {
-  background: #f5f5f4;
-  color: #57534e;
-}
-
-.modal-btn-secondary:hover {
-  background: #e7e5e4;
-  color: #292524;
-}
-
-.modal-btn-secondary:focus {
-  outline: none;
-}
+/* I bottoni dei modali usano il sistema .btn/.btn-primary/.btn-secondary
+   (buttons.css). Le vecchie classi .modal-btn* (indigo legacy) sono state
+   rimosse: non erano usate da nessun JSX. */
 
 .modal-section {
   margin-bottom: 1rem;
@@ -509,6 +467,14 @@
   }
 }
 
+/* Rispetta la preferenza di moto ridotto: niente fade/slide d'ingresso. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-container {
+    animation: none;
+  }
+}
+
 /* ============================================================
    MOBILE — Full-page modal (copre navbar top e bottom)
    ============================================================ */
@@ -573,8 +539,7 @@
   .form-actions .btn,
   .form-actions button,
   .modal-buttons .btn,
-  .modal-buttons button,
-  .modal-btn {
+  .modal-buttons button {
     width: 100%;
     justify-content: center;
     height: 2.75rem;
