@@ -10,7 +10,7 @@ export default function RegisterPage() {
   const [email, setEmail]                     = useState('');
   const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [currency, setCurrency]               = useState(() => detectBrowserCurrency());
+  const [currency, setCurrency]               = useState<string>(() => detectBrowserCurrency());
   const [showPass, setShowPass]               = useState(false);
   const [showConfirm, setShowConfirm]         = useState(false);
   const [error, setError]                     = useState('');

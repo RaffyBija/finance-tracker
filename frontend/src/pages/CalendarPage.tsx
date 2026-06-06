@@ -196,6 +196,7 @@ function computeRunningBalance(
 }
 
 function DayDetail({ date, day, balance }: { date: string; day: CalendarDay; balance: number | null }) {
+  const { formatCurrency } = useFormatCurrency();
   const [y, m, d] = date.split('-').map(Number);
   const net       = day.income - day.expenses;
 
@@ -226,6 +227,7 @@ function DayDetail({ date, day, balance }: { date: string; day: CalendarDay; bal
 }
 
 function EventRow({ event }: { event: CalendarEvent }) {
+  const { formatCurrency } = useFormatCurrency();
   const isIncome = event.transactionType === 'INCOME';
   const sourceLabel: Record<CalendarEvent['source'], string> = {
     actual:    'Effettiva',

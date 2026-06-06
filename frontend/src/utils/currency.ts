@@ -37,7 +37,8 @@ export function detectBrowserCurrency(): CurrencyCode {
     const byRegion: Record<string, CurrencyCode> = {
       US: 'USD', GB: 'GBP', CH: 'CHF', JP: 'JPY', CA: 'CAD', AU: 'AUD',
     };
-    return (region && byRegion[region]) ?? 'EUR';
+    if (region && byRegion[region]) return byRegion[region];
+    return 'EUR';
   } catch {
     return 'EUR';
   }

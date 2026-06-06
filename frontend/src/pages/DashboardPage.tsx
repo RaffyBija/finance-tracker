@@ -43,6 +43,7 @@ const getCategoryColor = (entry: { categoryColor?: string }, index: number) =>
 // ── Tooltip personalizzati ────────────────────────────────────────────────────
 
 const CustomBarTooltip = memo(({ active, payload, label }: any) => {
+  const { formatCurrency } = useFormatCurrency();
   if (!active || !payload?.length) return null;
   return (
     <div className="card card-md dashboard-tooltip">
@@ -57,6 +58,7 @@ const CustomBarTooltip = memo(({ active, payload, label }: any) => {
 });
 
 const CustomPieTooltip = memo(({ active, payload }: any) => {
+  const { formatCurrency } = useFormatCurrency();
   if (!active || !payload?.length) return null;
   return (
     <div className="card card-md dashboard-tooltip">
@@ -66,7 +68,9 @@ const CustomPieTooltip = memo(({ active, payload }: any) => {
   );
 });
 
-const CustomPieLegend = memo(({ data }: { data: any[] }) => (
+const CustomPieLegend = memo(({ data }: { data: any[] }) => {
+  const { formatCurrency } = useFormatCurrency();
+  return (
   <div className="dashboard-legend">
     {data.slice(0, 8).map((entry, i) => (
       <div key={entry.categoryName} className="dashboard-legend-item">
@@ -79,7 +83,8 @@ const CustomPieLegend = memo(({ data }: { data: any[] }) => (
       </div>
     ))}
   </div>
-));
+  );
+});
 
 // ── Componente principale ─────────────────────────────────────────────────────
 
