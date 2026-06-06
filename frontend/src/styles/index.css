@@ -54,8 +54,8 @@ body {
 }
 
 .dark body {
-  background-color: #0f172a;
-  color: #f1f5f9;
+  background-color: #1c1917;
+  color: #f5f5f4;
 }
 
 /* ============================================
@@ -124,39 +124,39 @@ h1, h2, h3 {
 
 /* Scrollbar dark */
 .dark * {
-  scrollbar-color: #334155 #1e293b;
+  scrollbar-color: #44403c #292524;
 }
-.dark *::-webkit-scrollbar-track { background: #1e293b; }
-.dark *::-webkit-scrollbar-thumb { background-color: #334155; }
-.dark *::-webkit-scrollbar-thumb:hover { background-color: #475569; }
+.dark *::-webkit-scrollbar-track { background: #292524; }
+.dark *::-webkit-scrollbar-thumb { background-color: #44403c; }
+.dark *::-webkit-scrollbar-thumb:hover { background-color: #57534e; }
 
 /* Focus ring offset in dark */
 .dark *:focus-visible {
-  --tw-ring-offset-color: #0f172a;
+  --tw-ring-offset-color: #1c1917;
 }
 
 /* Neutral text classes */
-.dark .text-neutral-900 { color: #f1f5f9; }
-.dark .text-neutral-800 { color: #e2e8f0; }
-.dark .text-neutral-700 { color: #cbd5e1; }
-.dark .text-neutral-600 { color: #94a3b8; }
-.dark .text-neutral-500 { color: #64748b; }
-.dark .text-neutral-400 { color: #475569; }
-.dark .text-neutral-300 { color: #334155; }
+.dark .text-neutral-900 { color: #f5f5f4; }
+.dark .text-neutral-800 { color: #e7e5e4; }
+.dark .text-neutral-700 { color: #d6d3d1; }
+.dark .text-neutral-600 { color: #a8a29e; }
+.dark .text-neutral-500 { color: #78716c; }
+.dark .text-neutral-400 { color: #57534e; }
+.dark .text-neutral-300 { color: #44403c; }
 
 /* Neutral bg classes */
-.dark .bg-neutral-50  { background-color: #0f172a; }
-.dark .bg-neutral-100 { background-color: #1e293b; }
-.dark .bg-neutral-200 { background-color: #334155; }
-.dark .bg-white       { background-color: #1e293b; }
+.dark .bg-neutral-50  { background-color: #1c1917; }
+.dark .bg-neutral-100 { background-color: #292524; }
+.dark .bg-neutral-200 { background-color: #44403c; }
+.dark .bg-white       { background-color: #292524; }
 
 /* Neutral border classes */
-.dark .border-neutral-100 { border-color: #1e293b; }
-.dark .border-neutral-200 { border-color: #334155; }
-.dark .border-neutral-300 { border-color: #475569; }
+.dark .border-neutral-100 { border-color: #292524; }
+.dark .border-neutral-200 { border-color: #44403c; }
+.dark .border-neutral-300 { border-color: #57534e; }
 
 /* Divide classes — must match Tailwind's :not([hidden]) selector to win on specificity. */
-.dark .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) { border-color: #334155; }
+.dark .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) { border-color: #44403c; }
 
 /* Primary soft bg in dark */
 .dark .bg-primary-50  { background-color: #0d2d2a; }
@@ -164,8 +164,8 @@ h1, h2, h3 {
 .dark .text-primary-700 { color: #0d9488; }
 
 /* Card hover in dark */
-.dark .hover\:bg-neutral-50:hover  { background-color: #334155; }
-.dark .hover\:bg-neutral-100:hover { background-color: #334155; }
+.dark .hover\:bg-neutral-50:hover  { background-color: #44403c; }
+.dark .hover\:bg-neutral-100:hover { background-color: #44403c; }
 
 /* Success/danger/info soft tones stay readable in dark */
 .dark .bg-success-100 { background-color: #064e3b; }
@@ -175,12 +175,12 @@ h1, h2, h3 {
 .dark .bg-info-100    { background-color: #0c2940; }
 
 /* Neutral-300 used by badge-date-past & other components */
-.dark .bg-neutral-300  { background-color: #1e293b; }
+.dark .bg-neutral-300  { background-color: #292524; }
 
 /* Semantic text colors for colored soft backgrounds */
 .dark .text-success-700 { color: #34d399; }
 .dark .text-danger-700  { color: #f87171; }
 .dark .text-warning-700 { color: #fbbf24; }
 .dark .text-info-700    { color: #38bdf8; }
-.dark .text-neutral-700 { color: #94a3b8; }
+.dark .text-neutral-700 { color: #a8a29e; }
 

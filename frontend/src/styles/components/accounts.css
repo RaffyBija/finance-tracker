@@ -166,6 +166,12 @@
     @apply border-neutral-100;
   }
 
+  .account-card-footer-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
   .account-card-billing {
     display: flex;
     align-items: center;
@@ -190,6 +196,11 @@
     gap: 10px;
     min-height: 160px;
     text-align: center;
+  }
+
+  /* Variante interattiva (slot "Aggiungi conto"): è un <button>, non un <div> */
+  button.account-card-locked {
+    cursor: pointer;
   }
 
   .account-card-locked-icon {
@@ -637,18 +648,6 @@
     @apply text-sm font-medium text-danger-600;
   }
 
-  /* Banner "in arrivo" */
-  .account-soon-banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    @apply text-sm text-primary-700 bg-primary-50 rounded-lg;
-    border: 1px dashed;
-    @apply border-primary-200;
-    padding: 14px 16px;
-    margin: 28px 0 8px;
-  }
-
   /* Flashcards / linked cards: multi-colonna da tablet in su */
   @media (min-width: 640px) {
     .account-flashcards { grid-template-columns: repeat(3, 1fr); }
@@ -659,54 +658,54 @@
 /* ── Dark mode ─────────────────────────────────── */
 
 .dark .account-card {
-  background-color: #1e293b;
-  border-color: #334155;
+  background-color: #292524;
+  border-color: #44403c;
 }
 
 .dark .account-card-footer {
-  border-color: #334155;
+  border-color: #44403c;
 }
 
-.dark .account-section-title { color: #94a3b8; }
+.dark .account-section-title { color: #a8a29e; }
 .dark .account-card-cc-chip { background-color: rgba(14, 165, 233, 0.15); color: #7dd3fc; }
-.dark .account-card-name { color: #f1f5f9; }
-.dark .account-card-balance-label { color: #64748b; }
-.dark .account-card-billing { color: #64748b; }
-.dark .account-card-bar-track { background-color: #334155; }
+.dark .account-card-name { color: #f5f5f4; }
+.dark .account-card-balance-label { color: #78716c; }
+.dark .account-card-billing { color: #78716c; }
+.dark .account-card-bar-track { background-color: #44403c; }
 
 .dark .account-card-locked {
-  background-color: #1e293b;
-  border-color: #334155;
+  background-color: #292524;
+  border-color: #44403c;
 }
 
 .dark .account-card-locked-icon {
-  background-color: #0f172a;
-  color: #475569;
+  background-color: #1c1917;
+  color: #57534e;
 }
 
-.dark .account-card-locked-title { color: #64748b; }
-.dark .account-card-locked-desc  { color: #475569; }
+.dark .account-card-locked-title { color: #78716c; }
+.dark .account-card-locked-desc  { color: #57534e; }
 
 .dark .account-net-worth {
-  background-color: #1e293b;
+  background-color: #292524;
 }
 
-.dark .account-net-worth-label  { color: #94a3b8; }
-.dark .account-net-worth-amount { color: #f1f5f9; }
-.dark .account-net-worth-row    { color: #94a3b8; }
+.dark .account-net-worth-label  { color: #a8a29e; }
+.dark .account-net-worth-amount { color: #f5f5f4; }
+.dark .account-net-worth-row    { color: #a8a29e; }
 
 /* I totali colorati mantengono la semantica anche in dark (asset teal, liability rosso) */
 .dark .account-net-worth-amount.is-asset     { color: #2dd4bf; }
 .dark .account-net-worth-amount.is-liability { color: #f87171; }
 
 @media (max-width: 540px) {
-  .dark .account-net-worth-total { border-color: #334155; }
+  .dark .account-net-worth-total { border-color: #44403c; }
 }
 
 .dark .account-type-option {
-  background-color: #1e293b;
-  border-color: #334155;
-  color: #94a3b8;
+  background-color: #292524;
+  border-color: #44403c;
+  color: #a8a29e;
 }
 
 .dark .account-type-option:hover,
@@ -717,9 +716,9 @@
 }
 
 .dark .account-filter-pill {
-  background-color: #1e293b;
-  border-color: #334155;
-  color: #94a3b8;
+  background-color: #292524;
+  border-color: #44403c;
+  color: #a8a29e;
 }
 
 .dark .account-filter-pill:hover,
@@ -730,27 +729,21 @@
 }
 
 /* ── Dark: pagina dettaglio ───────────────────── */
-.dark .account-detail-back { color: #94a3b8; }
+.dark .account-detail-back { color: #a8a29e; }
 .dark .account-detail-back:hover { color: #2dd4bf; }
-.dark .account-detail-error { color: #64748b; }
-.dark .account-detail-name { color: #f1f5f9; }
-.dark .account-detail-section-title { color: #94a3b8; }
+.dark .account-detail-error { color: #78716c; }
+.dark .account-detail-name { color: #f5f5f4; }
+.dark .account-detail-section-title { color: #a8a29e; }
 
 .dark .account-detail-hero,
 .dark .account-flashcard,
 .dark .account-linked-card {
-  background-color: #1e293b;
+  background-color: #292524;
 }
 .dark .account-detail-hero-label,
-.dark .account-flashcard-label { color: #64748b; }
-.dark .account-detail-hero-meta { color: #64748b; }
-.dark .account-detail-hero-amount.is-zero { color: #64748b; }
+.dark .account-flashcard-label { color: #78716c; }
+.dark .account-detail-hero-meta { color: #78716c; }
+.dark .account-detail-hero-amount.is-zero { color: #78716c; }
 .dark .account-detail-hero-amount.is-positive { color: #2dd4bf; }
-.dark .account-flashcard-value { color: #f1f5f9; }
-.dark .account-linked-card-name { color: #f1f5f9; }
-
-.dark .account-soon-banner {
-  background-color: rgba(13, 148, 136, 0.12);
-  border-color: #155e57;
-  color: #5eead4;
-}
+.dark .account-flashcard-value { color: #f5f5f4; }
+.dark .account-linked-card-name { color: #f5f5f4; }

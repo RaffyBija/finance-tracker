@@ -1,5 +1,6 @@
 import { Trash2, Pencil, TrendingUp, TrendingDown, CheckCircle2, StickyNote } from 'lucide-react';
 import type { PlannedTransaction } from '../../types';
+import { formatSignedCurrency } from '../../utils/format';
 
 interface PlannedListItemProps {
   planned: PlannedTransaction;
@@ -61,7 +62,7 @@ export default function PlannedListItem({
               planned.type === 'INCOME' ? 'text-success-600' : 'text-danger-600'
             } ${planned.isPaid ? 'line-through text-neutral-400' : ''}`}
           >
-            {planned.type === 'INCOME' ? '+' : '-'}€{Number(planned.amount).toFixed(2)}
+            {formatSignedCurrency(Number(planned.amount), planned.type)}
           </span>
           <div className="flex items-center gap-2">
             {!planned.isPaid && (
@@ -69,14 +70,15 @@ export default function PlannedListItem({
                 onClick={() => onMarkAsPaid(planned)}
                 className="btn-icon text-success-600 hover:bg-success-50"
                 title="Segna come pagato"
+                aria-label="Segna come pagato"
               >
                 <CheckCircle2 className="icon-md" />
               </button>
             )}
-            <button onClick={() => onEdit(planned)} className="btn-icon-primary">
+            <button onClick={() => onEdit(planned)} className="btn-icon-primary" title="Modifica transazione pianificata" aria-label="Modifica transazione pianificata">
               <Pencil className="icon-sm" />
             </button>
-            <button onClick={() => onDelete(planned.id)} className="btn-icon-danger">
+            <button onClick={() => onDelete(planned.id)} className="btn-icon-danger" title="Elimina transazione pianificata" aria-label="Elimina transazione pianificata">
               <Trash2 className="icon-sm" />
             </button>
           </div>

@@ -3,6 +3,7 @@ import { usePending } from '../../contexts/PendingContext';
 import { useMarkAsPaid } from '../../hooks/usePlannedTransactions';
 import { useToast } from '../../contexts/ToastContext';
 import type { PlannedTransaction } from '../../types';
+import { formatSignedCurrency } from '../../utils/format';
 
 function DueItem({ item, onRegister, isPending }: {
   item: PlannedTransaction;
@@ -14,10 +15,10 @@ function DueItem({ item, onRegister, isPending }: {
 
   return (
     <div className="pending-section-item">
-      <div className={item.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+      <div className={item.type === 'INCOME' ? 'transaction-card-icon-income' : 'transaction-card-icon-expense'}>
         {item.type === 'INCOME'
-          ? <TrendingUp className="icon-sm text-success-600" />
-          : <TrendingDown className="icon-sm text-danger-600" />
+          ? <TrendingUp className="icon-sm" />
+          : <TrendingDown className="icon-sm" />
         }
       </div>
       <div className="pending-section-info">
@@ -32,7 +33,7 @@ function DueItem({ item, onRegister, isPending }: {
       </div>
       <div className="pending-section-right">
         <span className={`pending-section-amount ${item.type === 'INCOME' ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}`}>
-          {item.type === 'INCOME' ? '+' : '−'}€{Number(item.amount).toFixed(2)}
+          {formatSignedCurrency(Number(item.amount), item.type)}
         </span>
         <button
           className="btn btn-primary btn-sm"

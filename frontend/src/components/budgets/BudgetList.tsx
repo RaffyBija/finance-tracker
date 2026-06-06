@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { Budget } from '../../types';
 import EmptyState from '../shared/EmptyState';
+import { formatCurrency } from '../../utils/format';
 
 interface BudgetListProps {
   budgets: Budget[];
@@ -66,10 +67,10 @@ export default function BudgetList({
             </div>
             <div className="flex gap-2">
               {getStatusIcon(budget.percentage || 0)}
-              <button onClick={() => onEdit(budget)} className="btn-icon-primary">
+              <button onClick={() => onEdit(budget)} className="btn-icon-primary" title="Modifica budget" aria-label="Modifica budget">
                 <Pencil className="icon-sm" />
               </button>
-              <button onClick={() => onDelete(budget.id)} className="btn-icon-danger">
+              <button onClick={() => onDelete(budget.id)} className="btn-icon-danger" title="Elimina budget" aria-label="Elimina budget">
                 <Trash2 className="icon-sm" />
               </button>
             </div>
@@ -79,7 +80,7 @@ export default function BudgetList({
           <div className="budget-card-progress">
             <div className="flex-between text-sm mb-2">
               <span className="text-neutral-600">
-                Speso: €{budget.spent?.toFixed(2) || 0}
+                Speso: {formatCurrency(budget.spent ?? 0)}
               </span>
               <span className="font-semibold">
                 {budget.percentage?.toFixed(1) || 0}%
@@ -102,7 +103,7 @@ export default function BudgetList({
             <div>
               <p className="text-xs text-neutral-500">Budget</p>
               <p className="text-lg font-bold text-neutral-900">
-                €{Number(budget.amount).toFixed(2)}
+                {formatCurrency(Number(budget.amount))}
               </p>
             </div>
             <div className="text-right">
@@ -114,7 +115,7 @@ export default function BudgetList({
                     : 'text-danger-600'
                 }`}
               >
-                €{budget.remaining?.toFixed(2) || 0}
+                {formatCurrency(budget.remaining ?? 0)}
               </p>
             </div>
           </div>

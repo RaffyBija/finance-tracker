@@ -4,17 +4,17 @@
 
 .guide-intro {
   font-size: 0.875rem;
-  color: #64748b;
+  color: #78716c;
   line-height: 1.5;
   margin-bottom: 1rem;
 }
 
 .guide-accordion {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e7e5e4;
 }
 
 .guide-item {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e7e5e4;
 }
 
 .guide-item-btn {
@@ -28,7 +28,7 @@
   cursor: pointer;
   text-align: left;
   gap: 10px;
-  color: #0f172a;
+  color: #1c1917;
   transition: color 0.15s ease;
 }
 
@@ -57,7 +57,7 @@
 
 .guide-item-chevron {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: #a8a29e;
   transition: transform 0.22s ease-out, color 0.15s ease;
 }
 
@@ -85,7 +85,7 @@
   padding-bottom: 0.875rem;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: #475569;
+  color: #57534e;
 }
 
 .guide-item-content p + p {
@@ -93,7 +93,7 @@
 }
 
 .guide-item-content strong {
-  color: #1e293b;
+  color: #292524;
   font-weight: 600;
 }
 
@@ -105,16 +105,16 @@
 }
 
 /* Dark mode */
-.dark .guide-intro { color: #64748b; }
+.dark .guide-intro { color: #78716c; }
 
 .dark .guide-accordion,
-.dark .guide-item { border-color: #334155; }
+.dark .guide-item { border-color: #44403c; }
 
-.dark .guide-item-btn { color: #f1f5f9; }
+.dark .guide-item-btn { color: #f5f5f4; }
 .dark .guide-item-btn:hover { color: #2dd4bf; }
 .dark .guide-item.is-open .guide-item-btn { color: #2dd4bf; }
-.dark .guide-item-chevron { color: #475569; }
+.dark .guide-item-chevron { color: #57534e; }
 .dark .guide-item.is-open .guide-item-chevron { color: #2dd4bf; }
 
-.dark .guide-item-content { color: #94a3b8; }
-.dark .guide-item-content strong { color: #e2e8f0; }
+.dark .guide-item-content { color: #a8a29e; }
+.dark .guide-item-content strong { color: #e7e5e4; }

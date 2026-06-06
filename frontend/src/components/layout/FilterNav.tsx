@@ -100,6 +100,7 @@ export default function FilterNav({
                 onClick={handleClearDates}
                 className="btn-icon-neutral flex-shrink-0"
                 title="Rimuovi filtro date"
+                aria-label="Rimuovi filtro date"
               >
                 <X size={14} />
               </button>

@@ -4,6 +4,7 @@ import BaseModal from '../layout/ModalBase';
 import { useSettleAccount, useBillingCycles } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
+import { formatCurrency } from '../../utils/format';
 import type { Account } from '../../types';
 
 interface AccountBillingModalProps {
@@ -11,10 +12,6 @@ interface AccountBillingModalProps {
   account: Account | null;
   allAccounts: Account[];
   onDismiss: () => void;
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
 export default function AccountBillingModal({
@@ -46,7 +43,7 @@ export default function AccountBillingModal({
   const handleSettle = async () => {
     try {
       const result = await settleMutation.mutateAsync({ id: account.id, categoryId: categoryId || undefined });
-      toast.success(`Addebito di ${fmt(result.settledAmount)} registrato`);
+      toast.success(`Addebito di ${formatCurrency(result.settledAmount)} registrato`);
       onDismiss();
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? 'Errore nel registrare l\'addebito');
@@ -109,7 +106,7 @@ export default function AccountBillingModal({
               fontWeight: 700,
               color: '#b45309',
             }}>
-              {fmt(debt)}
+              {formatCurrency(debt)}
             </span>
           </div>
 

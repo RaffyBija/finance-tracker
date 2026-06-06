@@ -8,7 +8,7 @@ import {
   useRecentTransactions,
 } from '../hooks/useDashboard';
 import { useAccounts } from '../hooks/useAccounts';
-import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,11 +17,13 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns
 import { it } from 'date-fns/locale';
 import BalanceOutlookCard from '../components/dashboard/BalanceOutlookCard';
 import SubscriptionCostCard from '../components/dashboard/SubscriptionCostCard';
+import TransactionRow from '../components/shared/TransactionRow';
 import {
   SkeletonChart,
   SkeletonPieChart,
   SkeletonList,
 } from '../components/shared/Skeleton';
+import { formatCurrency } from '../utils/format';
 
 // ── Costanti colori ───────────────────────────────────────────────────────────
 
@@ -47,7 +49,7 @@ const CustomBarTooltip = memo(({ active, payload, label }: any) => {
       <p className="dashboard-tooltip-label">{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color }} className="dashboard-tooltip-value">
-          {p.name}: €{Number(p.value).toFixed(2)}
+          {p.name}: {formatCurrency(Number(p.value))}
         </p>
       ))}
     </div>
@@ -59,7 +61,7 @@ const CustomPieTooltip = memo(({ active, payload }: any) => {
   return (
     <div className="card card-md dashboard-tooltip">
       <p className="dashboard-tooltip-label">{payload[0].name}</p>
-      <p className="dashboard-tooltip-amount">€{Number(payload[0].value).toFixed(2)}</p>
+      <p className="dashboard-tooltip-amount">{formatCurrency(Number(payload[0].value))}</p>
     </div>
   );
 });
@@ -73,7 +75,7 @@ const CustomPieLegend = memo(({ data }: { data: any[] }) => (
           style={{ width: 10, height: 10, background: getCategoryColor(entry, i) }}
         />
         <span className="dashboard-legend-name">{entry.categoryName}</span>
-        <span className="dashboard-legend-value">€{Number(entry.total).toFixed(0)}</span>
+        <span className="dashboard-legend-value">{formatCurrency(Number(entry.total))}</span>
       </div>
     ))}
   </div>
@@ -130,8 +132,6 @@ export default function DashboardPage() {
   const heroLoading = accountsLoading || (!hasAccounts && totalSummaryLoading);
   const heroPositive = heroValue >= 0;
 
-  const fmt = (n: number) =>
-    Math.abs(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="container-custom">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
               <div className="dashboard-hero-value-skeleton animate-pulse" />
             ) : (
               <p className={`dashboard-hero-value${!heroPositive ? ' is-negative' : ''}`}>
-                {heroPositive ? '+' : '−'}€{fmt(heroValue)}
+                {heroPositive ? '+' : '−'}{formatCurrency(Math.abs(heroValue))}
               </p>
             )}
           </div>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                   {a.name}
                 </span>
                 <span className={`dashboard-hero-account-amount${a.balance < 0 ? ' is-negative' : ''}`}>
-                  {a.balance >= 0 ? '+' : '−'}€{fmt(a.balance)}
+                  {a.balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(a.balance))}
                 </span>
               </div>
             ))}
@@ -201,16 +201,16 @@ export default function DashboardPage() {
             <>
               <div className="dashboard-hero-stat">
                 <p className="dashboard-hero-stat-label">Entrate</p>
-                <p className="dashboard-hero-stat-value dashboard-hero-stat-income">+€{summary?.income.toFixed(2)}</p>
+                <p className="dashboard-hero-stat-value dashboard-hero-stat-income">+{formatCurrency(summary?.income ?? 0)}</p>
               </div>
               <div className="dashboard-hero-stat">
                 <p className="dashboard-hero-stat-label">Uscite</p>
-                <p className="dashboard-hero-stat-value dashboard-hero-stat-expense">−€{summary?.expense.toFixed(2)}</p>
+                <p className="dashboard-hero-stat-value dashboard-hero-stat-expense">−{formatCurrency(summary?.expense ?? 0)}</p>
               </div>
               <div className="dashboard-hero-stat">
                 <p className="dashboard-hero-stat-label">Netto del mese</p>
                 <p className={`dashboard-hero-stat-value${summary && summary.balance >= 0 ? ' dashboard-hero-stat-income' : ' dashboard-hero-stat-expense'}`}>
-                  {summary && summary.balance >= 0 ? '+' : '−'}€{Math.abs(summary?.balance ?? 0).toFixed(2)}
+                  {summary && summary.balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary?.balance ?? 0))}
                 </p>
               </div>
               <div className="dashboard-hero-stat">
@@ -342,38 +342,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="transaction-card">
-                  <div className="transaction-card-left min-w-0 flex-1">
-                    <div className={
-                      transaction.type === 'INCOME'
-                        ? 'transaction-card-icon-income flex-shrink-0'
-                        : 'transaction-card-icon-expense flex-shrink-0'
-                    }>
-                      {transaction.type === 'INCOME'
-                        ? <TrendingUp className="icon-md text-success-600" />
-                        : <TrendingDown className="icon-md text-danger-600" />
-                      }
-                    </div>
-                    <div className="transaction-card-info min-w-0">
-                      <p className="transaction-card-title truncate">
-                        {transaction.description || 'Nessuna descrizione'}
-                      </p>
-                      <p className="transaction-card-subtitle truncate">
-                        {transaction.category?.name || 'Senza categoria'} •{' '}
-                        {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="transaction-card-right flex-shrink-0">
-                    <span className={
-                      transaction.type === 'INCOME'
-                        ? 'transaction-card-amount-income'
-                        : 'transaction-card-amount-expense'
-                    }>
-                      {transaction.type === 'INCOME' ? '+' : '-'}€{Number(transaction.amount).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+                <TransactionRow key={transaction.id} transaction={transaction} />
               ))
             )}
           </div>

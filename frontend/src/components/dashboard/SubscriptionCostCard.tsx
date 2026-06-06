@@ -3,6 +3,7 @@ import { recurringApi } from '../../api/recurring';
 import type { RecurringTransaction } from '../../types';
 import { SkeletonCard } from '../shared/Skeleton';
 import { RepeatIcon } from 'lucide-react';
+import { formatCurrency } from '../../utils/format';
 
 function toMonthly(rec: RecurringTransaction): number {
   const amount = Number(rec.amount);
@@ -36,8 +37,6 @@ export default function SubscriptionCostCard() {
   const totalMonthly = activeExpenses.reduce((s, r) => s + r.monthly, 0);
   const totalYearly = totalMonthly * 12;
 
-  const fmt = (v: number) =>
-    v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="subscription-card">
@@ -54,11 +53,11 @@ export default function SubscriptionCostCard() {
       <div className="subscription-totals">
         <div className="subscription-total-main">
           <p className="subscription-total-label">Totale mensile</p>
-          <p className="subscription-total-value">€{fmt(totalMonthly)}</p>
+          <p className="subscription-total-value">{formatCurrency(totalMonthly)}</p>
         </div>
         <div className="subscription-total-secondary">
           <p className="subscription-total-label">Annuale</p>
-          <p className="subscription-yearly">€{fmt(totalYearly)}</p>
+          <p className="subscription-yearly">{formatCurrency(totalYearly)}</p>
         </div>
       </div>
 
@@ -75,7 +74,7 @@ export default function SubscriptionCostCard() {
                 <span className="subscription-item-name">{rec.description}</span>
               </div>
               <div className="subscription-item-right">
-                <span className="subscription-item-monthly">€{fmt(rec.monthly)}/m</span>
+                <span className="subscription-item-monthly">{formatCurrency(rec.monthly)}/m</span>
                 <span className="subscription-item-freq">{freqLabel[rec.frequency]}</span>
               </div>
             </div>

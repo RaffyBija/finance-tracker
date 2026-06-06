@@ -2,14 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { useCalendar } from '../hooks/useCalendar';
 import type { CalendarDay, CalendarEvent } from '../api/calendar';
+import { formatCurrency } from '../utils/format';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const MONTHS   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                   'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const MONTHS_S = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
 function barH(amount: number, max: number): number {
   if (amount <= 0 || max <= 0) return 0;
@@ -146,7 +145,7 @@ export default function CalendarPage() {
                     )}
                     {dd && (
                       <span className={`cal-cell-net${net >= 0 ? ' pos' : ' neg'}`}>
-                        {net > 0 ? '+' : ''}{fmt(net)}
+                        {net > 0 ? '+' : ''}{formatCurrency(net)}
                       </span>
                     )}
                   </button>
@@ -204,17 +203,17 @@ function DayDetail({ date, day, balance }: { date: string; day: CalendarDay; bal
       <div className="cal-detail-header">
         <h3 className="cal-detail-date">{d} {MONTHS_S[m - 1]} {y}</h3>
         <div className="cal-detail-kpis">
-          {day.income   > 0 && <span className="cal-kpi cal-kpi-income">+{fmt(day.income)}</span>}
-          {day.expenses > 0 && <span className="cal-kpi cal-kpi-expense">-{fmt(day.expenses)}</span>}
+          {day.income   > 0 && <span className="cal-kpi cal-kpi-income">+{formatCurrency(day.income)}</span>}
+          {day.expenses > 0 && <span className="cal-kpi cal-kpi-expense">-{formatCurrency(day.expenses)}</span>}
           {day.income > 0 && day.expenses > 0 && (
             <span className={`cal-kpi cal-kpi-net${net >= 0 ? ' pos' : ' neg'}`}>
-              {net > 0 ? '+' : ''}{fmt(net)}
+              {net > 0 ? '+' : ''}{formatCurrency(net)}
             </span>
           )}
         </div>
         {balance !== null && (
           <div className={`cal-detail-balance${balance >= 0 ? ' pos' : ' neg'}`}>
-            Saldo a fine giornata: <strong>{fmt(balance)}</strong>
+            Saldo a fine giornata: <strong>{formatCurrency(balance)}</strong>
           </div>
         )}
       </div>
@@ -255,7 +254,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
         </div>
       </div>
       <span className={`cal-event-amount${isIncome ? ' pos' : ' neg'}`}>
-        {isIncome ? '+' : '-'}{fmt(event.amount)}
+        {isIncome ? '+' : '-'}{formatCurrency(event.amount)}
       </span>
     </div>
   );

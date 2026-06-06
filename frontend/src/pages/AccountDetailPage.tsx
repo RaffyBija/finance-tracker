@@ -2,10 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Pencil, Trash2, CreditCard, Landmark, Star,
-  TrendingUp, TrendingDown, Sparkles,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
 import { useAccount, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
@@ -15,21 +12,11 @@ import { useToast } from '../contexts/ToastContext';
 import AccountFormModal from '../components/accounts/AccountFormModal';
 import CycleHistoryList from '../components/accounts/CycleHistoryList';
 import ConfirmModal from '../components/shared/ConfirmModal';
-import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
+import TransactionRow from '../components/shared/TransactionRow';
+import Skeleton, { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
+import { formatCurrency } from '../utils/format';
+import { daysUntilBilling } from '../utils/billing';
 import type { Account } from '../types';
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
-}
-
-function daysUntilBilling(billingDay: number): number {
-  const today = new Date();
-  const day = today.getDate();
-  if (billingDay === day) return 0;
-  if (billingDay > day) return billingDay - day;
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  return daysInMonth - day + billingDay;
-}
 
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +40,7 @@ export default function AccountDetailPage() {
     return { start: start.toISOString(), end: end.toISOString() };
   }, []);
 
-  const { data: monthTx = [] } = useQuery({
+  const { data: monthTx = [], isLoading: monthLoading } = useQuery({
     queryKey: ['transactions', 'account-month', id, monthRange.start],
     queryFn: () => transactionAPI.getAll({ accountId: id, startDate: monthRange.start, endDate: monthRange.end, limit: 1000 }),
     enabled: !!id,
@@ -142,15 +129,15 @@ export default function AccountDetailPage() {
         </div>
         <div className="account-detail-actions">
           {!account.isDefault && (
-            <button onClick={handleSetDefault} className="btn-icon-primary" title="Imposta come principale">
+            <button onClick={handleSetDefault} className="btn-icon-primary" title="Imposta come principale" aria-label="Imposta come principale">
               <Star className="icon-sm" />
             </button>
           )}
-          <button onClick={() => setShowEdit(true)} className="btn-icon-primary" title="Modifica">
+          <button onClick={() => setShowEdit(true)} className="btn-icon-primary" title="Modifica conto" aria-label="Modifica conto">
             <Pencil className="icon-sm" />
           </button>
           {!account.isDefault && (
-            <button onClick={() => setConfirmDelete(true)} className="btn-icon-danger" title="Elimina">
+            <button onClick={() => setConfirmDelete(true)} className="btn-icon-danger" title="Elimina conto" aria-label="Elimina conto">
               <Trash2 className="icon-sm" />
             </button>
           )}
@@ -185,11 +172,15 @@ export default function AccountDetailPage() {
       <div className="account-flashcards">
         <div className="account-flashcard">
           <span className="account-flashcard-label">Entrate del mese</span>
-          <span className="account-flashcard-value is-income">{formatCurrency(monthIncome)}</span>
+          {monthLoading
+            ? <Skeleton className="h-6 w-24" />
+            : <span className="account-flashcard-value is-income">{formatCurrency(monthIncome)}</span>}
         </div>
         <div className="account-flashcard">
           <span className="account-flashcard-label">Uscite del mese</span>
-          <span className="account-flashcard-value is-expense">{formatCurrency(monthExpense)}</span>
+          {monthLoading
+            ? <Skeleton className="h-6 w-24" />
+            : <span className="account-flashcard-value is-expense">{formatCurrency(monthExpense)}</span>}
         </div>
         {!isCC && (
           <div className="account-flashcard">
@@ -253,41 +244,9 @@ export default function AccountDetailPage() {
           <div className="dashboard-empty-state">Nessuna transazione su questo conto</div>
         ) : (
           recent.map((transaction) => (
-            <div key={transaction.id} className="transaction-card">
-              <div className="transaction-card-left min-w-0 flex-1">
-                <div className={transaction.type === 'INCOME'
-                  ? 'transaction-card-icon-income flex-shrink-0'
-                  : 'transaction-card-icon-expense flex-shrink-0'}>
-                  {transaction.type === 'INCOME'
-                    ? <TrendingUp className="icon-md text-success-600" />
-                    : <TrendingDown className="icon-md text-danger-600" />}
-                </div>
-                <div className="transaction-card-info min-w-0">
-                  <p className="transaction-card-title truncate">
-                    {transaction.description || 'Nessuna descrizione'}
-                  </p>
-                  <p className="transaction-card-subtitle truncate">
-                    {transaction.category?.name || 'Senza categoria'} •{' '}
-                    {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
-                  </p>
-                </div>
-              </div>
-              <div className="transaction-card-right flex-shrink-0">
-                <span className={transaction.type === 'INCOME'
-                  ? 'transaction-card-amount-income'
-                  : 'transaction-card-amount-expense'}>
-                  {transaction.type === 'INCOME' ? '+' : '-'}€{Number(transaction.amount).toFixed(2)}
-                </span>
-              </div>
-            </div>
+            <TransactionRow key={transaction.id} transaction={transaction} />
           ))
         )}
-      </div>
-
-      {/* ── Banner nuovi strumenti ── */}
-      <div className="account-soon-banner">
-        <Sparkles className="icon-sm" />
-        <span>Nuovi strumenti per i tuoi conti sono in arrivo.</span>
       </div>
 
       <AccountFormModal

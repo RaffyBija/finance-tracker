@@ -1,4 +1,6 @@
-import { Pencil, Trash2, CreditCard, Landmark, Star, History } from 'lucide-react';
+import { Pencil, Trash2, CreditCard, Landmark, Star } from 'lucide-react';
+import { formatCurrency } from '../../utils/format';
+import { daysUntilBilling } from '../../utils/billing';
 import type { Account } from '../../types';
 
 interface AccountCardProps {
@@ -6,21 +8,7 @@ interface AccountCardProps {
   onEdit: (account: Account) => void;
   onDelete: (id: string) => void;
   onSetDefault: (id: string) => void;
-  onShowCycles?: (account: Account) => void;
   onOpen?: (account: Account) => void;
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
-}
-
-function daysUntilBilling(billingDay: number): number {
-  const today = new Date();
-  const day = today.getDate();
-  if (billingDay === day) return 0;
-  if (billingDay > day) return billingDay - day;
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  return daysInMonth - day + billingDay;
 }
 
 function BarFill({ pct }: { pct: number }) {
@@ -35,7 +23,7 @@ function BarFill({ pct }: { pct: number }) {
   );
 }
 
-export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onShowCycles, onOpen }: AccountCardProps) {
+export default function AccountCard({ account, onEdit, onDelete, onSetDefault, onOpen }: AccountCardProps) {
   const isCC = account.type === 'CREDIT_CARD';
   const balance = account.balance;
   const debt = isCC ? Math.abs(balance) : null;
@@ -83,29 +71,21 @@ export default function AccountCard({ account, onEdit, onDelete, onSetDefault, o
           </div>
         </div>
         <div className="account-card-actions" onClick={(e) => e.stopPropagation()}>
-          {isCC && onShowCycles && (
-            <button
-              onClick={() => onShowCycles(account)}
-              className="btn-icon-primary"
-              title="Storico cicli di fatturazione"
-            >
-              <History className="icon-sm" />
-            </button>
-          )}
           {!account.isDefault && (
             <button
               onClick={() => onSetDefault(account.id)}
               className="btn-icon-primary"
               title="Imposta come principale"
+              aria-label="Imposta come principale"
             >
               <Star className="icon-sm" />
             </button>
           )}
-          <button onClick={() => onEdit(account)} className="btn-icon-primary">
+          <button onClick={() => onEdit(account)} className="btn-icon-primary" title="Modifica conto" aria-label="Modifica conto">
             <Pencil className="icon-sm" />
           </button>
           {!account.isDefault && (
-            <button onClick={() => onDelete(account.id)} className="btn-icon-danger">
+            <button onClick={() => onDelete(account.id)} className="btn-icon-danger" title="Elimina conto" aria-label="Elimina conto">
               <Trash2 className="icon-sm" />
             </button>
           )}
@@ -135,7 +115,7 @@ export default function AccountCard({ account, onEdit, onDelete, onSetDefault, o
 
       {/* Footer */}
       <div className="account-card-footer">
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="account-card-footer-meta">
           {isCC ? <CreditCard size={12} /> : <Landmark size={12} />}
           {account.isDefault ? 'Conto principale' : `${account._count?.transactions ?? 0} transazioni`}
         </span>

@@ -6,19 +6,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AccountCard from '../components/accounts/AccountCard';
 import AccountFormModal from '../components/accounts/AccountFormModal';
-import CycleHistoryModal from '../components/accounts/CycleHistoryModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
+import { formatCurrency } from '../utils/format';
 import type { Account } from '../types';
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
-}
 
 export default function AccountsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [cyclesAccount, setCyclesAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const navigate = useNavigate();
@@ -106,14 +101,13 @@ export default function AccountsPage() {
                   onEdit={handleEdit}
                   onDelete={(id) => setDeletingId(id)}
                   onSetDefault={handleSetDefault}
-                  onShowCycles={setCyclesAccount}
                   onOpen={(a) => navigate(`/accounts/${a.id}`)}
                 />
               ))}
 
               {/* Slot libero o bloccato */}
               {!atLimit ? (
-                <button className="account-card-locked" onClick={handleOpenNew} style={{ cursor: 'pointer' }}>
+                <button className="account-card-locked" onClick={handleOpenNew}>
                   <div className="account-card-locked-icon">
                     <Plus size={18} />
                   </div>
@@ -138,8 +132,8 @@ export default function AccountsPage() {
               )}
             </div>
 
-            {/* Riepilogo conti */}
-            {bankAccounts.length > 0 && (
+            {/* Riepilogo conti — solo con 2+ conti: con uno solo la card è già il riepilogo */}
+            {bankAccounts.length > 1 && (
               <div className="account-net-worth account-net-worth-first">
                 <div className="account-net-worth-main">
                   <div className="account-net-worth-label">Liquidità</div>
@@ -181,7 +175,6 @@ export default function AccountsPage() {
                       onEdit={handleEdit}
                       onDelete={(id) => setDeletingId(id)}
                       onSetDefault={handleSetDefault}
-                      onShowCycles={setCyclesAccount}
                       onOpen={(a) => navigate(`/accounts/${a.id}`)}
                     />
                   ))}
@@ -189,7 +182,7 @@ export default function AccountsPage() {
               </>
             )}
 
-            {ccAccounts.length > 0 && (
+            {ccAccounts.length > 1 && (
               <div className="account-net-worth">
                 <div className="account-net-worth-main">
                   <div className="account-net-worth-label">Esposizione CC</div>
@@ -233,12 +226,6 @@ export default function AccountsPage() {
         isOpen={showModal}
         onClose={() => { setShowModal(false); setEditingAccount(null); }}
         editingAccount={editingAccount}
-      />
-
-      <CycleHistoryModal
-        isOpen={!!cyclesAccount}
-        account={cyclesAccount}
-        onClose={() => setCyclesAccount(null)}
       />
 
       <ConfirmModal

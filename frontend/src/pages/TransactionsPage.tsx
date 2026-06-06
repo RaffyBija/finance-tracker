@@ -13,6 +13,7 @@ import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
 import { useState, useMemo, useEffect } from 'react';
+import { formatSignedCurrency } from '../utils/format';
 
 export default function TransactionsPage() {
   // ── Filtri inviati al backend ──
@@ -209,19 +210,19 @@ export default function TransactionsPage() {
                 >
                   {/* ── Riga compatta (sempre visibile) ── */}
                   <div className="transaction-card">
-                    <div className="transaction-card-left min-w-0 flex-1">
-                      <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+                    <div className="transaction-card-left">
+                      <div className={transaction.type === 'INCOME' ? 'transaction-card-icon-income' : 'transaction-card-icon-expense'}>
                         {transaction.type === 'INCOME'
-                          ? <TrendingUp className="icon-md text-success-600" />
-                          : <TrendingDown className="icon-md text-danger-600" />
+                          ? <TrendingUp className="icon-md" />
+                          : <TrendingDown className="icon-md" />
                         }
                       </div>
-                      <div className="transaction-card-info min-w-0">
+                      <div className="transaction-card-info">
                         <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
-                        <p className="transaction-card-title truncate">
+                        <p className="transaction-card-title">
                           {transaction.description || 'Nessuna descrizione'}
                         </p>
-                        <p className="transaction-card-subtitle truncate">
+                        <p className="transaction-card-subtitle">
                           {transaction.category?.name || 'Senza categoria'}
                           {accounts.length > 1 && transaction.account && (
                             <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -233,21 +234,25 @@ export default function TransactionsPage() {
                       </div>
                     </div>
 
-                    <div className="transaction-card-right flex-shrink-0">
+                    <div className="transaction-card-right">
                       <span className={transaction.type === 'INCOME' ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
-                        {transaction.type === 'INCOME' ? '+' : '-'}€{Number(transaction.amount).toFixed(2)}
+                        {formatSignedCurrency(Number(transaction.amount), transaction.type)}
                       </span>
                       {/* Su mobile le azioni vanno nel pannello espanso */}
                       <div className="transaction-card-actions">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(transaction); }}
                           className="btn-icon-primary"
+                          title="Modifica transazione"
+                          aria-label="Modifica transazione"
                         >
                           <Pencil className="icon-sm" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeletingId(transaction.id); }}
                           className="btn-icon-danger"
+                          title="Elimina transazione"
+                          aria-label="Elimina transazione"
                         >
                           <Trash2 className="icon-sm" />
                         </button>
@@ -273,7 +278,7 @@ export default function TransactionsPage() {
                         <div className="transaction-card-detail-field">
                           <span className="transaction-card-detail-label">Importo</span>
                           <span className={`transaction-card-detail-amount ${transaction.type === 'INCOME' ? 'transaction-card-detail-amount-income' : 'transaction-card-detail-amount-expense'}`}>
-                            {transaction.type === 'INCOME' ? '+' : '−'}€{Number(transaction.amount).toFixed(2)}
+                            {formatSignedCurrency(Number(transaction.amount), transaction.type)}
                           </span>
                         </div>
                         <div className="transaction-card-detail-field">

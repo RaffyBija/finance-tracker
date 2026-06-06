@@ -372,13 +372,13 @@
    DARK MODE
    ============================================================ */
 .dark .btn-secondary {
-  background-color: #334155;
-  color: #e2e8f0;
+  background-color: #44403c;
+  color: #e7e5e4;
 }
-.dark .btn-secondary:hover { background-color: #475569; }
+.dark .btn-secondary:hover { background-color: #57534e; }
 
-.dark .btn-ghost { color: #cbd5e1; }
-.dark .btn-ghost:hover { background-color: #334155; }
+.dark .btn-ghost { color: #d6d3d1; }
+.dark .btn-ghost:hover { background-color: #44403c; }
 
 .dark .btn-ghost-primary { color: #14b8a6; }
 .dark .btn-ghost-primary:hover { background-color: #0d2d2a; }
@@ -390,11 +390,11 @@
 .dark .btn-ghost-danger:hover { background-color: #450a0a; }
 
 .dark .btn-outline {
-  background-color: #1e293b;
-  border-color: #475569;
-  color: #e2e8f0;
+  background-color: #292524;
+  border-color: #57534e;
+  color: #e7e5e4;
 }
-.dark .btn-outline:hover { background-color: #334155; border-color: #64748b; }
+.dark .btn-outline:hover { background-color: #44403c; border-color: #78716c; }
 
 .dark .btn-outline-primary {
   background-color: transparent;
@@ -404,17 +404,40 @@
 .dark .btn-outline-primary:hover { background-color: #0d2d2a; }
 
 .dark .btn-toggle-inactive {
-  background-color: #334155;
-  color: #cbd5e1;
+  background-color: #44403c;
+  color: #d6d3d1;
 }
-.dark .btn-toggle-inactive:hover { background-color: #475569; }
+.dark .btn-toggle-inactive:hover { background-color: #57534e; }
 
 .dark .btn-filter-inactive {
-  background-color: #334155;
-  color: #cbd5e1;
+  background-color: #44403c;
+  color: #d6d3d1;
 }
-.dark .btn-filter-inactive:hover { background-color: #475569; }
+.dark .btn-filter-inactive:hover { background-color: #57534e; }
 
-.dark .btn-icon-neutral { color: #94a3b8; }
-.dark .btn-icon-neutral:hover { background-color: #334155; }
+.dark .btn-icon-neutral { color: #a8a29e; }
+.dark .btn-icon-neutral:hover { background-color: #44403c; }
 .dark .btn-icon-primary:hover { background-color: #0d2d2a; }
+
+/* ============================================================
+   TOUCH TARGETS
+   Su pointer (desktop) i bottoni icona restano compatti a 32px
+   (p-2 + icon-sm) per preservare la densità. Su touch servono
+   44×44 reali (WCAG 2.5.5): l'area cliccabile cresce attorno
+   all'icona, che resta centrata e di dimensione invariata.
+   Le varianti sono `@apply btn-icon` → classe singola nel DOM,
+   quindi vanno elencate esplicitamente (`.btn-icon` non basta).
+   ============================================================ */
+@media (hover: none) {
+  .btn-icon,
+  .btn-icon-primary,
+  .btn-icon-success,
+  .btn-icon-danger,
+  .btn-icon-neutral {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

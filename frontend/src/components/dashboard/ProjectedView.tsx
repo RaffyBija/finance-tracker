@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useProjectedBalance } from '../../hooks/useDashboard';
+import { formatCurrency } from '../../utils/format';
 
 // Vista "Impegni certi" della card Andamento del saldo.
 // Mostra solo impegni programmati: ricorrenti + pianificate + debito CC.
@@ -189,7 +190,7 @@ export default function ProjectedView() {
             <div className="projection-flow-node">
               <p className="projection-flow-node-label">Oggi</p>
               <p className="projection-flow-node-value">
-                €{data.currentBalance.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.currentBalance)}
               </p>
             </div>
 
@@ -200,10 +201,10 @@ export default function ProjectedView() {
             <div className="projection-flow-node">
               <p className="projection-flow-node-label">{label}</p>
               <p className="projection-flow-node-value is-projected">
-                €{data.projectedBalance.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.projectedBalance)}
               </p>
               <p className={`projection-flow-delta${isPositiveDelta ? ' is-positive' : ' is-negative'}`}>
-                {isPositiveDelta ? '+' : '−'}€{Math.abs(delta).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isPositiveDelta ? '+' : '−'}{formatCurrency(Math.abs(delta))}
               </p>
             </div>
           </div>
@@ -214,14 +215,14 @@ export default function ProjectedView() {
               <TrendingUp size={13} style={{ color: '#059669' }} />
               Entrate previste
               <span className="projection-meta-value projection-meta-income">
-                +€{data.projectedIncome.toFixed(2)}
+                +{formatCurrency(data.projectedIncome)}
               </span>
             </span>
             <span className="projection-meta-item">
               <TrendingDown size={13} style={{ color: '#dc2626' }} />
               Uscite previste
               <span className="projection-meta-value projection-meta-expense">
-                −€{data.projectedExpense.toFixed(2)}
+                −{formatCurrency(data.projectedExpense)}
               </span>
             </span>
             <span className="projection-meta-item" style={{ color: '#a8a29e' }}>

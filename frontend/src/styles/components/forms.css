@@ -384,38 +384,38 @@
    DARK MODE
    ============================================================ */
 .dark .form-input {
-  background-color: #0f172a;
-  border-color: #334155;
-  color: #f1f5f9;
+  background-color: #1c1917;
+  border-color: #44403c;
+  color: #f5f5f4;
 }
-.dark .form-input::placeholder { color: #475569; }
-.dark .form-input:focus { border-color: #0d9488; background-color: #1e293b; }
-.dark .form-input:disabled { background-color: #1e293b; color: #475569; }
+.dark .form-input::placeholder { color: #57534e; }
+.dark .form-input:focus { border-color: #0d9488; background-color: #292524; }
+.dark .form-input:disabled { background-color: #292524; color: #57534e; }
 
 .dark .form-select {
-  background-color: #0f172a;
-  border-color: #334155;
-  color: #f1f5f9;
+  background-color: #1c1917;
+  border-color: #44403c;
+  color: #f5f5f4;
 }
-.dark .form-select:focus { border-color: #0d9488; background-color: #1e293b; }
+.dark .form-select:focus { border-color: #0d9488; background-color: #292524; }
 
 .dark .form-textarea {
-  background-color: #0f172a;
-  border-color: #334155;
-  color: #f1f5f9;
+  background-color: #1c1917;
+  border-color: #44403c;
+  color: #f5f5f4;
 }
-.dark .form-textarea:focus { border-color: #0d9488; background-color: #1e293b; }
+.dark .form-textarea:focus { border-color: #0d9488; background-color: #292524; }
 
-.dark .form-label { color: #94a3b8; }
-.dark .form-help { color: #475569; }
+.dark .form-label { color: #a8a29e; }
+.dark .form-help { color: #57534e; }
 
-.dark .form-fieldset { border-color: #334155; }
-.dark .form-legend { color: #94a3b8; }
+.dark .form-fieldset { border-color: #44403c; }
+.dark .form-legend { color: #a8a29e; }
 
 .dark .form-search {
-  background-color: #1e293b;
-  border-color: #334155;
-  color: #f1f5f9;
+  background-color: #292524;
+  border-color: #44403c;
+  color: #f5f5f4;
 }
 .dark .form-search:focus { border-color: #0d9488; }
 
@@ -449,11 +449,11 @@
 }
 .color-swatch:hover { transform: scale(1.08); }
 .color-swatch.is-selected {
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #1e293b;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #292524;
   transform: scale(1.08);
 }
 .dark .color-swatch.is-selected {
-  box-shadow: 0 0 0 2px #1e293b, 0 0 0 4px #5eead4;
+  box-shadow: 0 0 0 2px #292524, 0 0 0 4px #5eead4;
 }
 
 /* ── Selettore icona (categorie) ── stesso approccio robusto degli swatch colore */
@@ -491,6 +491,6 @@
   border-color: #2dd4bf;
   transform: scale(1.08);
 }
-.dark .icon-swatch { background: #0f172a; }
-.dark .icon-swatch:hover { background: #1e293b; }
+.dark .icon-swatch { background: #1c1917; }
+.dark .icon-swatch:hover { background: #292524; }
 .dark .icon-swatch.is-selected { background: rgba(19, 78, 74, 0.45); border-color: #14b8a6; }

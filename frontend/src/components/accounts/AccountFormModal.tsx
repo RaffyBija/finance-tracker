@@ -226,6 +226,9 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                   ))}
                 </select>
                 <FieldError message={errors.billingDay} />
+                <p className="form-help">
+                  Giorno in cui l'importo del ciclo viene prelevato dal conto collegato (es. il 15).
+                </p>
               </div>
             </div>
 
@@ -241,6 +244,9 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
+                <p className="form-help">
+                  Ultimo giorno incluso nel ciclo: le spese dei giorni successivi rientrano nel ciclo dopo.
+                </p>
               </div>
 
               {bankAccounts.length > 0 && (
@@ -256,6 +262,9 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
+                  <p className="form-help">
+                    Conto da cui viene prelevato l'importo della carta a ogni addebito.
+                  </p>
                 </div>
               )}
             </div>

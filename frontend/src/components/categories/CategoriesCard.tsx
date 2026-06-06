@@ -34,12 +34,16 @@ export default function CategoriesCard({
           <button
             onClick={() => handleEdit(category)}
             className="btn-icon-primary"
+            title="Modifica categoria"
+            aria-label="Modifica categoria"
           >
             <Pencil className="icon-sm" />
           </button>
           <button
             onClick={() => handleDelete(category.id)}
             className="btn-icon-danger"
+            title="Elimina categoria"
+            aria-label="Elimina categoria"
           >
             <Trash2 className="icon-sm" />
           </button>

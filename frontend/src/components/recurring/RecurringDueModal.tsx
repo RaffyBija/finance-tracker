@@ -4,6 +4,7 @@ import BaseModal from '../layout/ModalBase';
 import { useExecuteRecurring } from '../../hooks/useRecurringTransactions';
 import { useToast } from '../../contexts/ToastContext';
 import type { RecurringDueResponse } from '../../types';
+import { formatSignedCurrency } from '../../utils/format';
 
 interface RecurringDueModalProps {
   isOpen: boolean;
@@ -60,10 +61,10 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
                 onClick={(e) => e.stopPropagation()}
                 className="recurring-due-checkbox"
               />
-              <div className={item.type === 'INCOME' ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+              <div className={item.type === 'INCOME' ? 'transaction-card-icon-income' : 'transaction-card-icon-expense'}>
                 {item.type === 'INCOME'
-                  ? <TrendingUp className="icon-sm text-success-600" />
-                  : <TrendingDown className="icon-sm text-danger-600" />
+                  ? <TrendingUp className="icon-sm" />
+                  : <TrendingDown className="icon-sm" />
                 }
               </div>
               <div className="recurring-due-info">
@@ -72,7 +73,7 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
               </div>
               <div className="recurring-due-right">
                 <span className={item.type === 'INCOME' ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
-                  {item.type === 'INCOME' ? '+' : '−'}€{Number(item.amount).toFixed(2)}
+                  {formatSignedCurrency(Number(item.amount), item.type)}
                 </span>
                 {item.daysOverdue > 0
                   ? <span className="recurring-due-badge recurring-due-badge-overdue">⚠ {item.daysOverdue}g fa</span>

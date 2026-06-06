@@ -2,6 +2,7 @@ import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar, PlayCircle }
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { RecurringTransaction, Frequency, RecurringDueItem } from '../../types';
+import { formatSignedCurrency } from '../../utils/format';
 
 interface RecurringListItemProps {
   recurring: RecurringTransaction;
@@ -110,7 +111,7 @@ export default function RecurringListItem({
               recurring.type === 'INCOME' ? 'text-success-600' : 'text-danger-600'
             }`}
           >
-            {recurring.type === 'INCOME' ? '+' : '-'}€{Number(recurring.amount).toFixed(2)}
+            {formatSignedCurrency(Number(recurring.amount), recurring.type)}
           </span>
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
@@ -118,14 +119,15 @@ export default function RecurringListItem({
               className={`btn-icon ${
                 recurring.isActive ? 'text-success-600 hover:bg-success-50' : 'btn-icon-neutral'
               }`}
-              title={recurring.isActive ? 'Disattiva' : 'Attiva'}
+              title={recurring.isActive ? 'Disattiva ricorrente' : 'Attiva ricorrente'}
+              aria-label={recurring.isActive ? 'Disattiva ricorrente' : 'Attiva ricorrente'}
             >
               <Power className="icon-md" />
             </button>
-            <button onClick={() => onEdit(recurring)} className="btn-icon-primary">
+            <button onClick={() => onEdit(recurring)} className="btn-icon-primary" title="Modifica transazione ricorrente" aria-label="Modifica transazione ricorrente">
               <Pencil className="icon-sm" />
             </button>
-            <button onClick={() => onDelete(recurring.id)} className="btn-icon-danger">
+            <button onClick={() => onDelete(recurring.id)} className="btn-icon-danger" title="Elimina transazione ricorrente" aria-label="Elimina transazione ricorrente">
               <Trash2 className="icon-sm" />
             </button>
           </div>

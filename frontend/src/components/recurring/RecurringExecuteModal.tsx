@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import type { RecurringDueItem } from '../../types';
+import { formatSignedCurrency } from '../../utils/format';
 
 interface RecurringExecuteModalProps {
   item: RecurringDueItem | null;
@@ -31,10 +32,10 @@ export default function RecurringExecuteModal({
         </p>
 
         <div className="recurring-due-item" style={{ cursor: 'default', pointerEvents: 'none' }}>
-          <div className={isIncome ? 'transaction-card-icon-income flex-shrink-0' : 'transaction-card-icon-expense flex-shrink-0'}>
+          <div className={isIncome ? 'transaction-card-icon-income' : 'transaction-card-icon-expense'}>
             {isIncome
-              ? <TrendingUp className="icon-sm text-success-600" />
-              : <TrendingDown className="icon-sm text-danger-600" />
+              ? <TrendingUp className="icon-sm" />
+              : <TrendingDown className="icon-sm" />
             }
           </div>
           <div className="recurring-due-info">
@@ -43,7 +44,7 @@ export default function RecurringExecuteModal({
           </div>
           <div className="recurring-due-right">
             <span className={isIncome ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
-              {isIncome ? '+' : '−'}€{Number(item.amount).toFixed(2)}
+              {formatSignedCurrency(Number(item.amount), item.type)}
             </span>
             {isManual
               ? <span className="recurring-due-badge recurring-due-badge-manual">anticipato</span>

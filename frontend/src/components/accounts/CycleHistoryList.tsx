@@ -1,5 +1,7 @@
 import { CalendarClock, CheckCircle2, CircleDashed } from 'lucide-react';
 import { useBillingCycles } from '../../hooks/useAccounts';
+import { formatCurrency } from '../../utils/format';
+import Skeleton from '../shared/Skeleton';
 
 interface CycleHistoryListProps {
   accountId: string;
@@ -8,10 +10,6 @@ interface CycleHistoryListProps {
   showIntro?: boolean;
   /** Giorno di addebito della carta: serve a stimare l'addebito del ciclo ancora aperto */
   billingDay?: number | null;
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
 function fmtDate(d: string | Date) {
@@ -31,23 +29,36 @@ function projectedBilling(periodEnd: string, billingDay: number) {
 }
 
 /** Lista riusabile dello storico cicli di fatturazione di una CC.
- *  Usata sia nel modale (CycleHistoryModal) sia inline nella pagina dettaglio carta. */
+ *  Montata inline nella pagina dettaglio carta (/accounts/:id). */
 export default function CycleHistoryList({ accountId, enabled = true, showIntro = true, billingDay }: CycleHistoryListProps) {
   const { data: cycles = [], isLoading } = useBillingCycles(accountId, enabled);
 
   return (
     <>
       {showIntro && (
-        <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
-          Ogni spesa appartiene al ciclo della sua data. I cicli chiusi diventano addebiti
-          pianificati; il ciclo aperto è il debito che stai accumulando.
-        </p>
+        <div className="cycle-history-intro">
+          <p>Ogni spesa appartiene al ciclo della sua data. I cicli chiusi diventano addebiti pianificati.</p>
+          <p>Il ciclo in corso è il debito che stai accumulando.</p>
+        </div>
       )}
 
       {isLoading ? (
-        <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Caricamento…</p>
+        <div className="cycle-history-list">
+          {[0, 1].map((i) => (
+            <div key={i} className="cycle-history-item">
+              <div className="cycle-history-item-head">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <div className="cycle-history-item-body">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : cycles.length === 0 ? (
-        <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Nessun ciclo registrato.</p>
+        <p className="cycle-history-state">Nessun ciclo registrato.</p>
       ) : (
         <div className="cycle-history-list">
           {cycles.map((c) => {
@@ -67,7 +78,7 @@ export default function CycleHistoryList({ accountId, enabled = true, showIntro 
                 </div>
 
                 <div className="cycle-history-item-body">
-                  <span className="cycle-history-amount">{fmt(c.debtAmount)}</span>
+                  <span className="cycle-history-amount">{formatCurrency(c.debtAmount)}</span>
                   {!isOpen && c.billingDate && (
                     <span className="cycle-history-meta">
                       {paid ? <CheckCircle2 size={13} /> : <CircleDashed size={13} />}

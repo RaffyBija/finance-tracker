@@ -1,13 +1,12 @@
 import { TrendingUp, TrendingDown, Repeat } from 'lucide-react';
 import { useForecast } from '../../hooks/useAnalytics';
+import { formatCurrency } from '../../utils/format';
 
 // Vista "Stima realistica" della card Andamento del saldo.
 // Layout a waterfall: Oggi → +entrate → −spese fisse → −spese abituali → fine mese.
 // In più, le spese ricorrenti più frequenti (per numero di movimenti) con icona.
 // Orizzonte fisso a fine mese corrente. Chrome/titolo dal genitore.
 
-const fmt = (v: number) =>
-  v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function ForecastSkeleton() {
   return (
@@ -75,11 +74,11 @@ export default function ForecastView() {
         <span className="forecast-result-label">Saldo stimato a fine mese</span>
         <div className="forecast-result-row">
           <span className={`forecast-result-value${projectedEndBalance < 0 ? ' is-negative' : ''}`}>
-            {projectedEndBalance >= 0 ? '+' : '−'}€{fmt(Math.abs(projectedEndBalance))}
+            {projectedEndBalance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(projectedEndBalance))}
           </span>
           <span className={`forecast-result-delta${isPositive ? ' is-positive' : ' is-negative'}`}>
             {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-            {isPositive ? '+' : '−'}€{fmt(Math.abs(delta))} vs oggi
+            {isPositive ? '+' : '−'}{formatCurrency(Math.abs(delta))} vs oggi
           </span>
         </div>
       </div>
@@ -88,24 +87,24 @@ export default function ForecastView() {
       <div className="forecast-waterfall">
         <div className="forecast-wf-row is-start">
           <span className="forecast-wf-label">Saldo di oggi</span>
-          <span className="forecast-wf-amount">€{fmt(currentBalance)}</span>
+          <span className="forecast-wf-amount">{formatCurrency(currentBalance)}</span>
         </div>
         <div className="forecast-wf-row">
           <span className="forecast-wf-label">Entrate previste</span>
-          <span className="forecast-wf-amount is-income">+€{fmt(knownRemaining.income)}</span>
+          <span className="forecast-wf-amount is-income">+{formatCurrency(knownRemaining.income)}</span>
         </div>
         <div className="forecast-wf-row">
           <span className="forecast-wf-label">Spese fisse (ricorrenti + pianificate)</span>
-          <span className="forecast-wf-amount is-expense">−€{fmt(knownRemaining.expenses)}</span>
+          <span className="forecast-wf-amount is-expense">−{formatCurrency(knownRemaining.expenses)}</span>
         </div>
         <div className="forecast-wf-row">
           <span className="forecast-wf-label">Spese abituali stimate</span>
-          <span className="forecast-wf-amount is-expense">−€{fmt(habitualExpense)}</span>
+          <span className="forecast-wf-amount is-expense">−{formatCurrency(habitualExpense)}</span>
         </div>
         <div className="forecast-wf-row is-total">
           <span className="forecast-wf-label">Saldo a fine mese</span>
           <span className={`forecast-wf-amount${projectedEndBalance < 0 ? ' is-expense' : ''}`}>
-            €{fmt(projectedEndBalance)}
+            {formatCurrency(projectedEndBalance)}
           </span>
         </div>
       </div>
@@ -130,7 +129,7 @@ export default function ForecastView() {
                 <span className="forecast-frequent-freq">
                   ~{c.perMonth}×/mese
                 </span>
-                <span className="forecast-frequent-amount">~€{fmt(c.avgMonthly)}</span>
+                <span className="forecast-frequent-amount">~{formatCurrency(c.avgMonthly)}</span>
               </div>
             ))}
           </div>

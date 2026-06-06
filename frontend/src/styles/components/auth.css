@@ -386,17 +386,17 @@
 }
 
 /* ── Dark mode (right panel) ── */
-.dark .auth-right { background: #0f172a; }
+.dark .auth-right { background: #1c1917; }
 
-.dark .auth-title         { color: #f1f5f9; }
-.dark .auth-subtitle      { color: #94a3b8; }
-.dark .auth-link-row      { color: #94a3b8; }
+.dark .auth-title         { color: #f5f5f4; }
+.dark .auth-subtitle      { color: #a8a29e; }
+.dark .auth-link-row      { color: #a8a29e; }
 .dark .auth-error         { background: #450a0a; border-color: #991b1b; color: #fca5a5; }
-.dark .auth-field-icon    { color: #64748b; }
-.dark .auth-pass-toggle   { color: #64748b; }
-.dark .auth-pass-toggle:hover { color: #94a3b8; }
-.dark .auth-status-title  { color: #f1f5f9; }
-.dark .auth-status-text   { color: #94a3b8; }
+.dark .auth-field-icon    { color: #78716c; }
+.dark .auth-pass-toggle   { color: #78716c; }
+.dark .auth-pass-toggle:hover { color: #a8a29e; }
+.dark .auth-status-title  { color: #f5f5f4; }
+.dark .auth-status-text   { color: #a8a29e; }
 .dark .auth-status-icon.is-mail    { background: rgba(13,148,136,0.15); }
 .dark .auth-status-icon.is-loading { background: rgba(13,148,136,0.15); }
 .dark .auth-status-icon.is-success { background: rgba(5,150,105,0.15); color: #34d399; }
