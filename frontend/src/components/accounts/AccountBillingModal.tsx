@@ -5,6 +5,7 @@ import { useSettleAccount, useBillingCycles } from '../../hooks/useAccounts';
 import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import { formatDayMonthLong } from '../../utils/date';
 import type { Account } from '../../types';
 
 interface AccountBillingModalProps {
@@ -39,7 +40,7 @@ export default function AccountBillingModal({
     return sum;
   }, 0);
   const linkedAccount = allAccounts.find((a) => a.id === account.linkedAccountId) ?? null;
-  const today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+  const today = formatDayMonthLong(new Date());
 
   const handleSettle = async () => {
     try {

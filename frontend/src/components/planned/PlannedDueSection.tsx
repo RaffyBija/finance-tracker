@@ -4,6 +4,7 @@ import { useMarkAsPaid } from '../../hooks/usePlannedTransactions';
 import { useToast } from '../../contexts/ToastContext';
 import type { PlannedTransaction } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import { formatDayMonth } from '../../utils/date';
 
 function DueItem({ item, onRegister, isPending }: {
   item: PlannedTransaction;
@@ -12,7 +13,7 @@ function DueItem({ item, onRegister, isPending }: {
 }) {
   const { formatSignedCurrency } = useFormatCurrency();
   const isOverdue = new Date(item.plannedDate) < new Date(new Date().setHours(0, 0, 0, 0));
-  const dateLabel = new Date(item.plannedDate).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+  const dateLabel = formatDayMonth(item.plannedDate);
 
   return (
     <div className="pending-section-item">

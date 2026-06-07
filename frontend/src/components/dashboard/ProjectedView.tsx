@@ -1,7 +1,6 @@
 import { TrendingUp, TrendingDown, ArrowRight, SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort } from '../../utils/date';
 import { useProjectedBalance } from '../../hooks/useDashboard';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
@@ -19,7 +18,7 @@ function projectedLabel(mode: Mode, months: number, endDate: string): string {
   }
   if (endDate) {
     try {
-      return `Entro ${format(new Date(endDate), 'd MMM yyyy', { locale: it })}`;
+      return `Entro ${formatDateShort(endDate)}`;
     } catch {
       return 'Data personalizzata';
     }

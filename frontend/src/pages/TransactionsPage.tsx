@@ -5,8 +5,7 @@ import { useCategories } from '../hooks/useCategories';
 import { useAccounts } from '../hooks/useAccounts';
 import type { Transaction, TransactionType } from '../types';
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort, formatDateLong } from '../utils/date';
 import TransactionModal from '../components/transactions/TransactionModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import FilterNav from '../components/layout/FilterNav';
@@ -219,7 +218,7 @@ export default function TransactionsPage() {
                         }
                       </div>
                       <div className="transaction-card-info">
-                        <p>{format(new Date(transaction.date), 'dd/MMM/yyyy', { locale: it })}</p>
+                        <p>{formatDateShort(transaction.date)}</p>
                         <p className="transaction-card-title">
                           {transaction.description || 'Nessuna descrizione'}
                         </p>
@@ -291,7 +290,7 @@ export default function TransactionsPage() {
                         <div className="transaction-card-detail-field">
                           <span className="transaction-card-detail-label">Data</span>
                           <span className="transaction-card-detail-value">
-                            {format(new Date(transaction.date), 'dd MMMM yyyy', { locale: it })}
+                            {formatDateLong(transaction.date)}
                           </span>
                         </div>
                         {transaction.account && (

@@ -1,6 +1,5 @@
 import { isPast, isToday, isTomorrow } from 'date-fns';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort } from '../../utils/date';
 import type { PlannedTransaction } from '../../types';
 import EmptyState from '../shared/EmptyState';
 import PlannedDateGroup from './PlannedDateGroup';
@@ -30,7 +29,7 @@ export default function PlannedList({
     if (isTomorrow(d)) return { text: 'Domani', className: 'badge-date-tomorrow' };
     if (isPast(d)) return { text: 'Scaduto', className: 'badge-date-past' };
     return {
-      text: format(d, 'dd MMM yyyy', { locale: it }),
+      text: formatDateShort(d),
       className: 'badge-date-upcoming',
     };
   };

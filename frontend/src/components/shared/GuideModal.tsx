@@ -84,6 +84,17 @@ const SECTIONS: Section[] = [
       </>
     ),
   },
+  {
+    title: 'Profilo e valuta',
+    emoji: '🪙',
+    content: (
+      <>
+        <p>Apri il tuo <strong>profilo</strong> dall'avatar in alto a destra → <strong>Impostazioni</strong>: qui gestisci i dati account, la sicurezza e le <strong>preferenze</strong>.</p>
+        <p>In <strong>Preferenze</strong> scegli la <strong>valuta</strong> usata in tutta l'app (€, $, £…): simbolo e formato degli importi si aggiornano <strong>ovunque all'istante</strong>, senza ricaricare.</p>
+        <p>La valuta ti viene chiesta già in fase di <strong>registrazione</strong> (proposta in base alla lingua del dispositivo) e puoi cambiarla quando vuoi dal profilo.</p>
+      </>
+    ),
+  },
 ];
 
 function AccordionItem({ section, isOpen, onToggle }: {

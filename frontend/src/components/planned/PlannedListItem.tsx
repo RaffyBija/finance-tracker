@@ -24,14 +24,12 @@ export default function PlannedListItem({
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-start gap-4 flex-1 min-w-0">
           <div
-            className={`w-12 h-12 rounded-full flex-center flex-shrink-0 ${
-              planned.type === 'INCOME' ? 'bg-success-100' : 'bg-danger-100'
-            } ${planned.isPaid ? 'opacity-50' : ''}`}
+            className={`${planned.type === 'INCOME' ? 'tx-list-icon-income' : 'tx-list-icon-expense'}${planned.isPaid ? ' opacity-50' : ''}`}
           >
             {planned.type === 'INCOME' ? (
-              <TrendingUp className="icon-lg text-success-600" />
+              <TrendingUp className="icon-lg" />
             ) : (
-              <TrendingDown className="icon-lg text-danger-600" />
+              <TrendingDown className="icon-lg" />
             )}
           </div>
           <div className="flex-1 min-w-0">

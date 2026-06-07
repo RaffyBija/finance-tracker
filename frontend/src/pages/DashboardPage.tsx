@@ -14,7 +14,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatMonthYear, formatMonth, formatMonthShort } from '../utils/date';
 import BalanceOutlookCard from '../components/dashboard/BalanceOutlookCard';
 import SubscriptionCostCard from '../components/dashboard/SubscriptionCostCard';
 import TransactionRow from '../components/shared/TransactionRow';
@@ -121,7 +121,7 @@ export default function DashboardPage() {
   const formattedTrend = useMemo(() =>
     monthlyTrend.map((item) => ({
       ...item,
-      month: format(new Date(item.month + '-01'), 'MMM', { locale: it }),
+      month: formatMonthShort(item.month + '-01'),
     })),
     [monthlyTrend]
   );
@@ -162,7 +162,7 @@ export default function DashboardPage() {
               <ChevronLeft size={15} />
             </button>
             <span className="dashboard-month-pill">
-              {format(currentMonth, 'MMMM yyyy', { locale: it })}
+              {formatMonthYear(currentMonth)}
             </span>
             <button onClick={() => setCurrentMonth((d) => addMonths(d, 1))} disabled={isCurrentMonth} className="dashboard-nav-btn">
               <ChevronRight size={15} />
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             <h2 className="card-header-title mb-4">
               Spese per Categoria
               <span className="dashboard-pie-month">
-                {format(currentMonth, 'MMMM', { locale: it })}
+                {formatMonth(currentMonth)}
               </span>
             </h2>
             {expenseCategoryStats.length === 0 ? (

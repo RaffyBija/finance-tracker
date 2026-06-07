@@ -264,6 +264,15 @@
     @apply transaction-card-icon bg-danger-100 text-danger-600;
   }
 
+  /* Badge icona grande per le righe lista pianificate/ricorrenti
+     (ex wrapper one-off w-12 inline, duplicato tra i due file). */
+  .tx-list-icon {
+    @apply w-12 h-12 rounded-full flex-shrink-0;
+    @apply flex items-center justify-center;
+  }
+  .tx-list-icon-income { @apply tx-list-icon bg-success-100 text-success-600; }
+  .tx-list-icon-expense { @apply tx-list-icon bg-danger-100 text-danger-600; }
+
   .transaction-card-info {
     @apply flex flex-col min-w-0;
   }
@@ -533,6 +542,10 @@
 .dark .transaction-card-detail-body { border-top-color: #44403c; }
 .dark .transaction-card-detail-label { color: #57534e; }
 .dark .transaction-card-detail-value { color: #e7e5e4; }
+/* tx-list-icon: lo sfondo segue gli override dark di bg-success/danger-100
+   (l'@apply nel layer bake-rebbe il valore light, vedi feedback-dark-mode). */
+.dark .tx-list-icon-income { background-color: #064e3b; }
+.dark .tx-list-icon-expense { background-color: #450a0a; }
 
 /* ============================================================
    PROJECTED DETAIL FILTER BAR

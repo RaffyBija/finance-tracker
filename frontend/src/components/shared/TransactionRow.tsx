@@ -1,6 +1,5 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort } from '../../utils/date';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import type { Transaction } from '../../types';
 
@@ -24,7 +23,7 @@ export default function TransactionRow({ transaction }: { transaction: Transacti
           </p>
           <p className="transaction-card-subtitle">
             {transaction.category?.name || 'Senza categoria'} •{' '}
-            {format(new Date(transaction.date), 'dd MMM yyyy', { locale: it })}
+            {formatDateShort(transaction.date)}
           </p>
         </div>
       </div>

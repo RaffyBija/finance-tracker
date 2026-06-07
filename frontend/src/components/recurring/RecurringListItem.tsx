@@ -1,6 +1,5 @@
 import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar, PlayCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort } from '../../utils/date';
 import type { RecurringTransaction, Frequency, RecurringDueItem } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
@@ -57,15 +56,11 @@ export default function RecurringListItem({
     <div className={cardClass} onClick={handleCardClick}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-          <div
-            className={`w-12 h-12 rounded-full flex-center flex-shrink-0 ${
-              recurring.type === 'INCOME' ? 'bg-success-100' : 'bg-danger-100'
-            }`}
-          >
+          <div className={recurring.type === 'INCOME' ? 'tx-list-icon-income' : 'tx-list-icon-expense'}>
             {recurring.type === 'INCOME' ? (
-              <TrendingUp className="icon-lg text-success-600" />
+              <TrendingUp className="icon-lg" />
             ) : (
-              <TrendingDown className="icon-lg text-danger-600" />
+              <TrendingDown className="icon-lg" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -97,11 +92,8 @@ export default function RecurringListItem({
               </div>
             </div>
             <p className="text-xs text-neutral-400 mt-1">
-              Dal {format(new Date(recurring.startDate), 'dd MMM yyyy', { locale: it })}
-              {recurring.endDate &&
-                ` al ${format(new Date(recurring.endDate), 'dd MMM yyyy', {
-                  locale: it,
-                })}`}
+              Dal {formatDateShort(recurring.startDate)}
+              {recurring.endDate && ` al ${formatDateShort(recurring.endDate)}`}
             </p>
           </div>
         </div>

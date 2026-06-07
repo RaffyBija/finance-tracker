@@ -1,6 +1,5 @@
 import { Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateFull } from '../../utils/date';
 import type { PlannedTransaction } from '../../types';
 import PlannedListItem from './PlannedListItem';
 
@@ -31,7 +30,7 @@ export default function PlannedDateGroup({
       <div className="card-header flex items-center gap-3">
         <Calendar className="icon-md text-neutral-600" />
         <span className="font-semibold text-neutral-900">
-          {format(new Date(date), 'EEEE, dd MMMM yyyy', { locale: it })}
+          {formatDateFull(date)}
         </span>
         <span className={badgeClassName}>{badgeText}</span>
       </div>

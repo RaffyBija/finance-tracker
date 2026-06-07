@@ -1,6 +1,5 @@
 import { Trash2, Pencil, AlertTriangle, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { formatDateShort } from '../../utils/date';
 import type { Budget } from '../../types';
 import EmptyState from '../shared/EmptyState';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
@@ -59,11 +58,8 @@ export default function BudgetList({
                 {budget.category?.name || 'Tutte le categorie'} • {budget.period}
               </p>
               <p className="text-xs text-neutral-400 mt-1">
-                {format(new Date(budget.startDate), 'dd MMM yyyy', { locale: it })}
-                {budget.endDate &&
-                  ` - ${format(new Date(budget.endDate), 'dd MMM yyyy', {
-                    locale: it,
-                  })}`}
+                {formatDateShort(budget.startDate)}
+                {budget.endDate && ` - ${formatDateShort(budget.endDate)}`}
               </p>
             </div>
             <div className="flex gap-2">
