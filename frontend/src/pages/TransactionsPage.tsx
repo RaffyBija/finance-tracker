@@ -29,9 +29,12 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0);
   const [prevPages, setPrevPages] = useState<Transaction[]>([]);
 
-  // ── Espansione riga ──
+  // ── Espansione riga (solo mobile: su desktop il compact row mostra già tutto) ──
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
+  const toggleExpand = (id: string) => {
+    if (window.matchMedia('(min-width: 481px)').matches) return;
+    setExpandedId(prev => (prev === id ? null : id));
+  };
 
   // ── Modal ──
   const [showModal, setShowModal] = useState(false);
@@ -39,6 +42,14 @@ export default function TransactionsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
+
+  // Su desktop le righe sono statiche: collassa l'eventuale riga espansa al passaggio da mobile
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 481px)');
+    const onChange = () => { if (mq.matches) setExpandedId(null); };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   // Debounce: aggiorna il valore API 400ms dopo l'ultima digitazione e resetta la paginazione
   useEffect(() => {
@@ -218,15 +229,23 @@ export default function TransactionsPage() {
                         }
                       </div>
                       <div className="transaction-card-info">
-                        <p>{formatDateShort(transaction.date)}</p>
                         <p className="transaction-card-title">
                           {transaction.description || 'Nessuna descrizione'}
                         </p>
                         <p className="transaction-card-subtitle">
-                          {transaction.category?.name || 'Senza categoria'}
+                          <span className="transaction-card-meta-category">
+                            {transaction.category?.name || 'Senza categoria'}
+                          </span>
+                          <span className="transaction-card-meta-sep" aria-hidden="true">·</span>
+                          <span className="transaction-card-meta-date">
+                            {formatDateShort(transaction.date)}
+                          </span>
                           {accounts.length > 1 && transaction.account && (
-                            <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: transaction.account.color, display: 'inline-block' }} />
+                            <span className="transaction-card-subtitle-account">
+                              <span
+                                className="transaction-card-subtitle-dot"
+                                style={{ backgroundColor: transaction.account.color }}
+                              />
                               {transaction.account.name}
                             </span>
                           )}
@@ -334,11 +353,11 @@ export default function TransactionsPage() {
           <button
             onClick={handleLoadMore}
             disabled={isFetching}
-            className="btn btn-outline-primary btn-md min-w-[200px]"
+            className="btn btn-outline-primary btn-md"
           >
             {isFetching ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+              <span className="btn-spinner-label">
+                <span className="btn-spinner" />
                 Caricamento...
               </span>
             ) : (

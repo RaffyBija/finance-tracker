@@ -37,13 +37,13 @@ export default function FilterNav({
   };
 
   return (
-    <div className="card card-md mb-6">
+    <div className="card card-md filter-bar">
       {/* Riga 1: filtri tipo + ricerca */}
-      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
-        <div className="flex gap-2 sm:gap-4">
+      <div className="filter-bar-row">
+        <div className="filter-types">
           <button
             onClick={() => setFilterType('ALL')}
-            className={`btn-filter flex-1 sm:flex-initial ${
+            className={`btn-filter ${
               filterType === 'ALL' ? 'btn-filter-all-active' : 'btn-filter-inactive'
             }`}
           >
@@ -51,7 +51,7 @@ export default function FilterNav({
           </button>
           <button
             onClick={() => setFilterType('INCOME')}
-            className={`btn-filter flex-1 sm:flex-initial ${
+            className={`btn-filter ${
               filterType === 'INCOME' ? 'btn-filter-income-active' : 'btn-filter-inactive'
             }`}
           >
@@ -59,46 +59,46 @@ export default function FilterNav({
           </button>
           <button
             onClick={() => setFilterType('EXPENSE')}
-            className={`btn-filter flex-1 sm:flex-initial ${
+            className={`btn-filter ${
               filterType === 'EXPENSE' ? 'btn-filter-expense-active' : 'btn-filter-inactive'
             }`}
           >
             Uscite
           </button>
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="filter-search">
           <SearchBar setSearchFilter={(value) => setSearchFilter(value)} />
         </div>
       </div>
 
       {/* Riga 2: filtro date (solo se setDateRange è passato) */}
       {setDateRange && (
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center mt-3 pt-3 border-t border-neutral-100">
-          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide self-center whitespace-nowrap">
+        <div className="filter-period">
+          <span className="filter-period-label">
             Periodo
           </span>
-          <div className="flex gap-2 flex-1 items-center">
+          <div className="filter-date-range">
             <input
               type="date"
               value={dateRange?.startDate ?? ''}
               onChange={handleStartDate}
               max={dateRange?.endDate || undefined}
-              className="form-input flex-1 text-sm h-9"
+              className="form-input"
               placeholder="Da"
             />
-            <span className="text-neutral-400 text-sm flex-shrink-0">→</span>
+            <span className="filter-date-range-sep">→</span>
             <input
               type="date"
               value={dateRange?.endDate ?? ''}
               onChange={handleEndDate}
               min={dateRange?.startDate || undefined}
-              className="form-input flex-1 text-sm h-9"
+              className="form-input"
               placeholder="A"
             />
             {hasDateFilter && (
               <button
                 onClick={handleClearDates}
-                className="btn-icon-neutral flex-shrink-0"
+                className="btn-icon-neutral"
                 title="Rimuovi filtro date"
                 aria-label="Rimuovi filtro date"
               >

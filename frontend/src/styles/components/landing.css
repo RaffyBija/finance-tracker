@@ -10,34 +10,31 @@
   background: #fff;
 }
 
-/* ── Lang Toggle ── */
+/* ── Lang Toggle (lives inside the navbar) ── */
 .landing-lang-toggle {
-  position: fixed;
-  top: 20px;
-  right: 24px;
-  z-index: 1000;
   display: flex;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  gap: 2px;
+  background: #f5f5f4;
   border: 1px solid #e7e5e4;
   border-radius: 9999px;
-  padding: 4px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 3px;
 }
 
 .landing-lang-btn {
-  padding: 6px 14px;
+  padding: 5px 11px;
   border: none;
   border-radius: 9999px;
   font-family: 'Sora', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   background: transparent;
   color: #57534e;
+}
+
+.landing-lang-btn:hover:not(.is-active) {
+  color: #1c1917;
 }
 
 .landing-lang-btn.is-active {
@@ -57,10 +54,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  /* Flat solid surface (the brand rejects glassmorphism); definition comes
+     from a warm Stone hairline at rest and a shadow on scroll. */
+  background: #ffffff;
+  border-bottom: 1px solid #e7e5e4;
   transition: box-shadow 0.3s ease;
 }
 
@@ -80,8 +77,19 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  /* Space for the fixed lang-toggle (≈78px) + nav right-padding (24px) */
-  padding-right: 104px;
+}
+
+.landing-nav-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #57534e;
+  text-decoration: none;
+  padding: 8px 4px;
+  transition: color 0.2s ease;
+}
+
+.landing-nav-link:hover {
+  color: #0d9488;
 }
 
 /* ── Buttons ── */
@@ -146,15 +154,50 @@
   font-size: 16px;
 }
 
+/* ── Focus ── */
+/* Canonical teal focus ring (DESIGN.md) for keyboard users, replacing the
+   default browser outline on every interactive element. */
+.landing-btn-primary:focus-visible,
+.landing-btn-ghost:focus-visible,
+.landing-nav-link:focus-visible,
+.landing-footer-link:focus-visible,
+.landing-wordmark:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
+}
+
+.landing-lang-btn:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 1px;
+}
+
 /* ── Hero ── */
+/* Mobile-first: copy stacked above the product preview. The split into a
+   two-column layout happens at >=1024px (see Responsive). */
 .landing-hero {
-  padding: 148px 80px 100px;
+  padding: 130px 24px 80px;
   background: #fafafa;
+  overflow: hidden;
 }
 
 .landing-hero-inner {
   max-width: 1100px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.landing-hero-copy {
+  min-width: 0;
+}
+
+/* The visual column is a query container so the mock reflows to its own
+   width, complete and readable, instead of being clipped or driven by the
+   viewport. */
+.landing-hero-visual {
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .landing-hero-badge {
@@ -165,7 +208,7 @@
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 600;
-  color: #0d9488;
+  color: #0f766e;
   margin-bottom: 28px;
 }
 
@@ -198,25 +241,14 @@
 }
 
 /* ── Demo / Mock Browser ── */
-.landing-mock-section {
-  padding: 0 80px 100px;
-  overflow: hidden;
-}
-
-.landing-mock-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
+/* A quiet caption, not a tracked kicker, so the preview reads as "this is a
+   preview" without competing with the section eyebrow. */
 .landing-mock-label {
-  text-align: center;
-  font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 13px;
-  font-weight: 600;
-  color: #a8a29e;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 32px;
+  font-weight: 500;
+  color: #78716c;
+  letter-spacing: 0.01em;
+  margin: 0 0 20px;
 }
 
 .landing-browser {
@@ -592,12 +624,11 @@
 }
 
 .landing-features-eyebrow {
-  font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 2px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #0d9488;
+  color: #0f766e;
   margin-bottom: 14px;
   display: block;
   opacity: 0;
@@ -775,7 +806,7 @@
 
 .landing-footer-desc {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.6);
   line-height: 1.7;
   max-width: 260px;
   margin: 0;
@@ -784,11 +815,10 @@
 .landing-footer-col-label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.4);
   margin-bottom: 16px;
-  font-family: 'DM Mono', ui-monospace, monospace;
   display: block;
 }
 
@@ -902,29 +932,55 @@
   }
 }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .landing-nav        { padding: 0 24px; }
-  .landing-nav-links  { padding-right: 90px; }
-
-  .landing-hero         { padding: 130px 24px 80px; }
-  .landing-mock-section { padding: 0 24px 80px; }
-
+/* ── Mock: container-query reflow ──
+   The mock adapts to the width of its own column (.landing-hero-visual is the
+   query container), so it stays complete and readable whether it sits in the
+   narrow desktop preview column or full-width when the hero is stacked. */
+@container (max-width: 880px) {
   .landing-mock-sidebar { display: none; }
   .landing-mock-layout  { grid-template-columns: 1fr; }
   .landing-mock-stats   { grid-template-columns: repeat(2, 1fr); }
   .landing-mock-charts  { grid-template-columns: 1fr; }
+}
+
+@container (max-width: 420px) {
+  .landing-mock-stats      { gap: 8px; }
+  .landing-mock-stat       { padding: 12px; }
+  .landing-mock-stat-value { font-size: 17px; }
+  .landing-mock-donut-area { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Desktop: split hero (copy left, live product preview right) ──
+   Uses the same 80px gutter + 1100px inner as the sections below, so the
+   copy's left edge lines up with the features/footer content at every width
+   instead of drifting on wide screens. The preview fills its column and
+   reflows via the container query above. */
+@media (min-width: 1024px) {
+  .landing-hero {
+    padding: 148px 80px 100px;
+  }
+  .landing-hero-inner {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(32px, 3vw, 56px);
+  }
+  .landing-hero-copy {
+    max-width: 460px;
+  }
+  .landing-hero-copy .landing-hero-title {
+    font-size: clamp(40px, 3.2vw, 54px);
+  }
+  .landing-hero-visual .landing-browser {
+    width: 100%;
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .landing-nav { padding: 0 24px; }
 
   .landing-features-section { padding: 80px 24px; }
-  .landing-features-grid    { grid-template-columns: 1fr; }
-
-  /* Remove asymmetric last-row rule for single column */
-  .landing-feature-item:nth-last-child(-n+2) {
-    border-bottom: 1px solid #f5f5f4;
-  }
-  .landing-feature-item:last-child {
-    border-bottom: none;
-  }
 
   .landing-cta-section { padding: 60px 24px; }
 
@@ -937,8 +993,20 @@
   }
 }
 
+@media (max-width: 700px) {
+  .landing-features-grid { grid-template-columns: 1fr; }
+
+  /* Single column: restore the borders the desktop last-row rule removes,
+     drop only the true last item's border. */
+  .landing-feature-item:nth-last-child(-n+2) {
+    border-bottom: 1px solid #f5f5f4;
+  }
+  .landing-feature-item:last-child {
+    border-bottom: none;
+  }
+}
+
 @media (max-width: 600px) {
-  .landing-nav-links  { padding-right: 80px; }
   .landing-nav-ghost  { display: none; }
 
   .landing-hero-title { letter-spacing: -1px; }
@@ -946,34 +1014,47 @@
   .landing-hero-ctas { flex-direction: column; }
   .landing-hero-ctas .landing-btn-primary,
   .landing-hero-ctas .landing-btn-ghost { justify-content: center; width: 100%; box-sizing: border-box; }
-
-  .landing-mock-stats { grid-template-columns: repeat(2, 1fr); }
-  .landing-mock-donut-area { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 480px) {
-  .landing-nav        { padding: 0 16px; }
-  .landing-nav-links  { padding-right: 72px; gap: 8px; }
+  .landing-nav        { padding: 0 12px; }
+  .landing-nav-links  { gap: 8px; }
+  .landing-wordmark   { font-size: 16px; white-space: nowrap; }
+  .landing-lang-btn   { padding: 5px 8px; }
+  .landing-nav-links .landing-btn-primary {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
 
-  .landing-hero         { padding: 120px 16px 64px; }
-  .landing-mock-section { padding: 0 16px 64px; }
-
-  .landing-mock-stats {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-  .landing-mock-stat {
-    padding: 12px;
-  }
-  .landing-mock-stat-value {
-    font-size: 17px;
-  }
+  .landing-hero { padding: 120px 16px 64px; }
 
   .landing-features-section { padding: 64px 16px; }
   .landing-cta-section      { padding: 48px 16px; }
 
   .landing-footer       { padding: 40px 16px; }
   .landing-footer-desc  { max-width: 100%; }
+}
 
-  .landing-lang-toggle { right: 16px; }
+@media (max-width: 360px) {
+  /* Below ~340px the wordmark, toggle and CTA can't share one row. Drop the
+     nav CTA here; the full-width hero CTA right below carries conversion. */
+  .landing-nav-links .landing-btn-primary { display: none; }
+}
+
+/* ── Touch: enlarge the slim nav tap targets on coarse pointers ──
+   Vertical padding only, so the tight small-screen nav width is untouched. */
+@media (pointer: coarse) {
+  .landing-nav-link {
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+  .landing-nav-links .landing-btn-primary {
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+  .landing-lang-btn {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
 }

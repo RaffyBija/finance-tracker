@@ -366,6 +366,103 @@
   }
 
   /* ============================
+     FILTER BAR (Transactions / Recurring / Planned)
+     ============================ */
+  .filter-bar {
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-bar-row {
+    @apply flex flex-col gap-4 items-stretch justify-between;
+  }
+
+  .filter-types {
+    @apply flex gap-2;
+  }
+
+  .filter-types .btn-filter {
+    flex: 1 1 0;
+  }
+
+  .filter-search {
+    width: 100%;
+  }
+
+  .filter-period {
+    @apply flex flex-col gap-2 items-stretch;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f5f5f4;
+  }
+
+  .filter-period-label {
+    @apply text-xs font-semibold uppercase self-center whitespace-nowrap;
+    letter-spacing: 0.025em;
+    color: #78716c;
+  }
+
+  @media (min-width: 640px) {
+    .filter-bar-row {
+      @apply flex-row items-center;
+    }
+    .filter-types {
+      @apply gap-4;
+    }
+    .filter-types .btn-filter {
+      flex: 0 1 auto;
+    }
+    .filter-search {
+      width: auto;
+    }
+    .filter-period {
+      @apply flex-row items-center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+    }
+  }
+
+  /* ============================
+     TRANSACTION DATE-RANGE FILTER
+     ============================ */
+  .filter-date-range {
+    @apply flex flex-1 items-center gap-2;
+  }
+
+  /* min-width:0 lets the native date inputs shrink to share the row instead
+     of forcing horizontal overflow past the card on small screens. */
+  .filter-date-range .form-input {
+    @apply flex-1 text-sm;
+    min-width: 0;
+    height: 36px;
+  }
+
+  .filter-date-range-sep {
+    @apply text-sm flex-shrink-0;
+    color: #a8a29e;
+  }
+
+  .filter-date-range .btn-icon-neutral {
+    flex-shrink: 0;
+  }
+
+  /* Mobile: stack the two date fields so neither clips at the screen edge. */
+  @media (max-width: 540px) {
+    .filter-date-range {
+      @apply flex-col items-stretch;
+    }
+    .filter-date-range .form-input {
+      @apply w-full;
+    }
+    .filter-date-range-sep {
+      display: none;
+    }
+    .filter-date-range .btn-icon-neutral {
+      align-self: flex-end;
+    }
+  }
+
+  /* ============================
      RESPONSIVE
      ============================ */
   @media (max-width: 640px) {
@@ -432,6 +529,9 @@
   color: #f5f5f4;
 }
 .dark .form-search:focus { border-color: #0d9488; }
+
+/* Filter-bar period divider (border-neutral-100 baked light by @apply) */
+.dark .filter-period { border-top-color: #292524; }
 
 /* ── Selettore colore (unificato: conti, categorie) ──────────────────────────
    Robusto cross-browser, incluso Safari/WebKit: flex-basis fisso + min-width

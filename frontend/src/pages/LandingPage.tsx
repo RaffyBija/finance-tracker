@@ -20,7 +20,7 @@ const t = {
     heroTitle1: 'Prendi il controllo',
     heroTitle2: 'delle tue',
     heroTitleAccent: 'finanze personali',
-    heroSub: "Traccia entrate e uscite, gestisci budget, pianifica spese future e visualizza trend mensili — tutto in un'unica dashboard intuitiva.",
+    heroSub: "Traccia entrate e uscite, gestisci budget, pianifica spese future e visualizza i trend mensili. Tutto in un'unica dashboard intuitiva.",
     heroCta: 'Inizia subito, è gratis',
     heroCtaSecondary: 'Scopri le funzionalità',
     featuresEyebrow: 'Funzionalità',
@@ -42,12 +42,13 @@ const t = {
     navSignIn: 'Accedi',
     navCta: 'Inizia gratis →',
     footerDesc: 'Il tuo strumento personale per gestire le finanze quotidiane con semplicità e chiarezza.',
+    footerRights: 'Tutti i diritti riservati.',
     footerApp: 'App',
     footerLegal: 'Legale',
     footerSignIn: 'Accedi',
     footerRegister: 'Registrati',
     footerFeatures: 'Funzionalità',
-    demoLabel: "// Anteprima dell'interfaccia",
+    demoLabel: "Anteprima dell'interfaccia",
     mockPeriod: 'Marzo 2026',
     mockIncome: 'Entrate',
     mockExpense: 'Uscite',
@@ -57,7 +58,7 @@ const t = {
     mockCategory: 'Per categoria',
     mockRecent: 'Transazioni recenti',
     mockMonths: ['Ott', 'Nov', 'Dic', 'Gen', 'Feb', 'Mar'],
-    mockNav: ['Dashboard', 'Transazioni', 'Budget', 'Categorie', 'Ricorrenti', 'Pianificati'],
+    mockNav: ['Dashboard', 'Transazioni', 'Categorie', 'Budget', 'Ricorrenti', 'Pianificati'],
     mockLegend: ['Affitto', 'Stipendio', 'Spesa', 'Altro'],
     mockTxItems: [
       { icon: '🏠', bg: '#f0fdfa', name: 'Affitto',       date: '1 Mar',  amount: '−€850,00',   pos: false },
@@ -70,7 +71,7 @@ const t = {
     heroTitle1: 'Take control of',
     heroTitle2: 'your',
     heroTitleAccent: 'personal finances',
-    heroSub: 'Track income and expenses, manage budgets, plan future transactions and visualize monthly trends — all in one intuitive dashboard.',
+    heroSub: 'Track income and expenses, manage budgets, plan future transactions and visualize monthly trends. All in one intuitive dashboard.',
     heroCta: 'Start for free',
     heroCtaSecondary: 'Explore features',
     featuresEyebrow: 'Features',
@@ -92,12 +93,13 @@ const t = {
     navSignIn: 'Sign in',
     navCta: 'Get started →',
     footerDesc: 'Your personal tool to manage daily finances with simplicity and clarity.',
+    footerRights: 'All rights reserved.',
     footerApp: 'App',
     footerLegal: 'Legal',
     footerSignIn: 'Sign in',
     footerRegister: 'Register',
     footerFeatures: 'Features',
-    demoLabel: '// Interface preview',
+    demoLabel: 'Interface preview',
     mockPeriod: 'March 2026',
     mockIncome: 'Income',
     mockExpense: 'Expenses',
@@ -132,7 +134,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -191,24 +193,22 @@ export default function LandingPage() {
   return (
     <div className="landing-root">
 
-      {/* Lang Toggle */}
-      <div className="landing-lang-toggle">
-        {(['it', 'en'] as Lang[]).map(code => (
-          <button
-            key={code}
-            onClick={() => setLang(code)}
-            className={`landing-lang-btn${lang === code ? ' is-active' : ''}`}
-          >
-            {code.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
       {/* Navbar */}
       <nav className={`landing-nav${scrolled ? ' is-scrolled' : ''}`}>
         <a href="#" className="landing-wordmark">Finance Tracker</a>
         <div className="landing-nav-links">
-          <Link to="/login" className="landing-btn-ghost landing-nav-ghost">{l.navSignIn}</Link>
+          <Link to="/login" className="landing-nav-link landing-nav-ghost">{l.navSignIn}</Link>
+          <div className="landing-lang-toggle">
+            {(['it', 'en'] as Lang[]).map(code => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                className={`landing-lang-btn${lang === code ? ' is-active' : ''}`}
+              >
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <Link to="/register" className="landing-btn-primary">{l.navCta}</Link>
         </div>
       </nav>
@@ -216,29 +216,27 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="landing-hero">
         <div className="landing-hero-inner">
-          <div className="landing-hero-badge landing-anim-1">{l.badge}</div>
-          <h1 className="landing-hero-title landing-anim-2">
-            {l.heroTitle1}<br />{l.heroTitle2}{' '}
-            <span className="landing-hero-accent">{l.heroTitleAccent}</span>
-          </h1>
-          <p className="landing-hero-sub landing-anim-3">{l.heroSub}</p>
-          <div className="landing-hero-ctas landing-anim-4">
-            <Link to="/register" className="landing-btn-primary landing-btn-primary-lg">
-              {l.heroCta}
-            </Link>
-            <a href="#features" className="landing-btn-ghost landing-btn-ghost-lg">
-              {l.heroCtaSecondary}
-            </a>
+          <div className="landing-hero-copy">
+            <div className="landing-hero-badge landing-anim-1">{l.badge}</div>
+            <h1 className="landing-hero-title landing-anim-2">
+              {l.heroTitle1}<br />{l.heroTitle2}{' '}
+              <span className="landing-hero-accent">{l.heroTitleAccent}</span>
+            </h1>
+            <p className="landing-hero-sub landing-anim-3">{l.heroSub}</p>
+            <div className="landing-hero-ctas landing-anim-4">
+              <Link to="/register" className="landing-btn-primary landing-btn-primary-lg">
+                {l.heroCta}
+              </Link>
+              <a href="#features" className="landing-btn-ghost landing-btn-ghost-lg">
+                {l.heroCtaSecondary}
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Demo / Mock Browser */}
-      <section className="landing-mock-section">
-        <div className="landing-mock-inner">
-          <p className="landing-mock-label">{l.demoLabel}</p>
+          <div className="landing-hero-visual">
+            <p className="landing-mock-label">{l.demoLabel}</p>
 
-          <div ref={mockRef} className={`landing-browser${mockVisible ? ' is-visible' : ''}`}>
+            <div ref={mockRef} className={`landing-browser${mockVisible ? ' is-visible' : ''}`}>
             {/* Browser chrome */}
             <div className="landing-browser-bar">
               <div className="landing-browser-dots">
@@ -367,6 +365,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
         </div>
       </section>
@@ -441,7 +440,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="landing-footer-bottom">
-          <span>© 2026 Finance Tracker. All rights reserved.</span>
+          <span>© 2026 Finance Tracker. {l.footerRights}</span>
           <div className="landing-footer-made">
             <span>🇮🇹</span><span>Made in Italy</span>
           </div>

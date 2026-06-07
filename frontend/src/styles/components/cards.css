@@ -243,12 +243,12 @@
      ============================ */
   .transaction-card {
     @apply flex items-center justify-between;
-    @apply p-4 hover:bg-neutral-50;
+    @apply px-4 py-3 hover:bg-neutral-50;
     @apply transition-colors duration-150;
   }
 
   .transaction-card-left {
-    @apply flex items-center gap-4 min-w-0 flex-1;
+    @apply flex items-center gap-3 min-w-0 flex-1;
   }
 
   .transaction-card-icon {
@@ -393,7 +393,35 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
+/* Meta line: category · date (date demoted from its own row to here, so the
+   description leads the row — ledger-style scan hierarchy). */
+.transaction-card-meta-sep {
+  margin: 0 0.375rem;
+  color: #d6d3d1;
+}
+
+.transaction-card-meta-date {
+  color: #a8a29e;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Account chip inside the subtitle (dot color set inline from account.color) */
+.transaction-card-subtitle-account {
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.transaction-card-subtitle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 /* Su mobile: gap più stretto e font importo leggermente ridotto */
 @media (max-width: 480px) {
   .transaction-card {
@@ -542,6 +570,8 @@
 .dark .transaction-card-detail-body { border-top-color: #44403c; }
 .dark .transaction-card-detail-label { color: #57534e; }
 .dark .transaction-card-detail-value { color: #e7e5e4; }
+.dark .transaction-card-meta-sep { color: #57534e; }
+.dark .transaction-card-meta-date { color: #78716c; }
 /* tx-list-icon: lo sfondo segue gli override dark di bg-success/danger-100
    (l'@apply nel layer bake-rebbe il valore light, vedi feedback-dark-mode). */
 .dark .tx-list-icon-income { background-color: #064e3b; }

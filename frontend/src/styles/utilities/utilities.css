@@ -462,6 +462,10 @@
   margin-bottom: 0.5rem;
 }
 
+.list-pagination .btn {
+  min-width: 200px;
+}
+
 .list-result-count {
   text-align: center;
   font-size: 0.75rem;
