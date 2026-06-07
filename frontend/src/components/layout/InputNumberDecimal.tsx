@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface InputDecimalProps {
   setFormData: React.Dispatch<React.SetStateAction<any>>;
@@ -26,19 +26,27 @@ export const InputDecimal = ({
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
 
   const [rawAmount, setRawAmount] = useState<string>(toRaw(formData[field]));
-  const [isFocused, setIsFocused] = useState(false);
 
-  // Sincronizza con formData quando il campo non è in focus, oppure quando è
-  // vuoto (popolamento all'apertura del modale: il campo può essere già
-  // auto-focato ma senza valore digitato, quindi va comunque riempito).
-  // Mentre l'utente digita (rawAmount non vuoto + focus) non viene clobberato.
+  // Ultimo valore esterno di formData[field] effettivamente sincronizzato.
+  // Serve a distinguere una modifica ESTERNA (apertura modale, reset, cambio
+  // elemento in edit) dalla digitazione dell'utente: mentre si digita cambia
+  // solo `rawAmount`, NON formData[field] (committato solo onBlur).
+  const lastSyncedRef = useRef(formData[field]);
+
+  // Sincronizza solo quando formData[field] cambia davvero dall'esterno, a
+  // prescindere dal focus. Necessario perché ModalBase auto-foca il primo
+  // input all'apertura: senza questo, riaprendo il modale in edit il campo
+  // resterebbe bloccato sul valore stale registrato al mount (formData del
+  // parent viene popolato in un effect DOPO il mount dei figli).
   useEffect(() => {
-    if (!isFocused || rawAmount === '') setRawAmount(toRaw(formData[field]));
-  }, [formData[field], isFocused]);
+    if (formData[field] !== lastSyncedRef.current) {
+      lastSyncedRef.current = formData[field];
+      setRawAmount(toRaw(formData[field]));
+    }
+  }, [formData[field]]);
 
   // Handle per correggere l'input numerico decimale al blur
   const handleFixNumberInput = () => {
-    setIsFocused(false);
     let value = rawAmount.trim();
     if (!value || value === '-') {
       setFormData({ ...formData, [field]: 0 });
@@ -72,7 +80,6 @@ export const InputDecimal = ({
         onChange={(e) => setRawAmount(handleNormalizeNumberInput(e.target.value))}
         onBlur={handleFixNumberInput}
         onFocus={(e) => {
-          setIsFocused(true);
           if (e.target.value === '0') setRawAmount('');
         }}
         className="form-input"
