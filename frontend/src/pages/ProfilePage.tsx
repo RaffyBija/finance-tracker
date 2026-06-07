@@ -1,90 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 import { authAPI } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { useFormValidation } from '../hooks/useFormValidation';
 import FieldError from '../components/shared/FieldError';
-import { User, Lock, Trash2, ChevronRight, ShieldAlert, Sparkles, Check, Coins } from 'lucide-react';
+import {
+  User, SlidersHorizontal, Lock, FileText, Sparkles, Trash2,
+  ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor,
+} from 'lucide-react';
 import { CURRENCY_OPTIONS } from '../utils/currency';
 
-// ── Sezione: Piano ───────────────────────────────────────────────────────────
+// ── Sezione: Generale (identità + dati account) ──────────────────────────────
 
-function PlanSection() {
-  const { user } = useAuth();
-  const isPro = user?.isPro ?? false;
-
-  return (
-    <div className="card card-lg">
-      <div className="card-header">
-        <h2 className="card-title">Piano</h2>
-      </div>
-
-      <div className="plan-current">
-        <div className="plan-badge-row">
-          {isPro
-            ? <span className="pro-badge pro-badge-lg">PRO</span>
-            : <span className="plan-standard-badge">Standard</span>
-          }
-          <span className="plan-status-label">
-            {isPro ? 'Account Pro attivo' : 'Piano gratuito'}
-          </span>
-        </div>
-
-        <div className="plan-limits">
-          <div className="plan-limit-item">
-            <Check size={14} className="plan-limit-check" />
-            <span>Conti bancari / carte: fino a {isPro ? '10' : '3'}</span>
-          </div>
-          <div className="plan-limit-item">
-            <Check size={14} className="plan-limit-check" />
-            <span>Transazioni illimitate</span>
-          </div>
-          <div className="plan-limit-item">
-            <Check size={14} className="plan-limit-check" />
-            <span>Budget, ricorrenti e pianificate illimitati</span>
-          </div>
-          {isPro && (
-            <div className="plan-limit-item">
-              <Check size={14} className="plan-limit-check" />
-              <span>Accesso anticipato alle nuove funzionalità</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {!isPro && (
-        <div className="plan-upgrade">
-          <div className="plan-upgrade-content">
-            <Sparkles size={16} className="plan-upgrade-icon" />
-            <div>
-              <p className="plan-upgrade-title">Passa a Pro</p>
-              <p className="plan-upgrade-desc">Fino a 10 conti e accesso anticipato alle prossime funzionalità.</p>
-            </div>
-          </div>
-          <button className="btn btn-primary btn-sm" disabled>
-            Disponibile a breve
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Sezione: Dati Account ────────────────────────────────────────────────────
-
-function AccountSection() {
+function GeneralSection() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const [emailChangePending, setEmailChangePending] = useState(false); 
-  const [pendingEmailAddress, setPendingEmailAddress] = useState('');  
+  const [emailChangePending, setEmailChangePending] = useState(false);
+  const [pendingEmailAddress, setPendingEmailAddress] = useState('');
 
   const [formData, setFormData] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
   });
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
 
   const { errors, validate, clearError } = useFormValidation({
     name: (v: string) => {
@@ -114,12 +59,9 @@ function AccountSection() {
     setIsPending(true);
     try {
       const res = await authAPI.updateProfile(formData);
-
-      // Aggiorna il nome subito nel context
       updateUser(res.user ?? res);
 
       if (res.emailChangeRequested) {
-        // Email non aggiornata subito — in attesa di verifica
         setEmailChangePending(true);
         setPendingEmailAddress(formData.email);
         toast.info(res.message);
@@ -140,59 +82,60 @@ function AccountSection() {
   };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-          <User className="icon-md text-primary-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Dati account</h2>
-          <p className="text-sm text-neutral-500">Nome e indirizzo email</p>
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title">Generale</h2>
+        <p className="settings-section-desc">Le informazioni del tuo profilo.</p>
+      </div>
+
+      <div className="settings-identity">
+        <div className="settings-avatar">{initials}</div>
+        <div className="settings-identity-meta">
+          <div className="settings-identity-name-row">
+            <span className="settings-identity-name">{user?.name}</span>
+            {user?.isPro && <span className="pro-badge">PRO</span>}
+          </div>
+          <span className="settings-identity-email">{user?.email}</span>
         </div>
       </div>
 
       {!isEditing ? (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-            <div>
-              <p className="text-xs text-neutral-500 mb-0.5">Nome</p>
-              <p className="font-medium text-neutral-900">{user?.name}</p>
-            </div>
+        <div className="settings-fields">
+          <div className="settings-field">
+            <span className="settings-field-label">Nome</span>
+            <span className="settings-field-value">{user?.name}</span>
           </div>
-          <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-            <div>
-              <p className="text-xs text-neutral-500 mb-0.5">Email</p>
-              <p className="font-medium text-neutral-900">{user?.email}</p>
-            </div>
+          <div className="settings-field">
+            <span className="settings-field-label">Email</span>
+            <span className="settings-field-value">{user?.email}</span>
           </div>
+
           {emailChangePending && (
-            <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-warning-800 mb-1">
-                Verifica in attesa
-              </p>
-              <p className="text-sm text-warning-700">
+            <div className="settings-notice settings-notice-warning">
+              <p className="settings-notice-title">Verifica in attesa</p>
+              <p className="settings-notice-text">
                 Abbiamo inviato un link di conferma a{' '}
-                <span className="font-semibold">{pendingEmailAddress}</span>.
-                La tua email attuale rimane invariata fino al click sul link.
+                <strong>{pendingEmailAddress}</strong>. La tua email attuale resta
+                invariata fino al click sul link.
               </p>
             </div>
           )}
-          <button
-            onClick={() => setIsEditing(true)}
-            className="btn btn-outline-primary btn-md mt-2"
-          >
-            Modifica dati
-          </button>
+
+          <div className="settings-actions">
+            <button onClick={() => setIsEditing(true)} className="btn btn-primary btn-md">
+              Modifica dati
+            </button>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="settings-form">
           <div className="form-group">
             <label className="form-label">Nome</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => { setFormData({ ...formData, name: e.target.value }); clearError('name'); }}
-              className={`form-input ${errors.name ? 'form-input-error' : ''}`}
+              className={`form-input${errors.name ? ' form-input-error' : ''}`}
             />
             <FieldError message={errors.name} />
           </div>
@@ -203,12 +146,12 @@ function AccountSection() {
               type="email"
               value={formData.email}
               onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError('email'); }}
-              className={`form-input ${errors.email ? 'form-input-error' : ''}`}
+              className={`form-input${errors.email ? ' form-input-error' : ''}`}
             />
             <FieldError message={errors.email} />
           </div>
 
-          <div className="flex gap-3">
+          <div className="settings-actions">
             <button type="submit" disabled={isPending} className="btn btn-primary btn-md">
               {isPending ? 'Salvataggio...' : 'Salva modifiche'}
             </button>
@@ -218,11 +161,99 @@ function AccountSection() {
           </div>
         </form>
       )}
-    </div>
+    </>
   );
 }
 
-// ── Sezione: Sicurezza ───────────────────────────────────────────────────────
+// ── Sezione: Preferenze (tema + valuta) ──────────────────────────────────────
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: React.ElementType }[] = [
+  { value: 'light',  label: 'Chiaro',  icon: Sun     },
+  { value: 'dark',   label: 'Scuro',   icon: Moon    },
+  { value: 'system', label: 'Sistema', icon: Monitor },
+];
+
+function PreferencesSection() {
+  const { user, updateUser } = useAuth();
+  const { preference, setPreference } = useTheme();
+  const toast = useToast();
+  const [isPending, setIsPending] = useState(false);
+
+  const handleCurrencyChange = async (currency: string) => {
+    if (currency === user?.currency) return;
+    setIsPending(true);
+    try {
+      const res = await authAPI.updateProfile({ currency });
+      updateUser(res.user ?? res);
+      toast.success('Valuta aggiornata');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title">Preferenze</h2>
+        <p className="settings-section-desc">Aspetto e formato dell'app.</p>
+      </div>
+
+      <div className="settings-pref">
+        <div className="settings-pref-text">
+          <span className="settings-pref-title">Tema</span>
+          <span className="settings-pref-desc">Scegli l'aspetto o segui il sistema.</span>
+        </div>
+        <div className="theme-seg" role="group" aria-label="Tema">
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setPreference(value)}
+              className={`theme-seg-option${preference === value ? ' is-selected' : ''}`}
+              aria-pressed={preference === value}
+            >
+              <Icon size={15} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-divider" />
+
+      <div className="settings-pref settings-pref-stack">
+        <div className="settings-pref-text">
+          <span className="settings-pref-title">Valuta</span>
+          <span className="settings-pref-desc">Simbolo e formato degli importi, ovunque.</span>
+        </div>
+        <div className="settings-pref-control">
+          <select
+            className="form-select"
+            value={user?.currency ?? 'EUR'}
+            onChange={(e) => handleCurrencyChange(e.target.value)}
+            disabled={isPending}
+            aria-label="Valuta"
+            aria-busy={isPending}
+          >
+            {CURRENCY_OPTIONS.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
+          {isPending && (
+            <span className="settings-pref-status" role="status">
+              <span className="settings-spinner" aria-hidden="true" />
+              Salvataggio…
+            </span>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Sezione: Sicurezza (password) ────────────────────────────────────────────
 
 function SecuritySection() {
   const toast = useToast();
@@ -277,39 +308,33 @@ function SecuritySection() {
   };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-success-100 flex items-center justify-center flex-shrink-0">
-          <Lock className="icon-md text-success-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Sicurezza</h2>
-          <p className="text-sm text-neutral-500">Gestione password</p>
-        </div>
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title">Sicurezza</h2>
+        <p className="settings-section-desc">Gestisci la password del tuo account.</p>
       </div>
 
       {!isOpen ? (
-        <div className="flex justify-between items-center py-3 border-b border-neutral-100">
-          <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Password</p>
-            <p className="font-medium text-neutral-900">••••••••</p>
+        <div className="settings-fields">
+          <div className="settings-field">
+            <span className="settings-field-label">Password</span>
+            <span className="settings-field-value">••••••••</span>
           </div>
-          <button
-            onClick={() => setIsOpen(true)}
-            className="btn btn-outline-primary btn-sm flex items-center gap-1"
-          >
-            Modifica <ChevronRight className="icon-sm" />
-          </button>
+          <div className="settings-actions">
+            <button onClick={() => setIsOpen(true)} className="btn btn-primary btn-md">
+              Cambia password
+            </button>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="settings-form">
           <div className="form-group">
             <label className="form-label">Password attuale</label>
             <input
               type="password"
               value={formData.currentPassword}
               onChange={(e) => { setFormData({ ...formData, currentPassword: e.target.value }); clearError('currentPassword'); }}
-              className={`form-input ${errors.currentPassword ? 'form-input-error' : ''}`}
+              className={`form-input${errors.currentPassword ? ' form-input-error' : ''}`}
               placeholder="••••••••"
             />
             <FieldError message={errors.currentPassword} />
@@ -321,7 +346,7 @@ function SecuritySection() {
               type="password"
               value={formData.newPassword}
               onChange={(e) => { setFormData({ ...formData, newPassword: e.target.value }); clearError('newPassword'); }}
-              className={`form-input ${errors.newPassword ? 'form-input-error' : ''}`}
+              className={`form-input${errors.newPassword ? ' form-input-error' : ''}`}
               placeholder="Minimo 8 caratteri"
             />
             <FieldError message={errors.newPassword} />
@@ -333,13 +358,13 @@ function SecuritySection() {
               type="password"
               value={formData.confirmPassword}
               onChange={(e) => { setFormData({ ...formData, confirmPassword: e.target.value }); clearError('confirmPassword'); }}
-              className={`form-input ${errors.confirmPassword ? 'form-input-error' : ''}`}
+              className={`form-input${errors.confirmPassword ? ' form-input-error' : ''}`}
               placeholder="••••••••"
             />
             <FieldError message={errors.confirmPassword} />
           </div>
 
-          <div className="flex gap-3">
+          <div className="settings-actions">
             <button type="submit" disabled={isPending} className="btn btn-primary btn-md">
               {isPending ? 'Aggiornamento...' : 'Aggiorna password'}
             </button>
@@ -349,13 +374,99 @@ function SecuritySection() {
           </div>
         </form>
       )}
-    </div>
+    </>
   );
 }
 
-// ── Sezione: Zona pericolosa ─────────────────────────────────────────────────
+// ── Sezione: Privacy ─────────────────────────────────────────────────────────
 
-function DangerZoneSection() {
+function PrivacySection() {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title">Privacy</h2>
+        <p className="settings-section-desc">Come trattiamo e proteggiamo i tuoi dati.</p>
+      </div>
+
+      <button onClick={() => navigate('/privacy')} className="settings-link-row">
+        <span className="settings-link-row-main">
+          <FileText size={17} className="settings-link-row-icon" />
+          <span>
+            <span className="settings-link-row-title">Informativa sulla privacy</span>
+            <span className="settings-link-row-desc">Leggi la policy completa</span>
+          </span>
+        </span>
+        <ChevronRight size={16} className="settings-link-row-chevron" />
+      </button>
+    </>
+  );
+}
+
+// ── Sezione: Piano ───────────────────────────────────────────────────────────
+
+function PlanSection() {
+  const { user } = useAuth();
+  const isPro = user?.isPro ?? false;
+
+  return (
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title">Piano</h2>
+        <p className="settings-section-desc">Il tuo abbonamento e i relativi limiti.</p>
+      </div>
+
+      <div className="plan-badge-row">
+        {isPro
+          ? <span className="pro-badge pro-badge-lg">PRO</span>
+          : <span className="plan-standard-badge">Standard</span>
+        }
+        <span className="plan-status-label">
+          {isPro ? 'Account Pro attivo' : 'Piano gratuito'}
+        </span>
+      </div>
+
+      <div className="plan-limits">
+        <div className="plan-limit-item">
+          <Check size={14} className="plan-limit-check" />
+          <span>Conti bancari / carte: fino a {isPro ? '10' : '3'}</span>
+        </div>
+        <div className="plan-limit-item">
+          <Check size={14} className="plan-limit-check" />
+          <span>Transazioni illimitate</span>
+        </div>
+        <div className="plan-limit-item">
+          <Check size={14} className="plan-limit-check" />
+          <span>Budget, ricorrenti e pianificate illimitati</span>
+        </div>
+        {isPro && (
+          <div className="plan-limit-item">
+            <Check size={14} className="plan-limit-check" />
+            <span>Accesso anticipato alle nuove funzionalità</span>
+          </div>
+        )}
+      </div>
+
+      {!isPro && (
+        <div className="plan-upgrade">
+          <div className="plan-upgrade-content">
+            <Sparkles size={16} className="plan-upgrade-icon" />
+            <div>
+              <p className="plan-upgrade-title">Passa a Pro</p>
+              <p className="plan-upgrade-desc">Fino a 10 conti e accesso anticipato alle prossime funzionalità.</p>
+            </div>
+          </div>
+          <span className="plan-upgrade-soon">In arrivo</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Sezione: Elimina account ─────────────────────────────────────────────────
+
+function DangerSection() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -366,7 +477,6 @@ function DangerZoneSection() {
 
   const handleDelete = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!confirmEmail.trim()) {
       setEmailError('Inserisci la tua email per confermare');
       return;
@@ -389,63 +499,55 @@ function DangerZoneSection() {
   };
 
   return (
-    <div className="card p-6 border-danger-200">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-danger-100 flex items-center justify-center flex-shrink-0">
-          <ShieldAlert className="icon-md text-danger-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-danger-700">Zona pericolosa</h2>
-          <p className="text-sm text-neutral-500">Azioni irreversibili sull'account</p>
-        </div>
+    <>
+      <div className="settings-section-head">
+        <h2 className="settings-section-title settings-section-title-danger">Elimina account</h2>
+        <p className="settings-section-desc">Azione irreversibile su tutti i tuoi dati.</p>
       </div>
 
       {!isOpen ? (
-        <div className="flex items-center justify-between py-3 border-b border-neutral-100">
-          <div>
-            <p className="font-medium text-neutral-900">Elimina account</p>
-            <p className="text-sm text-neutral-500 mt-0.5">
-              Tutti i tuoi dati verranno eliminati definitivamente
+        <div className="settings-fields">
+          <div className="settings-notice settings-notice-danger">
+            <p className="settings-notice-title">Eliminazione definitiva</p>
+            <p className="settings-notice-text">
+              Verranno rimossi permanentemente transazioni, categorie, budget e impostazioni.
+              Non è possibile annullare.
             </p>
           </div>
-          <button
-            onClick={() => setIsOpen(true)}
-            className="btn btn-sm flex items-center gap-1 text-danger-600 border border-danger-200 hover:bg-danger-50 rounded-lg px-3 py-1.5"
-          >
-            <Trash2 className="icon-sm" />
-            Elimina
-          </button>
+          <div className="settings-actions">
+            <button onClick={() => setIsOpen(true)} className="btn btn-danger btn-md">
+              <Trash2 size={15} />
+              Elimina account
+            </button>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleDelete} className="space-y-4">
-          <div className="bg-danger-50 border border-danger-200 rounded-lg p-4">
-            <p className="text-sm text-danger-800 font-medium mb-1">Questa azione è irreversibile</p>
-            <p className="text-sm text-danger-700">
-              Verranno eliminati permanentemente tutti i tuoi dati: transazioni, categorie, budget e impostazioni.
+        <form onSubmit={handleDelete} className="settings-form">
+          <div className="settings-notice settings-notice-danger">
+            <p className="settings-notice-title">Questa azione è irreversibile</p>
+            <p className="settings-notice-text">
+              Verranno eliminati permanentemente tutti i tuoi dati: transazioni, categorie,
+              budget e impostazioni.
             </p>
           </div>
 
           <div className="form-group">
             <label className="form-label">
-              Scrivi <span className="font-semibold text-neutral-900">{user?.email}</span> per confermare
+              Scrivi <strong>{user?.email}</strong> per confermare
             </label>
             <input
               type="email"
               value={confirmEmail}
               onChange={(e) => { setConfirmEmail(e.target.value); setEmailError(''); }}
-              className={`form-input ${emailError ? 'form-input-error' : ''}`}
+              className={`form-input${emailError ? ' form-input-error' : ''}`}
               placeholder="La tua email"
             />
             <FieldError message={emailError} />
           </div>
 
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="btn btn-md bg-danger-600 text-white hover:bg-danger-700 disabled:opacity-50"
-            >
-              {isPending ? 'Eliminazione...' : 'Elimina account definitivamente'}
+          <div className="settings-actions">
+            <button type="submit" disabled={isPending} className="btn btn-danger btn-md">
+              {isPending ? 'Eliminazione...' : 'Elimina definitivamente'}
             </button>
             <button
               type="button"
@@ -457,104 +559,75 @@ function DangerZoneSection() {
           </div>
         </form>
       )}
-    </div>
-  );
-}
-
-// ── Sezione: Preferenze (valuta) ─────────────────────────────────────────────
-
-function PreferencesSection() {
-  const { user, updateUser } = useAuth();
-  const toast = useToast();
-  const [isPending, setIsPending] = useState(false);
-
-  const handleChange = async (currency: string) => {
-    if (currency === user?.currency) return;
-    setIsPending(true);
-    try {
-      const res = await authAPI.updateProfile({ currency });
-      updateUser(res.user ?? res);
-      toast.success('Valuta aggiornata');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  return (
-    <div className="card p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-          <Coins className="icon-md text-primary-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Preferenze</h2>
-          <p className="text-sm text-neutral-500">Valuta usata in tutta l'app</p>
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label className="form-label" htmlFor="currency-select">Valuta</label>
-        <select
-          id="currency-select"
-          className="form-select"
-          value={user?.currency ?? 'EUR'}
-          onChange={(e) => handleChange(e.target.value)}
-          disabled={isPending}
-        >
-          {CURRENCY_OPTIONS.map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
-          ))}
-        </select>
-        <p className="form-help">Cambia simbolo e formato degli importi ovunque, all'istante.</p>
-      </div>
-    </div>
+    </>
   );
 }
 
 // ── Pagina principale ────────────────────────────────────────────────────────
 
+type SectionId = 'generale' | 'preferenze' | 'sicurezza' | 'privacy' | 'piano' | 'elimina';
+
+const NAV: { id: SectionId; label: string; icon: React.ElementType; danger?: boolean }[] = [
+  { id: 'generale',   label: 'Generale',        icon: User             },
+  { id: 'preferenze', label: 'Preferenze',      icon: SlidersHorizontal },
+  { id: 'sicurezza',  label: 'Sicurezza',       icon: Lock             },
+  { id: 'privacy',    label: 'Privacy',         icon: FileText         },
+  { id: 'piano',      label: 'Piano',           icon: Sparkles         },
+  { id: 'elimina',    label: 'Elimina account', icon: Trash2, danger: true },
+];
+
 export default function ProfilePage() {
-  const { user } = useAuth();
-  const { hash } = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!hash) return;
-    const id = hash.replace('#', '');
-    const el = document.getElementById(id);
-    if (el) {
-      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-    }
-  }, [hash]);
+  // La sezione attiva vive nell'URL (`/profile#sicurezza`): deep-link
+  // condivisibili, back/forward del browser e refresh la conservano.
+  const hash = location.hash.replace(/^#/, '');
+  const isSection = NAV.some((n) => n.id === hash);
+  const active: SectionId = isSection ? (hash as SectionId) : 'generale';
+  // Su mobile (master-detail) l'hash distingue la lista dal dettaglio.
+  const mobileDetail = isSection;
 
-  // Genera le iniziali per l'avatar
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
+  const open = (id: SectionId) => navigate(`/profile#${id}`);
 
   return (
-    <div className="container-custom">
-      {/* Header pagina */}
-      <div className="page-header mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl font-bold text-white">{initials}</span>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{user?.name}</h1>
-            <p className="text-sm text-neutral-500">{user?.email}</p>
-          </div>
-        </div>
+    <div className="container-custom settings-page">
+      <div className="settings-header">
+        <h1 className="settings-title">Impostazioni</h1>
       </div>
 
-      {/* Sezioni */}
-      <div className="space-y-6">
-        <PlanSection />
-        <div id="dati"><AccountSection /></div>
-        <div id="preferenze"><PreferencesSection /></div>
-        <div id="sicurezza"><SecuritySection /></div>
-        <DangerZoneSection />
+      <div className={`settings-layout${mobileDetail ? ' is-detail' : ''}`}>
+        <nav className="settings-nav" aria-label="Sezioni impostazioni">
+          {NAV.map(({ id, label, icon: Icon, danger }) => (
+            <button
+              key={id}
+              onClick={() => open(id)}
+              className={`settings-nav-item${active === id ? ' is-active' : ''}${danger ? ' is-danger' : ''}`}
+              aria-current={active === id ? 'page' : undefined}
+            >
+              <Icon size={17} className="settings-nav-item-icon" />
+              <span>{label}</span>
+              <ChevronRight size={15} className="settings-nav-item-chevron" />
+            </button>
+          ))}
+        </nav>
+
+        <section className="settings-panel">
+          <button
+            onClick={() => navigate('/profile')}
+            className="settings-back"
+          >
+            <ChevronLeft size={16} />
+            Impostazioni
+          </button>
+
+          {active === 'generale'   && <GeneralSection />}
+          {active === 'preferenze' && <PreferencesSection />}
+          {active === 'sicurezza'  && <SecuritySection />}
+          {active === 'privacy'    && <PrivacySection />}
+          {active === 'piano'      && <PlanSection />}
+          {active === 'elimina'    && <DangerSection />}
+        </section>
       </div>
     </div>
   );

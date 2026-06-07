@@ -2,13 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePending } from '../../contexts/PendingContext';
-import { useTheme } from '../../hooks/useTheme';
 import { useTourContext } from '../../contexts/TourContext';
 import GuideModal from '../shared/GuideModal';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
   Repeat, Calendar, CalendarDays, Settings2, ChevronDown,
-  User, Shield, FileText, LogOut, Sun, Moon, Landmark,
+  SlidersHorizontal, FileText, LogOut, Landmark,
   BookOpen, PlayCircle,
 } from 'lucide-react';
 
@@ -71,7 +70,6 @@ function UserAvatar({ name, size = 36 }: { name?: string; size?: number }) {
 function ProfileDropdown({ onClose }: { onClose: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
   const { restart: restartTour } = useTourContext();
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -95,28 +93,9 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
         <div className="navbar-profile-body">
 
           <p className="navbar-profile-section-label">Account</p>
-          <button onClick={() => go('/profile#dati')} className="navbar-profile-item">
-            <User size={15} className="navbar-profile-item-icon" />
-            Impostazioni profilo
-          </button>
-          <button onClick={() => go('/profile#sicurezza')} className="navbar-profile-item">
-            <Shield size={15} className="navbar-profile-item-icon" />
-            Sicurezza e password
-          </button>
-
-          <div className="navbar-profile-divider" />
-          <p className="navbar-profile-section-label">Aspetto</p>
-
-          {/* Theme toggle row — doesn't close dropdown so user sees the switch */}
-          <button onClick={toggleTheme} className="navbar-profile-item navbar-profile-theme-row">
-            {theme === 'dark'
-              ? <Sun  size={15} className="navbar-profile-item-icon" />
-              : <Moon size={15} className="navbar-profile-item-icon" />
-            }
-            <span className="navbar-profile-theme-label">
-              {theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
-            </span>
-            <span className={`navbar-theme-switch${theme === 'dark' ? ' is-on' : ''}`} />
+          <button onClick={() => go('/profile')} className="navbar-profile-item">
+            <SlidersHorizontal size={15} className="navbar-profile-item-icon" />
+            Impostazioni
           </button>
 
           <div className="navbar-profile-divider" />

@@ -18,6 +18,7 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import PublicRoute from "./components/PublicRoute";
 import LandingPage from "./pages/LandingPage";
 import { ToastProvider } from "./contexts/ToastContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
@@ -30,9 +31,10 @@ inject();
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Routes>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Routes>
             {/* Public Routes */}
             <Route
               path="/login"
@@ -169,9 +171,10 @@ function App() {
 
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </ToastProvider>
-      </AuthProvider>
+            </Routes>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
