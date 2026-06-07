@@ -46,6 +46,30 @@ export default function BaseModal({
     };
   }, [isOpen]);
 
+  // Tastiera mobile: `dvh`/`100%` non si accorciano quando si apre la tastiera
+  // su iOS, così la sheet a tutto schermo finirebbe dietro la tastiera. Tracciamo
+  // l'altezza reale visibile (`visualViewport.height`) in una CSS var che la
+  // Modal.css usa per l'altezza del container su mobile: la sheet si adatta
+  // all'area visibile e i bottoni sticky restano raggiungibili sopra la tastiera.
+  useEffect(() => {
+    if (!isOpen) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const sync = () => {
+      document.documentElement.style.setProperty('--modal-vvh', `${vv.height}px`);
+    };
+    sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+      document.documentElement.style.removeProperty('--modal-vvh');
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // Elementi focusabili visibili dentro al modale (per il focus trap).
