@@ -380,12 +380,21 @@
   /* ============================
      BUTTON GROUP IN FORMS
      ============================ */
+  /* Segmented control Entrata/Uscita: la traccia è un pill neutro e incassato,
+     il segmento attivo si solleva su un "thumb" chiaro. Il colore (verde entrata
+     / rosso uscita) vive nel TESTO + segno del segmento attivo, non in un blocco
+     saturo: coerente con la regola one-accent e con "confidence, not anxiety".
+     L'importo resta il dato più forte del form, non il selettore di tipo. */
   .form-button-group {
-    @apply flex gap-2;
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background-color: #f5f5f4;
+    border-radius: 12px;
   }
 
-  /* I toggle dividono in egual misura la larghezza del gruppo (niente flex-1
-     inline nel JSX). */
+  /* I segmenti dividono in egual misura la larghezza della traccia (niente
+     flex-1 inline nel JSX). */
   .form-button-group > .btn-toggle {
     @apply flex-1;
   }

@@ -185,7 +185,10 @@ export default function PlannedFormModal({
             <InputDecimal
               setFormData={(value) => { setFormData(value); clearError('amount'); }}
               formData={formData}
-              label={`Importo (${currencySymbol(currency)})`}
+              label="Importo"
+              hero
+              currency={currencySymbol(currency)}
+              placeholder="0,00"
               required
               invalid={!!errors.amount}
               describedBy={errors.amount ? 'pl-amount-err' : undefined}

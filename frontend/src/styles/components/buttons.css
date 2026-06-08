@@ -190,34 +190,54 @@
      TOGGLE BUTTONS
      ============================ */
   .btn-toggle {
-    @apply px-4 py-2 rounded-lg;
-    @apply transition-all duration-200;
-    @apply font-medium;
+    @apply rounded-lg font-medium;
+    padding: 0.4rem 0.75rem;
+    background-color: transparent;
+    /* solo proprietà non-layout in transizione (DESIGN: niente animazioni di layout) */
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
 
-  /* Flat a riposo (DESIGN: l'ombra è una risposta allo stato, non decorazione).
-     Focus da tastiera: anello teal coerente col resto del sistema. */
+  /* Focus da tastiera: anello teal coerente col resto del sistema. Offset ridotto
+     così l'anello resta dentro la traccia del segmented control. */
   .btn-toggle:focus-visible {
     outline: 2px solid #0d9488;
-    outline-offset: 2px;
+    outline-offset: 1px;
   }
 
-  .btn-toggle-active {
-    @apply bg-primary-600 text-white;
-  }
-
-  .btn-toggle-inactive {
-    @apply bg-neutral-100 text-neutral-700;
-    @apply hover:bg-neutral-200;
-  }
-
-  /* Income/Expense specific toggles */
-  .btn-toggle-income-active {
-    @apply bg-success-600 text-white;
-  }
-
+  /* Segmento attivo = "thumb" chiaro sollevato (l'ombra è una risposta allo
+     stato, non decorazione). Il significato sta nel testo colorato + segno
+     (::before), MAI in un riempimento saturo a tutta larghezza. */
+  .btn-toggle-active,
+  .btn-toggle-income-active,
   .btn-toggle-expense-active {
-    @apply bg-danger-600 text-white;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.10);
+  }
+
+  .btn-toggle-active { @apply text-primary-700; }
+
+  /* Income/Expense: colore = significato, rinforzato dal segno +/− in testa. */
+  .btn-toggle-income-active { color: #065f46; }
+  .btn-toggle-expense-active { color: #b91c1c; }
+
+  .btn-toggle-income-active::before,
+  .btn-toggle-expense-active::before {
+    margin-right: 0.3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .btn-toggle-income-active::before { content: '+'; }
+  .btn-toggle-expense-active::before { content: '\2212'; } /* U+2212 minus, non hyphen */
+
+  /* neutral-600 (non -500): il testo del segmento inattivo deve restare ≥ AA
+     sulla traccia neutra (#f5f5f4). */
+  .btn-toggle-inactive {
+    background-color: transparent;
+    @apply text-neutral-600;
+  }
+  .btn-toggle-inactive:hover {
+    background-color: transparent;
+    @apply text-neutral-800;
   }
 
   /* ============================
@@ -422,11 +442,25 @@
 }
 .dark .btn-outline-primary:hover { background-color: #0d2d2a; }
 
+/* Segmented control in dark: traccia incassata più scura del modale (#292524),
+   thumb attivo sollevato più chiaro. Testo income/expense ravvivato per leggibilità. */
+.dark .form-button-group { background-color: #1c1917; }
+
 .dark .btn-toggle-inactive {
-  background-color: #44403c;
-  color: #d6d3d1;
+  background-color: transparent;
+  color: #a8a29e;
 }
-.dark .btn-toggle-inactive:hover { background-color: #57534e; }
+.dark .btn-toggle-inactive:hover { background-color: transparent; color: #e7e5e4; }
+
+.dark .btn-toggle-active,
+.dark .btn-toggle-income-active,
+.dark .btn-toggle-expense-active {
+  background-color: #44403c;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.dark .btn-toggle-active { color: #5eead4; }
+.dark .btn-toggle-income-active { color: #34d399; }
+.dark .btn-toggle-expense-active { color: #f87171; }
 
 .dark .btn-filter-inactive {
   background-color: #44403c;

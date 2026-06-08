@@ -266,7 +266,10 @@ export default function RecurringFormModal({
             <InputDecimal
               setFormData={(data) => { setFormData(data); clearError('amount'); }}
               formData={formData}
-              label={`Importo (${currencySymbol(currency)})`}
+              label="Importo"
+              hero
+              currency={currencySymbol(currency)}
+              placeholder="0,00"
               required
               invalid={!!errors.amount}
               describedBy={errors.amount ? 'rec-amount-err' : undefined}

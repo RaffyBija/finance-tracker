@@ -15,6 +15,12 @@ interface InputDecimalProps {
   invalid?: boolean;
   /** Id del messaggio di errore da collegare via aria-describedby. */
   describedBy?: string;
+  /** Variante "hero": importo come dato principale del form (cifra grande,
+   *  tabular-nums, simbolo valuta in testa). Da usare per l'importo di una
+   *  transazione, non per saldi/limiti secondari. */
+  hero?: boolean;
+  /** Simbolo valuta mostrato come adornment in testa al campo (solo `hero`). */
+  currency?: string;
 }
 
 export const InputDecimal = ({
@@ -27,6 +33,8 @@ export const InputDecimal = ({
   required = false,
   invalid = false,
   describedBy,
+  hero = false,
+  currency,
 }: InputDecimalProps) => {
   const toRaw = (v: any) =>
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
@@ -77,24 +85,39 @@ export const InputDecimal = ({
     return value;
   };
 
+  const inputEl = (
+    <input
+      type="text"
+      value={rawAmount}
+      onChange={(e) => setRawAmount(handleNormalizeNumberInput(e.target.value))}
+      onBlur={handleFixNumberInput}
+      onFocus={(e) => {
+        if (e.target.value === '0') setRawAmount('');
+      }}
+      className={hero ? 'amount-input' : 'form-input'}
+      pattern={allowNegative ? '-?[0-9]*[.,]?[0-9]*' : '[0-9]*[.,]?[0-9]*'}
+      inputMode="decimal"
+      placeholder={placeholder}
+      // Il <label> non avvolge l'input (gap a11y preesistente di questi form):
+      // in hero portiamo la valuta nel nome accessibile, così lo screen reader
+      // annuncia "Importo (€)" anche col simbolo mostrato solo come glifo.
+      aria-label={hero && currency ? `${label} (${currency})` : undefined}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
+    />
+  );
+
   return (
     <div className="form-group">
       <label className={`form-label${required ? ' form-label-required' : ''}`}>{label}</label>
-      <input
-        type="text"
-        value={rawAmount}
-        onChange={(e) => setRawAmount(handleNormalizeNumberInput(e.target.value))}
-        onBlur={handleFixNumberInput}
-        onFocus={(e) => {
-          if (e.target.value === '0') setRawAmount('');
-        }}
-        className="form-input"
-        pattern={allowNegative ? '-?[0-9]*[.,]?[0-9]*' : '[0-9]*[.,]?[0-9]*'}
-        inputMode="decimal"
-        placeholder={placeholder}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-      />
+      {hero ? (
+        <div className="amount-control" data-invalid={invalid || undefined}>
+          {currency && <span className="amount-currency" aria-hidden="true">{currency}</span>}
+          {inputEl}
+        </div>
+      ) : (
+        inputEl
+      )}
     </div>
   );
 };
