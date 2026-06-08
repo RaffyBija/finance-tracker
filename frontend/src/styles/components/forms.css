@@ -34,9 +34,12 @@
     @apply text-base mb-3;
   }
 
+  /* Marcatore campo obbligatorio: muto, non allarme. Il rosso è riservato agli
+     errori; l'asterisco segnala soltanto "richiesto" e non deve competere coi
+     toggle entrata/uscita né con i FieldError. */
   .form-label-required::after {
     content: '*';
-    @apply text-danger-500 ml-1;
+    @apply text-neutral-500 ml-1;
   }
 
   /* ============================
@@ -197,6 +200,26 @@
      ============================ */
   .form-help {
     @apply text-xs text-neutral-500 mt-1;
+  }
+
+  /* Riepilogo schedulazione (ricorrenti): help text con icona allineata in alto.
+     Tono muto, nessun colore semantico: è un promemoria, non un avviso. */
+  .form-help-schedule {
+    @apply flex items-start gap-1.5 mt-2;
+  }
+
+  .form-help-schedule svg {
+    @apply flex-shrink-0 text-neutral-400;
+    margin-top: 1px;
+  }
+
+  /* Contatore caratteri: muto e allineato a destra, danger al limite. */
+  .form-char-count {
+    @apply text-xs text-neutral-400 mt-1 text-right tabular-nums;
+  }
+
+  .form-char-count.is-limit {
+    @apply text-danger-600;
   }
 
   .form-error {
@@ -361,6 +384,42 @@
     @apply flex gap-2;
   }
 
+  /* I toggle dividono in egual misura la larghezza del gruppo (niente flex-1
+     inline nel JSX). */
+  .form-button-group > .btn-toggle {
+    @apply flex-1;
+  }
+
+  /* ============================
+     WEEKDAY PICKER (ricorrenti settimanali)
+     7 chip Lun-Dom; selezionato = teal (è uno stato, non un significato
+     finanziario). Va a capo su mobile invece di rimpicciolirsi sotto i 44px.
+     ============================ */
+  .weekday-picker {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .weekday-chip {
+    @apply flex-1 px-1 rounded-lg text-sm font-medium;
+    @apply bg-neutral-100 text-neutral-700;
+    @apply transition-colors duration-150;
+    min-width: 2.75rem;
+    min-height: 2.5rem;
+  }
+
+  .weekday-chip:hover {
+    @apply bg-neutral-200;
+  }
+
+  .weekday-chip.is-selected {
+    @apply bg-primary-600 text-white;
+  }
+
+  .weekday-chip:focus-visible {
+    outline: 2px solid #0d9488;
+    outline-offset: 2px;
+  }
+
   .form-button-group-vertical {
     @apply flex flex-col gap-2;
   }
@@ -502,6 +561,10 @@
 .dark .form-input::placeholder { color: #57534e; }
 .dark .form-input:focus { border-color: #0d9488; background-color: #292524; }
 .dark .form-input:disabled { background-color: #292524; color: #57534e; }
+
+.dark .weekday-chip { background-color: #44403c; color: #d6d3d1; }
+.dark .weekday-chip:hover { background-color: #57534e; }
+.dark .weekday-chip.is-selected { background-color: #0d9488; color: #fff; }
 
 .dark .form-select {
   background-color: #1c1917;

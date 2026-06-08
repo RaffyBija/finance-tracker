@@ -19,6 +19,21 @@ export function localeForCurrency(currency: string): string {
   return LOCALE_BY_CURRENCY[currency] ?? 'it-IT';
 }
 
+// Simbolo della valuta (€, $, £, ¥, CHF…) derivato via Intl, narrowSymbol così
+// USD→"$" e non "US$". Per le label dei campi importo: niente simbolo hardcoded.
+export function currencySymbol(currency: string): string {
+  try {
+    const parts = new Intl.NumberFormat(localeForCurrency(currency), {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+    }).formatToParts(0);
+    return parts.find((p) => p.type === 'currency')?.value ?? currency;
+  } catch {
+    return currency;
+  }
+}
+
 // Opzioni per i selettori (profilo / registrazione).
 export const CURRENCY_OPTIONS: { code: CurrencyCode; label: string }[] = [
   { code: 'EUR', label: 'Euro (€)' },

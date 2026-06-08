@@ -406,6 +406,10 @@
     position: relative;
   }
 
+  .account-selector-indicator .form-select {
+    flex: 1;
+  }
+
   .account-selector-dot {
     width: 10px;
     height: 10px;

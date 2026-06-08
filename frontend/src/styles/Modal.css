@@ -148,10 +148,9 @@
 .modal-form label,
 .form-label {
   font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #78716c;
+  font-weight: 500;
+  letter-spacing: normal;
+  color: #57534e;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -190,6 +189,18 @@
   border-color: #0d9488;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
   background-color: #fff;
+}
+
+/* Le textarea non hanno l'altezza fissa degli input: crescono con le righe e si
+   ridimensionano solo in verticale (niente maniglia diagonale che sfora il
+   modale). Padding verticale perché .form-input ne ha solo orizzontale. */
+.modal-form textarea,
+.modal-form textarea.form-input {
+  height: auto;
+  min-height: 2.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  resize: none;
 }
 
 .modal-form input[type="color"] {
@@ -543,6 +554,12 @@
     height: 2.75rem;
     font-size: 1rem; /* Evita zoom automatico su iOS (min 16px) */
     border-radius: 10px;
+  }
+
+  /* Target tattile ≥44px per i toggle entrata/uscita e le chip giorno (WCAG 2.5.5). */
+  .form-button-group .btn-toggle,
+  .weekday-chip {
+    min-height: 2.75rem;
   }
 
   /* Bottoni sticky in fondo, con safe area per home indicator */

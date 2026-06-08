@@ -33,7 +33,6 @@ export default function AccountSelector({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="form-select"
-          style={{ flex: 1 }}
         >
           {allowEmpty && <option value="">{emptyLabel}</option>}
           {accounts.map((a) => (

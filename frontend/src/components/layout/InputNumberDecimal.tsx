@@ -11,6 +11,10 @@ interface InputDecimalProps {
   placeholder?: string;
   /** Mostra il marcatore di campo obbligatorio (asterisco) sulla label. */
   required?: boolean;
+  /** Stato di validazione: marca l'input con aria-invalid per gli screen reader. */
+  invalid?: boolean;
+  /** Id del messaggio di errore da collegare via aria-describedby. */
+  describedBy?: string;
 }
 
 export const InputDecimal = ({
@@ -21,6 +25,8 @@ export const InputDecimal = ({
   allowNegative = false,
   placeholder,
   required = false,
+  invalid = false,
+  describedBy,
 }: InputDecimalProps) => {
   const toRaw = (v: any) =>
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
@@ -86,6 +92,8 @@ export const InputDecimal = ({
         pattern={allowNegative ? '-?[0-9]*[.,]?[0-9]*' : '[0-9]*[.,]?[0-9]*'}
         inputMode="decimal"
         placeholder={placeholder}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
       />
     </div>
   );

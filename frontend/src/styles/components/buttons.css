@@ -190,9 +190,16 @@
      TOGGLE BUTTONS
      ============================ */
   .btn-toggle {
-    @apply px-4 py-2 rounded-lg shadow;
+    @apply px-4 py-2 rounded-lg;
     @apply transition-all duration-200;
     @apply font-medium;
+  }
+
+  /* Flat a riposo (DESIGN: l'ombra è una risposta allo stato, non decorazione).
+     Focus da tastiera: anello teal coerente col resto del sistema. */
+  .btn-toggle:focus-visible {
+    outline: 2px solid #0d9488;
+    outline-offset: 2px;
   }
 
   .btn-toggle-active {

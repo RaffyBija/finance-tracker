@@ -10,6 +10,28 @@ interface BaseModalProps {
   children: React.ReactElement;
 }
 
+// Lock dello scroll del body a conteggio: con modali impilati (es. la conferma
+// "scarta modifiche" sopra un form) solo l'ultimo a chiudersi ripristina
+// l'overflow. Senza il conteggio l'ordine di cleanup poteva lasciare il body
+// bloccato su `hidden`.
+let modalOpenCount = 0;
+let savedBodyOverflow = '';
+
+function lockBodyScroll() {
+  if (modalOpenCount === 0) {
+    savedBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  modalOpenCount += 1;
+}
+
+function unlockBodyScroll() {
+  modalOpenCount = Math.max(0, modalOpenCount - 1);
+  if (modalOpenCount === 0) {
+    document.body.style.overflow = savedBodyOverflow;
+  }
+}
+
 export default function BaseModal({
   isOpen,
   title,
@@ -26,8 +48,7 @@ export default function BaseModal({
     if (!isOpen) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
 
     // Auto-focus sul primo campo SOLO su puntatore preciso (desktop/laptop),
     // così su mobile/tablet non si apre la tastiera. Fallback: il container.
@@ -41,7 +62,7 @@ export default function BaseModal({
     }
 
     return () => {
-      document.body.style.overflow = prevOverflow;
+      unlockBodyScroll();
       previouslyFocused?.focus?.();
     };
   }, [isOpen]);
