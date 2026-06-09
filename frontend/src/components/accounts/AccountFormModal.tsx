@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Landmark } from 'lucide-react';
+import { CreditCard, Landmark, ChevronDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import FieldError from '../shared/FieldError';
@@ -19,6 +19,11 @@ const COLORS = [
 ];
 
 const BILLING_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+// Giorni di chiusura ciclo selezionabili nelle opzioni avanzate: 1..30 come giorni
+// fissi; "Fine mese" (valore 31) viene aggiunto a parte ed è il default. closingDay=31
+// è interpretato dal backend come "ultimo giorno reale del mese" (clamping).
+const CLOSING_END_OF_MONTH = '31';
+const CLOSING_FIXED_DAYS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 interface AccountFormModalProps {
   isOpen: boolean;
@@ -52,10 +57,13 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
     openingBalance: 0,
     creditLimit: 0,
     billingDay: '',
-    closingDay: '1',
+    closingDay: CLOSING_END_OF_MONTH,
     linkedAccountId: '',
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Le opzioni avanzate (giorno di chiusura ciclo) sono nascoste di default: la
+  // chiusura è a fine mese. Si aprono se si modifica una CC con un giorno fisso.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Sincronizza il form all'apertura (nuovo vs modifica). Gli hook girano sempre:
   // l'early-return per !isOpen sta DOPO gli hook, mai prima (Rules of Hooks).
@@ -68,10 +76,13 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
       openingBalance: Number(editingAccount?.openingBalance ?? 0),
       creditLimit: Number(editingAccount?.creditLimit ?? 0),
       billingDay: editingAccount?.billingDay != null ? String(editingAccount.billingDay) : '',
-      closingDay: editingAccount?.closingDay != null ? String(editingAccount.closingDay) : '1',
+      closingDay: editingAccount?.closingDay != null ? String(editingAccount.closingDay) : CLOSING_END_OF_MONTH,
       linkedAccountId: editingAccount?.linkedAccountId ?? '',
     });
     setSubmitError(null);
+    // Apri le avanzate solo se la carta ha un giorno di chiusura fisso (≠ fine mese).
+    const cd = editingAccount?.closingDay;
+    setShowAdvanced(cd != null && String(cd) !== CLOSING_END_OF_MONTH);
   }, [isOpen, editingAccount]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -249,7 +260,37 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
               </div>
             </div>
 
-            <div className="modal-form-row">
+            {bankAccounts.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">Conto collegato per l'addebito</label>
+                <select
+                  value={formData.linkedAccountId}
+                  onChange={(e) => set('linkedAccountId', e.target.value)}
+                  className="form-select"
+                >
+                  <option value="">-- Nessuno --</option>
+                  {bankAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                <p className="form-help">
+                  Conto da cui viene prelevato l'importo della carta a ogni addebito.
+                </p>
+              </div>
+            )}
+
+            {/* Opzioni avanzate: chiusura ciclo. Nascoste di default → fine mese. */}
+            <button
+              type="button"
+              className={`form-advanced-toggle${showAdvanced ? ' is-open' : ''}`}
+              onClick={() => setShowAdvanced((v) => !v)}
+              aria-expanded={showAdvanced}
+            >
+              <ChevronDown size={16} />
+              Opzioni avanzate
+            </button>
+
+            {showAdvanced && (
               <div className="form-group">
                 <label className="form-label">Giorno di chiusura ciclo</label>
                 <select
@@ -257,34 +298,17 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
                   onChange={(e) => set('closingDay', e.target.value)}
                   className="form-select"
                 >
-                  {BILLING_DAYS.map((d) => (
+                  <option value={CLOSING_END_OF_MONTH}>Fine mese</option>
+                  {CLOSING_FIXED_DAYS.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
                 <p className="form-help">
-                  Ultimo giorno incluso nel ciclo: le spese dei giorni successivi rientrano nel ciclo dopo.
+                  Ultimo giorno incluso nel ciclo. Con "Fine mese" le spese di un mese di calendario
+                  formano un unico ciclo (consigliato).
                 </p>
               </div>
-
-              {bankAccounts.length > 0 && (
-                <div className="form-group">
-                  <label className="form-label">Conto collegato per l'addebito</label>
-                  <select
-                    value={formData.linkedAccountId}
-                    onChange={(e) => set('linkedAccountId', e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="">-- Nessuno --</option>
-                    {bankAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
-                  <p className="form-help">
-                    Conto da cui viene prelevato l'importo della carta a ogni addebito.
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
           </>
         )}
 

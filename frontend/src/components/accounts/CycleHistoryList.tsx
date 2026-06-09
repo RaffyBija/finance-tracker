@@ -2,7 +2,7 @@ import { CalendarClock, CheckCircle2, CircleDashed } from 'lucide-react';
 import { useBillingCycles } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import Skeleton from '../shared/Skeleton';
-import { formatDateLong, formatMonthYear } from '../../utils/date';
+import { formatDateLong, formatCycleMonth, cycleMidpoint } from '../../utils/date';
 
 interface CycleHistoryListProps {
   accountId: string;
@@ -13,10 +13,15 @@ interface CycleHistoryListProps {
   billingDay?: number | null;
 }
 
-// Addebito stimato del ciclo aperto: il billingDay del mese successivo alla chiusura.
-function projectedBilling(periodEnd: string, billingDay: number) {
-  const e = new Date(periodEnd);
-  return new Date(e.getFullYear(), e.getMonth() + 1, billingDay);
+// Addebito stimato del ciclo aperto: il billingDay del mese successivo a quello
+// di competenza. Basato sul punto medio del ciclo per non scavallare di mese nei
+// fusi non-UTC (periodEnd è 23:59:59.999 UTC).
+function projectedBilling(periodStart: string, periodEnd: string, billingDay: number) {
+  const mid = cycleMidpoint(periodStart, periodEnd);
+  const year = mid.getFullYear();
+  const month = mid.getMonth() + 1; // mese successivo a quello di competenza
+  const lastDay = new Date(year, month + 1, 0).getDate(); // clamping per mesi corti (es. billingDay 31 ad aprile → 30)
+  return new Date(year, month, Math.min(billingDay, lastDay));
 }
 
 /** Lista riusabile dello storico cicli di fatturazione di una CC.
@@ -56,13 +61,13 @@ export default function CycleHistoryList({ accountId, enabled = true, showIntro 
           {cycles.map((c) => {
             const isOpen = c.status === 'OPEN';
             const paid = c.planned?.isPaid ?? false;
-            const openBilling = isOpen && billingDay ? projectedBilling(c.periodEnd, billingDay) : null;
+            const openBilling = isOpen && billingDay ? projectedBilling(c.periodStart, c.periodEnd, billingDay) : null;
             return (
               <div key={c.id} className={`cycle-history-item${isOpen ? ' is-open' : ''}`}>
                 <div className="cycle-history-item-head">
                   <span className="cycle-history-range">
                     <CalendarClock size={14} />
-                    {formatMonthYear(c.periodEnd)}
+                    {formatCycleMonth(c.periodStart, c.periodEnd)}
                   </span>
                   <span className={`badge ${isOpen ? 'badge-info' : paid ? 'badge-success' : 'badge-warning'}`}>
                     {isOpen ? 'In corso' : paid ? 'Pagato' : 'Da pagare'}

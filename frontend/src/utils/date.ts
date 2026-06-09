@@ -39,6 +39,17 @@ export const formatWeekday = (d: string | Date): string =>
 export const formatMonthYear = (d: string | Date): string =>
   cap(format(toDate(d), 'MMMM yyyy', { locale: LOCALE }));
 
+// ── Cicli di fatturazione ──
+// periodStart è 00:00 UTC e periodEnd 23:59:59.999 UTC: presi singolarmente
+// scavallano di giorno (e quindi di mese, ai bordi) nei fusi non-UTC. Il punto
+// medio sta a metà mese ed è stabile in qualsiasi fuso → mese di competenza certo.
+export const cycleMidpoint = (periodStart: string | Date, periodEnd: string | Date): Date =>
+  new Date((toDate(periodStart).getTime() + toDate(periodEnd).getTime()) / 2);
+
+// Maggio 2026 — mese di competenza del ciclo (non quello di chiusura/addebito).
+export const formatCycleMonth = (periodStart: string | Date, periodEnd: string | Date): string =>
+  cap(format(cycleMidpoint(periodStart, periodEnd), 'MMMM yyyy', { locale: LOCALE }));
+
 // Maggio (nome mese, capitalizzato)
 export const formatMonth = (d: string | Date): string =>
   cap(format(toDate(d), 'MMMM', { locale: LOCALE }));
