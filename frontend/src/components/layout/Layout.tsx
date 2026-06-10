@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import Navbar from './Navbar';
+import LoadingSpinner from '../shared/LoadingSpinner';
 import { CookieBanner } from '../CookieConsent';
 import RecurringDueGuard from '../recurring/RecurringDueGuard';
 import CCBillingGuard from '../accounts/CCBillingGuard';
@@ -20,7 +21,9 @@ export default function Layout({ children }: LayoutProps) {
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
           <Navbar />
           <main className="layout-main">
-            <ErrorBoundary>{children}</ErrorBoundary>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingSpinner size="lg" />}>{children}</Suspense>
+            </ErrorBoundary>
           </main>
           <CookieBanner />
           <RecurringDueGuard />

@@ -1,30 +1,37 @@
+import { Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout/Layout";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import DashboardPage from "./pages/DashboardPage";
-import TransactionsPage from "./pages/TransactionsPage";
-import CategoriesPage from "./pages/CategoriesPage";
-import { Budgets } from "./pages/BudgetsPage";
-import { RecurringTransactions } from "./pages/RecurringTransactions";
-import { PlannedTransactions } from "./pages/PlannedPage";
-import { inject } from "@vercel/analytics";
-import { Privacy } from "./pages/Privacy";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
 import PublicRoute from "./components/PublicRoute";
-import LandingPage from "./pages/LandingPage";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import LoadingSpinner from "./components/shared/LoadingSpinner";
+import { lazyWithReload } from "./utils/lazyWithReload";
+import { inject } from "@vercel/analytics";
+
+// Eager: primo accesso non autenticato e fallback 404 (nessuno spinner-waterfall)
+import LoginPage from "./pages/LoginPage";
+import LandingPage from "./pages/LandingPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import ProfilePage from "./pages/ProfilePage";
-import VerifyEmailChangePage from './pages/VerifyEmailChangePage';
-import CalendarPage from "./pages/CalendarPage";
-import AccountsPage from "./pages/AccountsPage";
-import AccountDetailPage from "./pages/AccountDetailPage";
+
+// Lazy: chunk separati scaricati on-demand
+const RegisterPage = lazyWithReload(() => import("./pages/RegisterPage"));
+const DashboardPage = lazyWithReload(() => import("./pages/DashboardPage"));
+const TransactionsPage = lazyWithReload(() => import("./pages/TransactionsPage"));
+const CategoriesPage = lazyWithReload(() => import("./pages/CategoriesPage"));
+const Budgets = lazyWithReload(() => import("./pages/BudgetsPage").then(m => ({ default: m.Budgets })));
+const RecurringTransactions = lazyWithReload(() => import("./pages/RecurringTransactions").then(m => ({ default: m.RecurringTransactions })));
+const PlannedTransactions = lazyWithReload(() => import("./pages/PlannedPage").then(m => ({ default: m.PlannedTransactions })));
+const Privacy = lazyWithReload(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
+const ForgotPasswordPage = lazyWithReload(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazyWithReload(() => import("./pages/ResetPasswordPage"));
+const VerifyEmailPage = lazyWithReload(() => import("./pages/VerifyEmailPage"));
+const VerifyEmailChangePage = lazyWithReload(() => import("./pages/VerifyEmailChangePage"));
+const ProfilePage = lazyWithReload(() => import("./pages/ProfilePage"));
+const CalendarPage = lazyWithReload(() => import("./pages/CalendarPage"));
+const AccountsPage = lazyWithReload(() => import("./pages/AccountsPage"));
+const AccountDetailPage = lazyWithReload(() => import("./pages/AccountDetailPage"));
 
 inject();
 
@@ -34,6 +41,11 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
+            {/* Suspense esterno: copre le rotte pubbliche lazy senza Layout
+                (Register, ForgotPassword, ...). Per le rotte protette il
+                Suspense interno in Layout è il boundary più vicino e cattura
+                per primo, tenendo la navbar montata. */}
+            <Suspense fallback={<LoadingSpinner size="lg" />}>
             <Routes>
             {/* Public Routes */}
             <Route
@@ -172,6 +184,7 @@ function App() {
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            </Suspense>
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
