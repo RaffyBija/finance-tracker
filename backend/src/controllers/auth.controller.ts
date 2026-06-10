@@ -185,7 +185,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 // Login utente
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password }: LoginDTO = req.body;
+    const { email, password, rememberMe }: LoginDTO = req.body;
 
     // Validazione base
     if (!email.trim() || !password.trim()) {
@@ -224,10 +224,12 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Genera JWT
+    // "Resta connesso": sessione lunga e persistente (30g) se spuntato,
+    // altrimenti sessione breve (1g) lato client effimera (sessionStorage).
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET!, // il fail-fast in server.ts garantisce che esista
-      { expiresIn: "7d" },
+      { expiresIn: rememberMe === true ? "30d" : "1d" },
     );
 
     const response: AuthResponse = {

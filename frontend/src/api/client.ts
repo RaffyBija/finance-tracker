@@ -15,12 +15,16 @@ import type {
   MonthlyTrend,
   ProjectedBalance,
 } from "../types";
+import { getToken, clearToken } from "../utils/tokenStorage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 // Crea istanza axios
 const api = axios.create({
   baseURL: API_URL,
+  // Timeout: evita richieste appese all'infinito (es. backend in cold-start dopo un deploy),
+  // che lasciano l'app bloccata sullo spinner di caricamento.
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -28,7 +32,7 @@ const api = axios.create({
 
 // Interceptor per aggiungere il token ad ogni richiesta
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -40,7 +44,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
+      clearToken();
     }
     return Promise.reject(error);
   },

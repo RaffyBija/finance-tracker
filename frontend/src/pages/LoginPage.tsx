@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError]       = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,7 +20,7 @@ export default function LoginPage() {
     setError('');
     try {
       setIsLoading(true);
-      await login({ email, password });
+      await login({ email, password, rememberMe });
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante il login');
@@ -80,6 +81,15 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          <label className="auth-remember">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span>Resta connesso</span>
+          </label>
 
         </div>
 

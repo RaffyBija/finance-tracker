@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
 import { authAPI } from '../api/client';
+import { getToken, setToken as persistToken, clearToken } from '../utils/tokenStorage';
 import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
 
 
@@ -29,39 +30,71 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(getToken());
   // true solo se esiste un token da verificare — evita lo spinner su /login senza sessione attiva
-  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('token'));
+  const [isLoading, setIsLoading] = useState(() => !!getToken());
 
   // Verifica il token all'avvio
   useEffect(() => {
-    const initAuth = async () => {
-      const savedToken = localStorage.getItem('token');
-      if (savedToken) {
-        try {
-          const userData = await authAPI.getMe();
+    let cancelled = false;
+
+    // Esito di una verifica del token: ok | non autorizzato (401) | errore di rete/timeout.
+    const fetchUser = async (savedToken: string): Promise<'ok' | 'unauthorized' | 'network'> => {
+      try {
+        const userData = await authAPI.getMe();
+        if (!cancelled) {
           setUser(userData);
           setToken(savedToken);
-        } catch (error) {
-          localStorage.removeItem('token');
-          setToken(null);
+        }
+        return 'ok';
+      } catch (error: any) {
+        // Token cancellato SOLO se davvero non valido/scaduto (401).
+        if (error?.response?.status === 401) {
+          if (!cancelled) {
+            clearToken();
+            setToken(null);
+          }
+          return 'unauthorized';
+        }
+        // Nessun response → errore di rete/timeout: manteniamo la sessione.
+        return 'network';
+      }
+    };
+
+    const initAuth = async () => {
+      const savedToken = getToken();
+      if (!savedToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      const result = await fetchUser(savedToken);
+      // Sblocca subito la UI: niente spinner infinito anche se il backend è lento/irraggiungibile.
+      if (!cancelled) setIsLoading(false);
+
+      // Errore di rete/timeout (es. backend in cold-start dopo un deploy): teniamo il token e
+      // ritentiamo in background con backoff, così lo user si popola appena il backend torna su.
+      if (result === 'network') {
+        for (const delay of [2000, 4000, 8000]) {
+          await new Promise((r) => setTimeout(r, delay));
+          if (cancelled) return;
+          const retry = await fetchUser(savedToken);
+          if (retry !== 'network') return;
         }
       }
-      setIsLoading(false);
     };
+
     initAuth();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    try {
-      const response = await authAPI.login(credentials);
-      localStorage.setItem('token', response.token);
-        setToken(response.token);
-        setUser(response.user);
-      }
-      catch (error) {
-          throw error;
-        }
+    const response = await authAPI.login(credentials);
+    persistToken(response.token, !!credentials.rememberMe);
+    setToken(response.token);
+    setUser(response.user);
   };
 
   const register = async (credentials: RegisterCredentials) => {
@@ -70,7 +103,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearToken();
     setToken(null);
     setUser(null);
   };
