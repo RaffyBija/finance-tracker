@@ -110,21 +110,38 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
   }
 });
 
-  // Suggerimento categoria dallo storico: solo su nuova transazione e finché
-  // la categoria è vuota (mai sovrascrivere una scelta manuale o esistente).
-  const suggestEnabled = !editingTransactionData && !formData.categoryId;
-  const { suggestedCategoryId } = useSuggestedCategory(
+  // Suggerimento categoria dallo storico: solo su nuova transazione. Resta attivo
+  // anche dopo aver applicato un suggerimento (`autoSuggested`), così cambiando la
+  // descrizione la categoria viene riaggiornata invece di restare "bloccata" sul
+  // primo match. Si disattiva solo quando l'utente sceglie a mano (categoria
+  // valorizzata con autoSuggested=false): una scelta manuale non va mai sovrascritta.
+  const suggestEnabled =
+    !editingTransactionData && (!formData.categoryId || autoSuggested);
+  const { suggestedCategoryId, isFetching: isSuggesting } = useSuggestedCategory(
     formData.description ?? '',
     formData.type,
     suggestEnabled,
   );
 
-  // Applica il suggerimento se la categoria è ancora vuota e l'id suggerito
-  // esiste tra quelle del tipo corrente (guard difensivo). Le dipendenze sono
-  // input stabili (`categories` dalla query, `formData.type` primitivo): NON
-  // `filteredCategories`, che è ricreato a ogni render.
+  // Applica (o riaggiorna) il suggerimento finché la categoria è gestita in
+  // automatico — `suggestEnabled` copre sia il caso vuoto sia quello già
+  // auto-suggerito — e l'id suggerito esiste tra quelle del tipo corrente
+  // (guard difensivo). Le dipendenze sono input stabili (`categories` dalla
+  // query, `formData.type` primitivo): NON `filteredCategories`, ricreato a
+  // ogni render.
   useEffect(() => {
-    if (!suggestEnabled || !suggestedCategoryId) return;
+    if (!suggestEnabled) return;
+    // Nessun match per la descrizione corrente: se la categoria era stata messa
+    // in automatico, azzerala invece di lasciare quella precedente (altrimenti si
+    // salverebbe con una categoria mai scelta). Restiamo in modalità automatica.
+    // Aspetta che la query sia conclusa (`!isSuggesting`) per non azzerare durante
+    // il fetch tra una descrizione e l'altra.
+    if (!suggestedCategoryId) {
+      if (!isSuggesting && autoSuggested) {
+        setFormData((prev) => (prev.categoryId ? { ...prev, categoryId: '' } : prev));
+      }
+      return;
+    }
     const exists = categories.some(
       (cat) => cat.id === suggestedCategoryId && cat.type === formData.type,
     );
@@ -132,7 +149,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
     setFormData((prev) => ({ ...prev, categoryId: suggestedCategoryId }));
     setAutoSuggested(true);
     clearError('categoryId');
-  }, [suggestedCategoryId, suggestEnabled, categories, formData.type, clearError]);
+  }, [suggestedCategoryId, isSuggesting, suggestEnabled, autoSuggested, categories, formData.type, clearError]);
 
 
   // Valida e salva. Ritorna true se ok, così i chiamanti decidono se chiudere

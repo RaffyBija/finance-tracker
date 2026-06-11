@@ -32,8 +32,9 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition: background .5s var(--ease), color .5s var(--ease);
-  /* clip (non hidden): evita che overflow-y diventi auto e rompa position:sticky */
-  overflow-x: clip;
+  /* NIENTE overflow-x/clip qui: un antenato con overflow:clip rompe `position: sticky`
+     dello stage pinnato in Firefox (Gecko). Il bleed orizzontale (solo l'aura su mobile)
+     è contenuto alla sorgente in `.aura` (width: min(100%, ...)). Non reintrodurre il clip. */
 }
 
 html.dark .lp-root {
@@ -100,7 +101,7 @@ html.dark .lp-root .seg button.on { color: #06201d; }
 .lp-root .hero-line b { font-weight: 600; }
 
 .lp-root .figure { position: relative; margin: clamp(40px, 8vh, 90px) 0 0; }
-.lp-root .aura { position: absolute; left: 50%; top: 52%; width: min(120%, 1100px); height: 420px; transform: translate(-50%,-50%);
+.lp-root .aura { position: absolute; left: 50%; top: 52%; width: min(100%, 1100px); height: 420px; transform: translate(-50%,-50%);
         background: radial-gradient(ellipse at center, var(--aura), transparent 68%); pointer-events: none; z-index: 0; }
 .lp-root .balance-cap { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; text-align: center; }
 .lp-root .balance { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: center; gap: 0;
