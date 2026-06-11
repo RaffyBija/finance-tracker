@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import { detectBrowserCurrency, CURRENCY_OPTIONS } from '../utils/currency';
 
 export default function RegisterPage() {
+  const location = useLocation();
+  const prefillEmail = (location.state as { email?: string } | null)?.email ?? '';
+
   const [name, setName]                       = useState('');
-  const [email, setEmail]                     = useState('');
+  const [email, setEmail]                     = useState(prefillEmail);
   const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [currency, setCurrency]               = useState<string>(() => detectBrowserCurrency());

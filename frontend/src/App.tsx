@@ -32,6 +32,7 @@ const ProfilePage = lazyWithReload(() => import("./pages/ProfilePage"));
 const CalendarPage = lazyWithReload(() => import("./pages/CalendarPage"));
 const AccountsPage = lazyWithReload(() => import("./pages/AccountsPage"));
 const AccountDetailPage = lazyWithReload(() => import("./pages/AccountDetailPage"));
+const ProjectionPage = lazyWithReload(() => import("./pages/ProjectionPage"));
 
 inject();
 
@@ -151,6 +152,17 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <CalendarPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/projection"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ProjectionPage />
                   </Layout>
                 </ProtectedRoute>
               }

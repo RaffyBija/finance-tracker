@@ -1381,6 +1381,139 @@
 .projection-meta-income { color: #059669; }
 .projection-meta-expense { color: #dc2626; }
 
+/* ── Grafico andamento saldo (ProjectionChart) ── */
+.projection-chart {
+  margin-bottom: 1rem;
+}
+
+.projection-empty {
+  text-align: center;
+  padding: 2rem 0;
+  color: #a8a29e;
+  font-size: 0.875rem;
+}
+
+.projection-chart-tip-tag {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a8a29e;
+}
+
+/* Focus visibile su SVG Recharts: nessun outline indesiderato */
+.projection-chart svg:focus,
+.projection-chart .recharts-surface:focus { outline: none; }
+
+/* ── Dettaglio per voce (pagina /projection) ── */
+.projection-detail {
+  margin-top: 1.5rem;
+}
+
+.projection-detail-month {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a8a29e;
+  margin: 1rem 0 0.5rem;
+}
+
+.projection-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid #f5f5f4;
+}
+
+.projection-detail-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: #f5f5f4;
+  color: #78716c;
+}
+
+.projection-detail-body { flex: 1; min-width: 0; }
+
+.projection-detail-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1c1917;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projection-detail-meta {
+  font-size: 0.75rem;
+  color: #a8a29e;
+}
+
+.projection-detail-amount {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.projection-detail-amount.is-income { color: #059669; }
+.projection-detail-amount.is-expense { color: #dc2626; }
+
+/* Footer link "Vedi dettaglio" della card Andamento del saldo */
+.outlook-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid #f5f5f4;
+}
+
+.outlook-detail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0d9488;
+  text-decoration: none;
+  transition: gap 0.15s ease;
+}
+.outlook-detail-link:hover { gap: 0.625rem; }
+
+/* What-if / scenario controls */
+.projection-scenario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.projection-scenario-field {
+  min-width: 14rem;
+}
+
+/* Link breadcrumb "Torna alla dashboard" sopra il titolo pagina */
+.projection-back {
+  margin-bottom: 0.5rem;
+}
+
+/* Il bottone Applica del range non si comprime */
+.projection-custom-row > .btn {
+  flex-shrink: 0;
+}
+
+/* Conteggio fisse/pianificate: muted più tenue del resto della meta-row */
+.projection-meta-item.is-muted {
+  color: #a8a29e;
+}
+
 /* ============================================================
    DASHBOARD STATS — crossfade on month change (via React key)
    ============================================================ */
@@ -2034,6 +2167,16 @@
 .dark .projection-flow-node-value { color: #f5f5f4; }
 .dark .projection-flow-arrow { color: #57534e; }
 .dark .projection-meta { border-top-color: #44403c; }
+.dark .projection-chart-tip-tag { color: #78716c; }
+.dark .projection-detail-month { color: #78716c; }
+.dark .projection-detail-item { border-bottom-color: #292524; }
+.dark .projection-detail-icon { background: #1c1917; color: #a8a29e; }
+.dark .projection-detail-label { color: #f5f5f4; }
+.dark .projection-detail-meta { color: #78716c; }
+.dark .outlook-footer { border-top-color: #44403c; }
+.dark .outlook-detail-link { color: #2dd4bf; }
+.dark .projection-empty { color: #78716c; }
+.dark .projection-meta-item.is-muted { color: #78716c; }
 
 /* Dashboard charts & tooltip */
 .dark .dashboard-tooltip-label  { color: #d6d3d1; }

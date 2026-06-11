@@ -13,6 +13,14 @@ interface ProjectedBalanceParams {
   accountId?: string;
 }
 
+interface ProjectionSeriesParams {
+  months?: number;
+  startDate?: string;
+  endDate?: string;
+  accountId?: string;
+  historyDays?: number;
+}
+
 // staleTime: 0 + refetchOnMount: true → refetch garantito ad ogni mount (override del default globale false)
 // il trend mensile è dati storici stabili, può restare cacheato più a lungo
 export const useSummary = (dateRange?: DateRange) => {
@@ -54,6 +62,16 @@ export const useProjectedBalance = (params: ProjectedBalanceParams, enabled = tr
   return useQuery({
     queryKey: ['dashboard', 'projected-balance', params],
     queryFn: () => dashboardAPI.getProjectedBalance(params),
+    staleTime: 0,
+    refetchOnMount: true,
+    enabled,
+  });
+};
+
+export const useProjectionSeries = (params: ProjectionSeriesParams, enabled = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'projection-series', params],
+    queryFn: () => dashboardAPI.getProjectionSeries(params),
     staleTime: 0,
     refetchOnMount: true,
     enabled,

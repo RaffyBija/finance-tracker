@@ -129,6 +129,32 @@ export interface ProjectedBalance {
   plannedCount: number;
 }
 
+// ── Serie temporale dell'andamento del saldo (grafico proiezione) ──
+export interface ProjectionPoint {
+  date: string;       // YYYY-MM-DD
+  balance: number;    // saldo a fine giornata
+  projected: boolean; // false = storia reale (solid), true = proiezione (dashed)
+}
+
+export interface ProjectionEvent {
+  date: string;       // YYYY-MM-DD
+  label: string;
+  amount: number;
+  type: TransactionType;
+  source: 'recurring' | 'planned' | 'cc';
+}
+
+export interface ProjectionSeries {
+  currentBalance: number;
+  projectedIncome: number;
+  projectedExpense: number;
+  projectedBalance: number;
+  recurringCount: number;
+  plannedCount: number;
+  points: ProjectionPoint[];
+  events: ProjectionEvent[];
+}
+
 export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 

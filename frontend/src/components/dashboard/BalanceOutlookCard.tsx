@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import ProjectedView from './ProjectedView';
 import ForecastView from './ForecastView';
 
@@ -46,6 +47,13 @@ export default function BalanceOutlookCard() {
       </div>
 
       {mode === 'committed' ? <ProjectedView /> : <ForecastView />}
+
+      <div className="outlook-footer">
+        <Link to="/projection" className="outlook-detail-link">
+          Vedi dettaglio
+          <ArrowRight size={14} />
+        </Link>
+      </div>
     </div>
   );
 }

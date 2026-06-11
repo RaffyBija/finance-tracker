@@ -14,6 +14,7 @@ import type {
   CategoryStat,
   MonthlyTrend,
   ProjectedBalance,
+  ProjectionSeries,
 } from "../types";
 import { getToken, clearToken } from "../utils/tokenStorage";
 
@@ -216,6 +217,11 @@ export const dashboardAPI = {
 
   getProjectedBalance: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string }) => {
   const response = await api.get<ProjectedBalance>('/dashboard/projected-balance', { params });
+  return response.data;
+},
+
+  getProjectionSeries: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string; historyDays?: number }) => {
+  const response = await api.get<ProjectionSeries>('/dashboard/projection-series', { params });
   return response.data;
 },
 

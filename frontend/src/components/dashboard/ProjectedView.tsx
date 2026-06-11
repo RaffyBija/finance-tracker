@@ -1,8 +1,9 @@
 import { TrendingUp, TrendingDown, ArrowRight, SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
 import { formatDateShort } from '../../utils/date';
-import { useProjectedBalance } from '../../hooks/useDashboard';
+import { useProjectionSeries } from '../../hooks/useDashboard';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import ProjectionChart from './ProjectionChart';
 
 // Vista "Impegni certi" della card Andamento del saldo.
 // Mostra solo impegni programmati: ricorrenti + pianificate + debito CC.
@@ -62,7 +63,9 @@ export default function ProjectedView() {
   const isCustomValid = mode === 'custom' && !!customRange.startDate && !!customRange.endDate;
   const enabled = mode === 'months' || isCustomValid;
 
-  const { data, isFetching } = useProjectedBalance(queryParams, enabled);
+  // Un'unica fonte: la serie contiene sia i punti del grafico sia gli aggregati
+  // (currentBalance, projected*, conteggi) usati nel riepilogo numerico.
+  const { data, isFetching } = useProjectionSeries(queryParams, enabled);
 
   const handleMonthsChange = (months: number) => {
     setSelectedMonths(months);
@@ -185,6 +188,11 @@ export default function ProjectedView() {
         </div>
       ) : (
         <>
+          {/* Grafico andamento: storia reale (pieno) + proiezione (tratteggiato) */}
+          {data.points.length > 1 && (
+            <ProjectionChart points={data.points} compact height={150} />
+          )}
+
           {/* Flow: Oggi → Tra X mesi */}
           <div className="projection-flow">
             <div className="projection-flow-node">

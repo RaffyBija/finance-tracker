@@ -79,7 +79,8 @@ const SECTIONS: Section[] = [
     content: (
       <>
         <p>La Dashboard mostra: liquidità disponibile, entrate/uscite del mese, trend mensile (bar chart), spese per categoria (pie chart), la card <strong>Andamento del saldo</strong> e le spese ricorrenti.</p>
-        <p>La card <strong>Andamento del saldo</strong> ha due modalità: <strong>Impegni certi</strong> (solo ricorrenti, pianificate e addebiti CC programmati) e <strong>Stima realistica</strong> (aggiunge una stima delle spese abituali per categoria a fine mese).</p>
+        <p>La card <strong>Andamento del saldo</strong> ha due modalità: <strong>Impegni certi</strong> (solo ricorrenti, pianificate e addebiti CC programmati) e <strong>Stima realistica</strong> (aggiunge una stima delle spese abituali per categoria a fine mese). Mostra un <strong>grafico</strong>: linea piena per la storia recente, tratteggiata per la proiezione futura.</p>
+        <p>Tocca <strong>«Vedi dettaglio»</strong> per aprire la pagina <strong>Andamento del saldo</strong>: orizzonte esteso (fino a 24 mesi o intervallo personalizzato), <strong>dettaglio per voce</strong> degli impegni futuri e uno <strong>scenario «what-if»</strong> per simulare una variazione di liquidità oggi.</p>
         <p>Usa le frecce per navigare i mesi storici e confrontare i trend.</p>
       </>
     ),
