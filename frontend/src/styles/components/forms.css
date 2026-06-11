@@ -42,6 +42,13 @@
     @apply text-neutral-500 ml-1;
   }
 
+  /* Badge "Suggerito" accanto alla label: hint discreto, non un allarme.
+     Tint teal tenue, pill piccola; convive con l'asterisco di obbligatorietà. */
+  .form-label-suggest {
+    @apply inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-full;
+    @apply text-xs font-medium text-primary-700 bg-primary-50;
+  }
+
   /* ============================
      BASE INPUT
      ============================ */
@@ -611,6 +618,7 @@
 .dark .form-textarea:focus { border-color: #0d9488; background-color: #292524; }
 
 .dark .form-label { color: #a8a29e; }
+.dark .form-label-suggest { color: #5eead4; background-color: rgba(19, 78, 74, 0.45); }
 .dark .form-help { color: #57534e; }
 .dark .form-advanced-toggle { color: #78716c; }
 .dark .form-advanced-toggle:hover { color: #d6d3d1; }

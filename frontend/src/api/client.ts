@@ -15,6 +15,7 @@ import type {
   MonthlyTrend,
   ProjectedBalance,
   ProjectionSeries,
+  TransactionType,
 } from "../types";
 import { getToken, clearToken } from "../utils/tokenStorage";
 
@@ -146,6 +147,17 @@ export const transactionAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/transactions/${id}`);
+  },
+
+  suggestCategory: async (
+    description: string,
+    type: TransactionType,
+  ): Promise<{ categoryId: string | null }> => {
+    const { data } = await api.get<{ categoryId: string | null }>(
+      "/transactions/suggest-category",
+      { params: { description, type } },
+    );
+    return data;
   },
 };
 

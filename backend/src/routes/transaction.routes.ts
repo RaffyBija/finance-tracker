@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getTransactions,
   getTransaction,
+  suggestCategory,
   createTransaction,
   updateTransaction,
   deleteTransaction,
@@ -15,6 +16,10 @@ router.use(authenticate);
 
 // GET /api/transactions - Ottieni tutte le transazioni
 router.get('/', getTransactions);
+
+// GET /api/transactions/suggest-category - Suggerisce una categoria dallo storico
+// (DEVE stare prima di /:id, altrimenti :id cattura "suggest-category")
+router.get('/suggest-category', suggestCategory);
 
 // GET /api/transactions/:id - Ottieni una transazione
 router.get('/:id', getTransaction);

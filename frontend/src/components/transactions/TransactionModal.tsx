@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Sparkles } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
@@ -14,6 +15,7 @@ import { currencySymbol } from '../../utils/currency';
 import CharCount from '../shared/CharCount';
 import ConfirmModal from '../shared/ConfirmModal';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
+import { useSuggestedCategory } from '../../hooks/useSuggestedCategory';
 
 const DESCRIPTION_MAX = 200;
 
@@ -48,6 +50,9 @@ export default function TransactionModal({
     accountId: '',
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // true quando categoryId è stato valorizzato dal suggerimento automatico
+  // (serve a mostrare il badge "Suggerito" finché l'utente non sceglie a mano).
+  const [autoSuggested, setAutoSuggested] = useState(false);
   const guard = useUnsavedGuard(formData, onClose);
 
   // Form vuoto. `carry` conserva alcuni campi tra un salvataggio e l'altro con
@@ -79,6 +84,7 @@ export default function TransactionModal({
     setFormData(init);
     guard.capture(init);
     setSubmitError(null);
+    setAutoSuggested(false);
   }, [isOpen, editingTransactionData, defaultAccount]);
 
   const filteredCategories = categories.filter((cat) => cat.type === formData.type);
@@ -103,6 +109,30 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
     return null;
   }
 });
+
+  // Suggerimento categoria dallo storico: solo su nuova transazione e finché
+  // la categoria è vuota (mai sovrascrivere una scelta manuale o esistente).
+  const suggestEnabled = !editingTransactionData && !formData.categoryId;
+  const { suggestedCategoryId } = useSuggestedCategory(
+    formData.description ?? '',
+    formData.type,
+    suggestEnabled,
+  );
+
+  // Applica il suggerimento se la categoria è ancora vuota e l'id suggerito
+  // esiste tra quelle del tipo corrente (guard difensivo). Le dipendenze sono
+  // input stabili (`categories` dalla query, `formData.type` primitivo): NON
+  // `filteredCategories`, che è ricreato a ogni render.
+  useEffect(() => {
+    if (!suggestEnabled || !suggestedCategoryId) return;
+    const exists = categories.some(
+      (cat) => cat.id === suggestedCategoryId && cat.type === formData.type,
+    );
+    if (!exists) return;
+    setFormData((prev) => ({ ...prev, categoryId: suggestedCategoryId }));
+    setAutoSuggested(true);
+    clearError('categoryId');
+  }, [suggestedCategoryId, suggestEnabled, categories, formData.type, clearError]);
 
 
   // Valida e salva. Ritorna true se ok, così i chiamanti decidono se chiudere
@@ -153,6 +183,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
     const next = blankTransaction({ type: formData.type, accountId: formData.accountId });
     setFormData(next);
     guard.capture(next);
+    setAutoSuggested(false);
     if (window.matchMedia('(pointer: fine)').matches) {
       requestAnimationFrame(() =>
         document.querySelector<HTMLElement>('.modal-content input')?.focus(),
@@ -176,7 +207,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
           <div className="form-button-group">
             <button
               type="button"
-              onClick={() => setFormData({ ...formData, type: 'INCOME', categoryId: '' })}
+              onClick={() => { setFormData({ ...formData, type: 'INCOME', categoryId: '' }); setAutoSuggested(false); }}
               className={`btn-toggle ${
                 formData.type === 'INCOME' ? 'btn-toggle-income-active' : 'btn-toggle-inactive'
               }`}
@@ -185,7 +216,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
             </button>
             <button
               type="button"
-              onClick={() => setFormData({ ...formData, type: 'EXPENSE', categoryId: '' })}
+              onClick={() => { setFormData({ ...formData, type: 'EXPENSE', categoryId: '' }); setAutoSuggested(false); }}
               className={`btn-toggle ${
                 formData.type === 'EXPENSE' ? 'btn-toggle-expense-active' : 'btn-toggle-inactive'
               }`}
@@ -248,11 +279,19 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
         </div>
 
         <div className="form-group">
-          <label className="form-label form-label-required">Categoria</label>
+          <label className="form-label form-label-required">
+            Categoria
+            {autoSuggested && formData.categoryId === suggestedCategoryId && (
+              <span className="form-label-suggest">
+                <Sparkles size={13} aria-hidden="true" /> Suggerito
+              </span>
+            )}
+          </label>
           <select
             value={formData.categoryId}
             onChange={(e) => {
               setFormData({ ...formData, categoryId: e.target.value })
+              setAutoSuggested(false);
               clearError('categoryId');
             }}
             aria-invalid={!!errors.categoryId || undefined}

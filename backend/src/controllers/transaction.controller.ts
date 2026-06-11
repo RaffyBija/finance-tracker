@@ -93,6 +93,62 @@ export const getTransaction = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Sceglie la categoria suggerita da una lista di transazioni storiche già
+// ordinata per data desc: vince la categoria più frequente; a parità di
+// frequenza vince la più recente (la prima incontrata nella lista ordinata).
+// Funzione pura (testabile senza DB).
+export const pickSuggestedCategory = (
+  matches: { categoryId: string | null }[],
+): string | null => {
+  const counts = new Map<string, number>();
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const m of matches) {
+    if (!m.categoryId) continue;
+    const next = (counts.get(m.categoryId) ?? 0) + 1;
+    counts.set(m.categoryId, next);
+    // > (non >=): a parità di conteggio mantiene il primo (= più recente).
+    if (next > bestCount) {
+      bestCount = next;
+      best = m.categoryId;
+    }
+  }
+  return best;
+};
+
+// Suggerisce una categoria per un nuovo movimento in base allo storico
+// dell'utente (stessa descrizione/payee, stesso tipo).
+export const suggestCategory = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { description, type } = req.query;
+
+    const normalized =
+      typeof description === 'string' ? description.trim().toLowerCase() : '';
+
+    if (normalized.length < 2 || (type !== 'INCOME' && type !== 'EXPENSE')) {
+      return res.json({ categoryId: null });
+    }
+
+    const matches = await prisma.transaction.findMany({
+      where: {
+        userId,
+        type,
+        categoryId: { not: null },
+        description: { contains: normalized, mode: 'insensitive' },
+      },
+      select: { categoryId: true },
+      orderBy: { date: 'desc' },
+      take: 25,
+    });
+
+    res.json({ categoryId: pickSuggestedCategory(matches) });
+  } catch (error) {
+    console.error('Suggest category error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
 // Crea una nuova transazione
 export const createTransaction = async (req: AuthRequest, res: Response) => {
   try {
