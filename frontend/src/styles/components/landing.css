@@ -279,9 +279,11 @@ html.dark .lp-root .btn.teal { color: #06201d; }
   .lp-root .mm b { color: var(--ink-2); font-weight: 600; }
   .lp-root .idx-row { grid-template-columns: auto 1fr; }
   .lp-root .idx-meta { grid-column: 2; text-align: left; margin-top: 4px; }
-  .lp-root .nav-tools .ghost-link { display: none; }
 }
 @media (max-width: 520px) {
   .lp-root .cta { flex-direction: column; }
   .lp-root .btn { width: 100%; }
+  .lp-root .nav-tools { gap: 6px; }
+  .lp-root .seg button { padding: 6px 9px; }
+  .lp-root .ghost-link { padding: 8px 4px; }
 }
