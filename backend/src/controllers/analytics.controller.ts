@@ -40,11 +40,11 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
       plannedRemaining,
     ] = await Promise.all([
       prisma.transaction.findMany({
-        where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null },
+        where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null, transferId: null },
         include: { category: { select: { id: true, name: true } } },
       }),
       prisma.transaction.findMany({
-        where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null },
+        where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null, transferId: null },
         include: { category: { select: { id: true, name: true, icon: true, color: true } } },
       }),
       getAccountsWithBalances(userId),

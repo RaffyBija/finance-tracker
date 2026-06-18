@@ -6,6 +6,9 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  createTransfer,
+  updateTransfer,
+  deleteTransfer,
 } from '../controllers/transaction.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -20,6 +23,16 @@ router.get('/', getTransactions);
 // GET /api/transactions/suggest-category - Suggerisce una categoria dallo storico
 // (DEVE stare prima di /:id, altrimenti :id cattura "suggest-category")
 router.get('/suggest-category', suggestCategory);
+
+// POST /api/transactions/transfer - Crea un trasferimento tra conti
+// (DEVE stare prima di /:id per le DELETE, ma è POST quindi ordine indifferente per il get)
+router.post('/transfer', createTransfer);
+
+// PUT /api/transactions/transfer/:transferId - Aggiorna un trasferimento (entrambe le gambe)
+router.put('/transfer/:transferId', updateTransfer);
+
+// DELETE /api/transactions/transfer/:transferId - Elimina un trasferimento (entrambe le gambe)
+router.delete('/transfer/:transferId', deleteTransfer);
 
 // GET /api/transactions/:id - Ottieni una transazione
 router.get('/:id', getTransaction);

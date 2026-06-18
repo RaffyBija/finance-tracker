@@ -30,6 +30,7 @@ const SECTIONS: Section[] = [
       <>
         <p>Registra ogni entrata e uscita con <strong>tipo</strong> (Entrata/Uscita), <strong>importo</strong>, <strong>categoria</strong>, <strong>data</strong> e <strong>conto</strong>.</p>
         <p>Nella lista Transazioni puoi <strong>filtrare per conto</strong> usando le pill in cima, oppure per tipo, periodo e testo libero.</p>
+        <p>Con due o più conti bancari, il pulsante <strong>Trasferisci</strong> (in cima alla pagina o nel dettaglio di un conto) sposta denaro da un conto all'altro: appare come un'unica riga <strong>⇄ Trasferimento</strong> e non viene conteggiato tra entrate e uscite, perché è solo uno spostamento interno.</p>
       </>
     ),
   },

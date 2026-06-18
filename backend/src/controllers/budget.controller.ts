@@ -36,6 +36,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
         const whereTransaction: any = {
           userId,
           type: 'EXPENSE',
+          transferId: null,
           date: {
             gte: budget.startDate,
             ...(budget.endDate && { lte: budget.endDate }),
@@ -88,6 +89,7 @@ export const getBudget = async (req: AuthRequest, res: Response) => {
     const whereTransaction: any = {
       userId,
       type: 'EXPENSE',
+      transferId: null,
       date: {
         gte: budget.startDate,
         ...(budget.endDate && { lte: budget.endDate }),

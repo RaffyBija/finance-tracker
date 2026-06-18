@@ -264,6 +264,11 @@
     @apply transaction-card-icon bg-danger-100 text-danger-600;
   }
 
+  /* Trasferimento tra conti: movimento neutro (né entrata né uscita). */
+  .transaction-card-icon-transfer {
+    @apply transaction-card-icon bg-neutral-100 text-neutral-500;
+  }
+
   /* Badge icona grande per le righe lista pianificate/ricorrenti
      (ex wrapper one-off w-12 inline, duplicato tra i due file). */
   .tx-list-icon {
@@ -299,6 +304,22 @@
 
   .transaction-card-amount-expense {
     @apply transaction-card-amount text-danger-600;
+  }
+
+  .transaction-card-amount-transfer {
+    @apply transaction-card-amount text-neutral-600;
+  }
+
+  /* Riga conti "Da → A" nel modal di trasferimento. */
+  .transfer-accounts-row {
+    @apply flex items-end gap-2;
+  }
+  .transfer-accounts-row > .account-selector-wrap {
+    @apply flex-1 min-w-0;
+  }
+  .transfer-arrow {
+    @apply flex items-center justify-center text-neutral-400 flex-shrink-0;
+    height: 42px;
   }
 
   /* ============================
@@ -576,6 +597,10 @@
    (l'@apply nel layer bake-rebbe il valore light, vedi feedback-dark-mode). */
 .dark .tx-list-icon-income { background-color: #064e3b; }
 .dark .tx-list-icon-expense { background-color: #450a0a; }
+/* Trasferimento (neutro): bg-neutral-100 sarebbe troppo chiaro in dark. */
+.dark .transaction-card-icon-transfer { background-color: #44403c; color: #a8a29e; }
+.dark .transaction-card-amount-transfer { color: #a8a29e; }
+.dark .transfer-arrow { color: #78716c; }
 
 /* ============================================================
    PROJECTED DETAIL FILTER BAR

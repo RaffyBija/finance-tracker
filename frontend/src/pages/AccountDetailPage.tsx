@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Pencil, Trash2, CreditCard, Landmark, Star,
+  ArrowLeft, Pencil, Trash2, CreditCard, Landmark, Star, ArrowLeftRight,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
-import { useAccount, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
+import { useAccount, useAccounts, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
 import { useTransactions } from '../hooks/useTransactions';
 import { useProjectedBalance } from '../hooks/useDashboard';
 import { useToast } from '../contexts/ToastContext';
 import AccountFormModal from '../components/accounts/AccountFormModal';
+import TransferModal from '../components/transactions/TransferModal';
 import CycleHistoryList from '../components/accounts/CycleHistoryList';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import TransactionRow from '../components/shared/TransactionRow';
@@ -25,13 +26,16 @@ export default function AccountDetailPage() {
   const toast = useToast();
 
   const { data: account, isLoading, isError } = useAccount(id);
+  const { data: allAccounts = [] } = useAccounts();
   const deleteMutation = useDeleteAccount();
   const setDefaultMutation = useSetDefaultAccount();
 
   const [showEdit, setShowEdit] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isCC = account?.type === 'CREDIT_CARD';
+  const bankAccountsCount = allAccounts.filter((a) => a.type === 'BANK').length;
 
   // Range mese corrente per le flashcard entrate/uscite
   const monthRange = useMemo(() => {
@@ -129,6 +133,11 @@ export default function AccountDetailPage() {
           </div>
         </div>
         <div className="account-detail-actions">
+          {!isCC && bankAccountsCount >= 2 && (
+            <button onClick={() => setShowTransfer(true)} className="btn-icon-primary" title="Trasferisci" aria-label="Trasferisci">
+              <ArrowLeftRight className="icon-sm" />
+            </button>
+          )}
           {!account.isDefault && (
             <button onClick={handleSetDefault} className="btn-icon-primary" title="Imposta come principale" aria-label="Imposta come principale">
               <Star className="icon-sm" />
@@ -254,6 +263,12 @@ export default function AccountDetailPage() {
         isOpen={showEdit}
         onClose={() => setShowEdit(false)}
         editingAccount={account as Account}
+      />
+
+      <TransferModal
+        isOpen={showTransfer}
+        onClose={() => setShowTransfer(false)}
+        defaultFromAccountId={account.id}
       />
 
       <ConfirmModal

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
-import type { CreateTransactionDTO, TransactionType } from '../types';
+import type { CreateTransactionDTO, CreateTransferDTO, TransactionType } from '../types';
 
 const TRANSACTION_KEYS = ['transactions', 'dashboard', 'budgets', 'calendar', 'accounts', 'planned', 'billing-cycles'];
 
@@ -64,6 +64,31 @@ export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => transactionAPI.delete(id),
+    onSuccess: () => invalidateTransactions(queryClient),
+  });
+};
+
+export const useCreateTransfer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateTransferDTO) => transactionAPI.createTransfer(data),
+    onSuccess: () => invalidateTransactions(queryClient),
+  });
+};
+
+export const useUpdateTransfer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ transferId, data }: { transferId: string; data: CreateTransferDTO }) =>
+      transactionAPI.updateTransfer(transferId, data),
+    onSuccess: () => invalidateTransactions(queryClient),
+  });
+};
+
+export const useDeleteTransfer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transferId: string) => transactionAPI.deleteTransfer(transferId),
     onSuccess: () => invalidateTransactions(queryClient),
   });
 };

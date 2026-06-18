@@ -104,6 +104,7 @@ model Transaction {
   userId          String
   fromRecurringId String?
   accountId       String?
+  transferId      String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -114,6 +115,7 @@ model Transaction {
   @@index([userId, date])
   @@index([userId, type])
   @@index([userId, accountId])
+  @@index([transferId])
   @@map("transactions")
 }
 

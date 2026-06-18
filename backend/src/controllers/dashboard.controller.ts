@@ -15,7 +15,7 @@ export const getSummary = async (req: AuthRequest, res: Response) => {
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId };
+    const where: any = { userId, transferId: null };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
 
     const [totalIncome, totalExpense, transactionCount] = await Promise.all([
@@ -54,7 +54,7 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId };
+    const where: any = { userId, transferId: null };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
     if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
 
@@ -94,7 +94,7 @@ export const getRecentTransactions = async (req: AuthRequest, res: Response) => 
     const limit  = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId },
+      where: { userId, transferId: null },
       include: { category: true },
       orderBy: { date: 'desc' },
       take: limit,
@@ -122,7 +122,7 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
     startDate.setMonth(startDate.getMonth() - monthsCount);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId, date: { gte: startDate } },
+      where: { userId, date: { gte: startDate }, transferId: null },
       orderBy: { date: 'asc' },
     });
 
@@ -555,6 +555,9 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     const histEnd = new Date(rangeStart);
     histEnd.setHours(23, 59, 59, 999);
     const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
+    // NB: qui NON si filtra `transferId: null`. Questa query ricostruisce il saldo
+    // reale all'indietro a partire da currentBalance (getAccountsWithBalances), che
+    // include i trasferimenti: per coerenza il netto storico deve includerli anch'esso.
     const histWhere: any = {
       userId,
       date: { gte: pastStart, lte: histEnd },

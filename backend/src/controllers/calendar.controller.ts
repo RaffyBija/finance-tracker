@@ -88,7 +88,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
 
     const [transactions, plannedTransactions, recurringTransactions, openingBalanceRows] = await Promise.all([
       prisma.transaction.findMany({
-        where: { userId, date: { gte: monthStart, lte: monthEnd } },
+        where: { userId, date: { gte: monthStart, lte: monthEnd }, transferId: null },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
         orderBy: { date: 'asc' },
       }),
@@ -108,7 +108,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       }),
       prisma.transaction.groupBy({
         by: ['type'],
-        where: { userId, date: { lt: monthStart } },
+        where: { userId, date: { lt: monthStart }, transferId: null },
         _sum: { amount: true },
       }),
     ]);

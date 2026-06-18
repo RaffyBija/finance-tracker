@@ -39,10 +39,13 @@ export interface Transaction {
   categoryId?: string;
   accountId?: string | null;
   userId: string;
+  transferId?: string | null;
   createdAt: string;
   updatedAt: string;
   category?: Category;
   account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
+  // Conto "peer" dell'altra gamba del trasferimento (popolato dal backend).
+  transferPeer?: Pick<Account, 'id' | 'name' | 'color'> | null;
 }
 
 export interface CreateTransactionDTO {
@@ -52,6 +55,14 @@ export interface CreateTransactionDTO {
   date?: string;
   categoryId?: string;
   accountId?: string;
+}
+
+export interface CreateTransferDTO {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  date?: string;
+  description?: string;
 }
 
 export interface UpdateTransactionDTO {

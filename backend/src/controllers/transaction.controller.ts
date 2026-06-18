@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { randomUUID } from 'node:crypto';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
@@ -58,7 +59,37 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       skip: offset ? parseInt(offset as string) : 0,
     });
 
-    res.json(transactions);
+    // Arricchisci le gambe di trasferimento con il conto "peer" (l'altra gamba):
+    // serve al frontend per mostrare "Conto A → Conto B" senza query extra.
+    const transferIds = [
+      ...new Set(transactions.map((t) => t.transferId).filter((id): id is string => !!id)),
+    ];
+    let withPeer: typeof transactions | (typeof transactions[number] & { transferPeer?: unknown })[] = transactions;
+    if (transferIds.length > 0) {
+      const legs = await prisma.transaction.findMany({
+        where: { userId, transferId: { in: transferIds } },
+        select: {
+          id: true,
+          transferId: true,
+          type: true,
+          account: { select: { id: true, name: true, color: true } },
+        },
+      });
+      // Per ogni transferId, il peer di una gamba è la gamba con id diverso.
+      const byTransfer = new Map<string, typeof legs>();
+      for (const leg of legs) {
+        const arr = byTransfer.get(leg.transferId!) ?? [];
+        arr.push(leg);
+        byTransfer.set(leg.transferId!, arr);
+      }
+      withPeer = transactions.map((t) => {
+        if (!t.transferId) return t;
+        const peer = byTransfer.get(t.transferId)?.find((l) => l.id !== t.id);
+        return { ...t, transferPeer: peer?.account ?? null };
+      });
+    }
+
+    res.json(withPeer);
   } catch (error) {
     console.error('Get transactions error:', error);
     res.status(500).json({ error: 'Errore del server' });
@@ -342,6 +373,175 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Transazione eliminata con successo' });
   } catch (error) {
     console.error('Delete transaction error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Crea un trasferimento tra due conti BANK: due transazioni collegate dallo
+// stesso transferId (uscita sull'origine, entrata sulla destinazione). I
+// trasferimenti non hanno categoria e sono esclusi dalle statistiche.
+export const createTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { fromAccountId, toAccountId, amount, date, description } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Importo non valido' });
+    }
+
+    if (!fromAccountId || !toAccountId) {
+      return res.status(400).json({ error: 'Conto di origine e destinazione obbligatori' });
+    }
+
+    if (fromAccountId === toAccountId) {
+      return res.status(400).json({ error: 'Il conto di origine e destinazione devono essere diversi' });
+    }
+
+    // Entrambi i conti devono esistere, appartenere all'utente ed essere BANK.
+    const accounts = await prisma.account.findMany({
+      where: { id: { in: [fromAccountId, toAccountId] }, userId },
+      select: { id: true, type: true },
+    });
+
+    if (accounts.length !== 2) {
+      return res.status(404).json({ error: 'Conto non trovato' });
+    }
+
+    if (accounts.some((a) => a.type !== 'BANK')) {
+      return res.status(400).json({ error: 'I trasferimenti sono consentiti solo tra conti bancari' });
+    }
+
+    const transferId = randomUUID();
+    const txDate = date ? new Date(date) : new Date();
+
+    await prisma.$transaction([
+      prisma.transaction.create({
+        data: {
+          amount,
+          type: 'EXPENSE',
+          description,
+          date: txDate,
+          userId,
+          accountId: fromAccountId,
+          transferId,
+        },
+      }),
+      prisma.transaction.create({
+        data: {
+          amount,
+          type: 'INCOME',
+          description,
+          date: txDate,
+          userId,
+          accountId: toAccountId,
+          transferId,
+        },
+      }),
+    ]);
+
+    analyticsCache.onTransactionMutated(userId);
+    res.status(201).json({ message: 'Trasferimento creato con successo', transferId });
+  } catch (error) {
+    console.error('Create transfer error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Aggiorna un trasferimento esistente: ritocca entrambe le gambe collegate dal
+// transferId mantenendone gli id. La gamba EXPENSE va sull'origine, la INCOME
+// sulla destinazione; importo, data e descrizione sono condivisi.
+export const updateTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const transferId = Array.isArray(req.params.transferId)
+      ? req.params.transferId[0]
+      : req.params.transferId;
+    const { fromAccountId, toAccountId, amount, date, description } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Importo non valido' });
+    }
+
+    if (!fromAccountId || !toAccountId) {
+      return res.status(400).json({ error: 'Conto di origine e destinazione obbligatori' });
+    }
+
+    if (fromAccountId === toAccountId) {
+      return res.status(400).json({ error: 'Il conto di origine e destinazione devono essere diversi' });
+    }
+
+    // Le due gambe devono esistere e appartenere all'utente.
+    const legs = await prisma.transaction.findMany({
+      where: { userId, transferId },
+      select: { id: true, type: true },
+    });
+
+    if (legs.length !== 2) {
+      return res.status(404).json({ error: 'Trasferimento non trovato' });
+    }
+
+    // Entrambi i conti devono esistere, appartenere all'utente ed essere BANK.
+    const accounts = await prisma.account.findMany({
+      where: { id: { in: [fromAccountId, toAccountId] }, userId },
+      select: { id: true, type: true },
+    });
+
+    if (accounts.length !== 2) {
+      return res.status(404).json({ error: 'Conto non trovato' });
+    }
+
+    if (accounts.some((a) => a.type !== 'BANK')) {
+      return res.status(400).json({ error: 'I trasferimenti sono consentiti solo tra conti bancari' });
+    }
+
+    const expenseLeg = legs.find((l) => l.type === 'EXPENSE');
+    const incomeLeg = legs.find((l) => l.type === 'INCOME');
+
+    if (!expenseLeg || !incomeLeg) {
+      return res.status(409).json({ error: 'Trasferimento in uno stato non valido' });
+    }
+
+    const txDate = date ? new Date(date) : new Date();
+
+    await prisma.$transaction([
+      prisma.transaction.update({
+        where: { id: expenseLeg.id },
+        data: { accountId: fromAccountId, amount, date: txDate, description },
+      }),
+      prisma.transaction.update({
+        where: { id: incomeLeg.id },
+        data: { accountId: toAccountId, amount, date: txDate, description },
+      }),
+    ]);
+
+    analyticsCache.onTransactionMutated(userId);
+    res.json({ message: 'Trasferimento aggiornato con successo', transferId });
+  } catch (error) {
+    console.error('Update transfer error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Elimina un trasferimento: rimuove entrambe le gambe collegate dal transferId.
+export const deleteTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const transferId = Array.isArray(req.params.transferId)
+      ? req.params.transferId[0]
+      : req.params.transferId;
+
+    const result = await prisma.transaction.deleteMany({
+      where: { userId, transferId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Trasferimento non trovato' });
+    }
+
+    analyticsCache.onTransactionMutated(userId);
+    res.json({ message: 'Trasferimento eliminato con successo' });
+  } catch (error) {
+    console.error('Delete transfer error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

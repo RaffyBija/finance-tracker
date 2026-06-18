@@ -7,6 +7,7 @@ import type {
   Transaction,
   CreateTransactionDTO,
   UpdateTransactionDTO,
+  CreateTransferDTO,
   Category,
   CreateCategoryDTO,
   UpdateCategoryDTO,
@@ -147,6 +148,31 @@ export const transactionAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/transactions/${id}`);
+  },
+
+  createTransfer: async (
+    transfer: CreateTransferDTO,
+  ): Promise<{ message: string; transferId: string }> => {
+    const { data } = await api.post<{ message: string; transferId: string }>(
+      "/transactions/transfer",
+      transfer,
+    );
+    return data;
+  },
+
+  updateTransfer: async (
+    transferId: string,
+    transfer: CreateTransferDTO,
+  ): Promise<{ message: string; transferId: string }> => {
+    const { data } = await api.put<{ message: string; transferId: string }>(
+      `/transactions/transfer/${transferId}`,
+      transfer,
+    );
+    return data;
+  },
+
+  deleteTransfer: async (transferId: string): Promise<void> => {
+    await api.delete(`/transactions/transfer/${transferId}`);
   },
 
   suggestCategory: async (

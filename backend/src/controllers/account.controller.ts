@@ -30,7 +30,10 @@ export const getAccounts = async (req: AuthRequest, res: Response) => {
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
 
-    // Calcola saldi con una sola query groupBy invece di N*2 aggregate
+    // Calcola saldi con una sola query groupBy invece di N*2 aggregate.
+    // NB: i trasferimenti (transferId) NON vanno esclusi qui: muovono denaro tra
+    // conti e devono incidere sul saldo per-conto (coerente con balance.ts). Solo
+    // gli aggregati statistici (dashboard/budget/analytics/calendar) li filtrano.
     const accountIds = accounts.map((a) => a.id);
     const totals = await prisma.transaction.groupBy({
       by: ['accountId', 'type'],
