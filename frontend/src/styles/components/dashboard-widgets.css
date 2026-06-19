@@ -1,7 +1,6 @@
 /* ============================================
-   DASHBOARD WIDGETS
-   Griglia personalizzabile + widget (azioni rapide, utilizzo CC,
-   in scadenza, budget) + pannello "Personalizza".
+   DASHBOARD WIDGETS (v2)
+   Gerarchia: Hero → barra azioni → fascia tessere KPI → griglia contenuti.
    CSS esplicito (no @apply) così gli override .dark non vengono "baked".
    Palette: teal primary, semantici emerald/red/amber, neutri warm Stone.
    ============================================ */
@@ -19,7 +18,192 @@
   gap: 0.4rem;
 }
 
-/* ── Griglia widget ── */
+/* ── Barra azioni rapide ── */
+.quick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.quick-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 0.625rem;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #1c1917;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.quick-bar-btn:hover {
+  background-color: #f5f5f4;
+  border-color: #d6d3d1;
+}
+
+.quick-bar-btn:active {
+  transform: scale(0.98);
+}
+
+.quick-bar-icon-income   { color: #059669; }
+.quick-bar-icon-transfer { color: #0d9488; }
+.quick-bar-icon-planned  { color: #0284c7; }
+
+/* ── Fascia tessere KPI ── */
+.dashboard-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 1rem 1.125rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  text-align: left;
+}
+
+button.dashboard-tile {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.dashboard-tile:hover {
+  border-color: #d6d3d1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-tile-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #78716c;
+}
+
+.dashboard-tile-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.dashboard-tile-figure {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #1c1917;
+}
+
+.dashboard-tile-figure.is-expense { color: #dc2626; }
+.dashboard-tile-figure.is-income  { color: #059669; }
+
+.dashboard-tile-figure-muted {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #78716c;
+}
+
+.dashboard-tile-figure-ok {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.dashboard-tile-meta {
+  font-size: 0.75rem;
+  color: #78716c;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tono = significato (utilizzo CC sopra soglia) sulla meta, non sull'intera card */
+.dashboard-tile.is-warn   .dashboard-tile-meta { color: #d97706; }
+.dashboard-tile.is-danger .dashboard-tile-meta { color: #dc2626; }
+
+/* ── Header leggero dei widget contenuto ── */
+.widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem 0.75rem;
+}
+
+.widget-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #57534e;
+  margin: 0;
+}
+
+.widget-body {
+  padding: 0 1.25rem 1.25rem;
+}
+
+/* Selettore mese nei widget analitici (es. torta) */
+.widget-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.widget-period-pill {
+  min-width: 5.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #57534e;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-period-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e7e5e4;
+  background-color: #ffffff;
+  color: #57534e;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.widget-period-btn:hover:not(:disabled) {
+  background-color: #f5f5f4;
+  border-color: #d6d3d1;
+}
+
+.widget-period-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* La torta dentro un .card senza padding: aggiungo respiro al body */
+.dashboard-pie-body { padding: 0 1.25rem 1.25rem; }
+.dashboard-chart-empty { padding: 1.5rem 1.25rem 2rem; }
+
+/* ── Griglia contenuti ── */
 .dashboard-widget-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -40,171 +224,11 @@
   min-width: 0;
 }
 
-/* ── Azioni rapide ── */
-.quick-actions-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem 1.5rem;
-}
-
-.quick-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid #e7e5e4;
-  border-radius: 0.625rem;
-  background-color: #fafaf9;
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #1c1917;
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-}
-
-.quick-action-btn:hover {
-  background-color: #f5f5f4;
-  border-color: #d6d3d1;
-}
-
-.quick-action-btn:active {
-  transform: scale(0.99);
-}
-
-.quick-action-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.5rem;
-  flex-shrink: 0;
-}
-
-.quick-action-icon-income {
-  background-color: #d1fae5;
-  color: #059669;
-}
-
-.quick-action-icon-transfer {
-  background-color: #ccfbf1;
-  color: #0d9488;
-}
-
-.quick-action-icon-planned {
-  background-color: #e0f2fe;
-  color: #0284c7;
-}
-
-.quick-action-label {
-  min-width: 0;
-}
-
-/* ── Utilizzo CC ── */
-.cc-usage-list {
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem 0.75rem 0.75rem;
-}
-
-.cc-usage-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.75rem;
-  border: none;
-  border-radius: 0.625rem;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.15s ease;
-}
-
-.cc-usage-row:hover {
-  background-color: #f5f5f4;
-}
-
-.cc-usage-row-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.cc-usage-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: #1c1917;
-  min-width: 0;
-}
-
-.cc-usage-dot {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-
-.cc-usage-debt {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: #dc2626;
-  white-space: nowrap;
-}
-
-.cc-usage-bar-track {
-  height: 0.5rem;
-  width: 100%;
-  border-radius: 9999px;
-  background-color: #e7e5e4;
-  overflow: hidden;
-}
-
-.cc-usage-bar-fill {
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 0.3s ease;
-}
-
-.cc-usage-bar-fill.is-ok     { background-color: #14b8a6; }
-.cc-usage-bar-fill.is-warn   { background-color: #fbbf24; }
-.cc-usage-bar-fill.is-danger { background-color: #ef4444; }
-
-.cc-usage-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #78716c;
-  font-variant-numeric: tabular-nums;
-}
-
-.cc-usage-billing {
-  font-size: 0.75rem;
-  color: #57534e;
-}
-
-.cc-usage-empty-icon,
-.due-soon-empty-icon,
-.budget-overview-empty-icon {
-  display: block;
-  margin: 0 auto 0.5rem;
-  color: #a8a29e;
-}
-
 /* ── In scadenza ── */
 .due-soon-list {
   display: flex;
   flex-direction: column;
-  padding: 0.5rem 0.75rem 0.75rem;
+  padding: 0 0.75rem 0.75rem;
 }
 
 .due-soon-row {
@@ -222,9 +246,7 @@
   transition: background-color 0.15s ease;
 }
 
-.due-soon-row:hover {
-  background-color: #f5f5f4;
-}
+.due-soon-row:hover { background-color: #f5f5f4; }
 
 .due-soon-info {
   display: flex;
@@ -259,15 +281,8 @@
   font-weight: 600;
 }
 
-.due-soon-badge-recurring {
-  background-color: #ccfbf1;
-  color: #0f766e;
-}
-
-.due-soon-badge-planned {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
+.due-soon-badge-recurring { background-color: #ccfbf1; color: #0f766e; }
+.due-soon-badge-planned   { background-color: #e0f2fe; color: #0369a1; }
 
 .due-soon-amount {
   font-variant-numeric: tabular-nums;
@@ -278,12 +293,19 @@
 .due-soon-amount.is-income  { color: #059669; }
 .due-soon-amount.is-expense { color: #dc2626; }
 
+.due-soon-empty-icon,
+.budget-overview-empty-icon {
+  display: block;
+  margin: 0 auto 0.5rem;
+  color: #a8a29e;
+}
+
 /* ── Budget overview ── */
 .budget-overview-list {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.5rem 0.75rem 0.75rem;
+  padding: 0 0.75rem 0.75rem;
 }
 
 .budget-overview-row {
@@ -300,9 +322,7 @@
   transition: background-color 0.15s ease;
 }
 
-.budget-overview-row:hover {
-  background-color: #f5f5f4;
-}
+.budget-overview-row:hover { background-color: #f5f5f4; }
 
 .budget-overview-row-top {
   display: flex;
@@ -345,6 +365,31 @@
 .budget-overview-bar-fill.is-warn   { background-color: #fbbf24; }
 .budget-overview-bar-fill.is-danger { background-color: #ef4444; }
 
+/* ── Empty state griglia ── */
+.dashboard-empty-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  border: 1px dashed #d6d3d1;
+  border-radius: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-empty-grid-icon { color: #a8a29e; }
+.dashboard-empty-grid-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1917;
+}
+.dashboard-empty-grid-text {
+  font-size: 0.875rem;
+  color: #78716c;
+  margin-bottom: 0.5rem;
+}
+
 /* ── Pannello Personalizza ── */
 .customize-panel {
   display: flex;
@@ -355,6 +400,21 @@
 .customize-intro {
   font-size: 0.875rem;
   color: #78716c;
+  margin: 0;
+}
+
+.customize-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.customize-section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a8a29e;
   margin: 0;
 }
 
@@ -378,9 +438,7 @@
   transition: opacity 0.15s ease;
 }
 
-.customize-item.is-disabled {
-  opacity: 0.55;
-}
+.customize-item.is-disabled { opacity: 0.55; }
 
 .customize-reorder {
   display: flex;
@@ -467,52 +525,71 @@
 /* ============================================
    DARK MODE — Stone caldo (charcoal)
    ============================================ */
-.dark .quick-action-btn {
-  background-color: #1c1917;
+.dark .quick-bar-btn {
+  background-color: #292524;
   border-color: #44403c;
   color: #f5f5f4;
 }
-.dark .quick-action-btn:hover {
+.dark .quick-bar-btn:hover {
   background-color: #44403c;
   border-color: #57534e;
 }
-.dark .quick-action-icon-income   { background-color: #064e3b; color: #6ee7b7; }
-.dark .quick-action-icon-transfer { background-color: #134e4a; color: #5eead4; }
-.dark .quick-action-icon-planned  { background-color: #0c4a6e; color: #7dd3fc; }
+.dark .quick-bar-icon-income   { color: #34d399; }
+.dark .quick-bar-icon-transfer { color: #2dd4bf; }
+.dark .quick-bar-icon-planned  { color: #38bdf8; }
 
-.dark .cc-usage-row:hover,
+.dark .dashboard-tile {
+  background-color: #292524;
+  border-color: #44403c;
+}
+.dark button.dashboard-tile:hover {
+  border-color: #57534e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.dark .dashboard-tile-figure { color: #f5f5f4; }
+.dark .dashboard-tile-figure.is-expense { color: #f87171; }
+.dark .dashboard-tile-figure.is-income  { color: #34d399; }
+.dark .dashboard-tile-figure-ok { color: #34d399; }
+.dark .dashboard-tile-label,
+.dark .dashboard-tile-meta,
+.dark .dashboard-tile-figure-muted { color: #a8a29e; }
+.dark .dashboard-tile.is-warn   .dashboard-tile-meta { color: #fbbf24; }
+.dark .dashboard-tile.is-danger .dashboard-tile-meta { color: #f87171; }
+
+.dark .widget-title,
+.dark .widget-period-pill { color: #d6d3d1; }
+.dark .widget-period-btn {
+  background-color: #292524;
+  border-color: #44403c;
+  color: #d6d3d1;
+}
+.dark .widget-period-btn:hover:not(:disabled) {
+  background-color: #44403c;
+  border-color: #57534e;
+}
+
 .dark .due-soon-row:hover,
-.dark .budget-overview-row:hover {
-  background-color: #44403c;
-}
-.dark .cc-usage-name,
+.dark .budget-overview-row:hover { background-color: #44403c; }
 .dark .due-soon-name,
-.dark .budget-overview-name,
-.dark .customize-item-title {
-  color: #f5f5f4;
-}
-.dark .cc-usage-bar-track,
-.dark .budget-overview-bar-track {
-  background-color: #44403c;
-}
-.dark .cc-usage-meta,
+.dark .budget-overview-name { color: #f5f5f4; }
 .dark .due-soon-meta,
-.dark .budget-overview-figures,
-.dark .customize-intro,
-.dark .customize-item-desc {
-  color: #a8a29e;
-}
-.dark .cc-usage-billing { color: #d6d3d1; }
-.dark .cc-usage-debt        { color: #f87171; }
+.dark .budget-overview-figures { color: #a8a29e; }
 .dark .due-soon-amount.is-income  { color: #34d399; }
 .dark .due-soon-amount.is-expense { color: #f87171; }
-
 .dark .due-soon-badge-recurring { background-color: #134e4a; color: #5eead4; }
 .dark .due-soon-badge-planned   { background-color: #0c4a6e; color: #7dd3fc; }
+.dark .budget-overview-bar-track { background-color: #44403c; }
+
+.dark .dashboard-empty-grid { border-color: #44403c; }
+.dark .dashboard-empty-grid-title { color: #f5f5f4; }
+.dark .dashboard-empty-grid-text { color: #a8a29e; }
 
 .dark .customize-item {
   background-color: #1c1917;
   border-color: #44403c;
 }
+.dark .customize-item-title { color: #f5f5f4; }
+.dark .customize-intro,
+.dark .customize-item-desc { color: #a8a29e; }
 .dark .customize-switch-track { background-color: #57534e; }
 .dark .customize-switch input:checked + .customize-switch-track { background-color: #0d9488; }

@@ -22,8 +22,8 @@ export default function BudgetOverviewWidget() {
 
   return (
     <div className="card budget-overview">
-      <div className="card-header">
-        <h2 className="card-header-title">Budget</h2>
+      <div className="widget-head">
+        <h3 className="widget-title">Budget</h3>
       </div>
       {sorted.length === 0 ? (
         <div className="dashboard-empty-state">

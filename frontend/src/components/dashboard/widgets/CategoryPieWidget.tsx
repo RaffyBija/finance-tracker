@@ -1,7 +1,8 @@
-import { useMemo, memo } from 'react';
+import { useMemo, useState, memo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { useCategoryStats } from '../../../hooks/useDashboard';
-import { useDashboardMonth } from '../../../contexts/DashboardMonthContext';
 import { formatMonth } from '../../../utils/date';
 import { useFormatCurrency } from '../../../hooks/useFormatCurrency';
 import { SkeletonPieChart } from '../../shared/Skeleton';
@@ -48,11 +49,22 @@ const CustomPieLegend = memo(({ data }: { data: any[] }) => {
   );
 });
 
-// Widget "Spese per categoria" — pie chart delle uscite del mese selezionato.
+// Widget "Spese per categoria" — autonomo: possiede il proprio selettore mese
+// (il mese tocca solo questo widget analitico, non l'Hero).
 export default function CategoryPieWidget() {
-  const { currentMonth, monthRange } = useDashboardMonth();
-  const { data: categoryStats = [], isLoading } = useCategoryStats(monthRange);
+  const [month, setMonth] = useState(new Date());
 
+  const range = useMemo(() => ({
+    startDate: format(startOfMonth(month), 'yyyy-MM-dd'),
+    endDate: format(endOfMonth(month), 'yyyy-MM-dd'),
+  }), [month]);
+
+  const isCurrentMonth = useMemo(() => {
+    const now = new Date();
+    return month.getMonth() === now.getMonth() && month.getFullYear() === now.getFullYear();
+  }, [month]);
+
+  const { data: categoryStats = [], isLoading } = useCategoryStats(range);
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
     [categoryStats]
@@ -61,11 +73,31 @@ export default function CategoryPieWidget() {
   if (isLoading) return <SkeletonPieChart />;
 
   return (
-    <div className="card card-lg">
-      <h2 className="card-header-title mb-4">
-        Spese per Categoria
-        <span className="dashboard-pie-month">{formatMonth(currentMonth)}</span>
-      </h2>
+    <div className="card">
+      <div className="widget-head">
+        <h3 className="widget-title">Spese per categoria</h3>
+        <div className="widget-period">
+          <button
+            type="button"
+            className="widget-period-btn"
+            onClick={() => setMonth((d) => subMonths(d, 1))}
+            aria-label="Mese precedente"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span className="widget-period-pill">{formatMonth(month)}</span>
+          <button
+            type="button"
+            className="widget-period-btn"
+            onClick={() => setMonth((d) => addMonths(d, 1))}
+            disabled={isCurrentMonth}
+            aria-label="Mese successivo"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+
       {expenseCategoryStats.length === 0 ? (
         <div className="dashboard-chart-empty">Nessuna spesa registrata questo mese</div>
       ) : (

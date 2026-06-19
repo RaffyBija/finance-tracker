@@ -34,9 +34,9 @@ export default function MonthlyTrendWidget() {
   if (isLoading) return <SkeletonChart />;
 
   return (
-    <div className="card card-lg">
-      <div className="dashboard-chart-header">
-        <h2 className="card-header-title">Trend Mensile</h2>
+    <div className="card">
+      <div className="widget-head">
+        <h3 className="widget-title">Trend mensile</h3>
         <div className="dashboard-chart-legend">
           <span className="dashboard-chart-legend-item">
             <span className="dashboard-chart-dot dashboard-chart-dot-income" /> Entrate
@@ -46,27 +46,29 @@ export default function MonthlyTrendWidget() {
           </span>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={formattedTrend} barCategoryGap="30%" barGap={4}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 12, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 11, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(v) => `€${v}`}
-            width={60}
-          />
-          <Tooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-          <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expense" name="Uscite" fill="#EF4444" radius={[4, 4, 0, 0]} opacity={0.8} />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="widget-body">
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={formattedTrend} barCategoryGap="30%" barGap={4}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+            <XAxis
+              dataKey="month"
+              tick={{ fontSize: 12, fill: '#a8a29e' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#a8a29e' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `€${v}`}
+              width={60}
+            />
+            <Tooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+            <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expense" name="Uscite" fill="#EF4444" radius={[4, 4, 0, 0]} opacity={0.8} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

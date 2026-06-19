@@ -53,8 +53,8 @@ export default function DueSoonWidget() {
 
   return (
     <div className="card due-soon">
-      <div className="card-header">
-        <h2 className="card-header-title">In scadenza</h2>
+      <div className="widget-head">
+        <h3 className="widget-title">In scadenza</h3>
       </div>
       {rows.length === 0 ? (
         <div className="dashboard-empty-state">

@@ -1,38 +1,30 @@
 // frontend/src/pages/DashboardPage.tsx
 
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { formatMonthYear } from '../utils/date';
+import { SlidersHorizontal, LayoutGrid } from 'lucide-react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useSummary } from '../hooks/useDashboard';
 import { useAccounts } from '../hooks/useAccounts';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { WIDGET_MAP } from '../components/dashboard/widgets/registry';
-import { DashboardMonthProvider } from '../contexts/DashboardMonthContext';
 import CustomizeDashboardModal from '../components/dashboard/CustomizeDashboardModal';
 
 export default function DashboardPage() {
   const { formatCurrency } = useFormatCurrency();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showCustomize, setShowCustomize] = useState(false);
-
   const { items, toggle, move, reset } = useDashboardLayout();
 
-  const monthRange = useMemo(() => ({
-    startDate: format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
-    endDate: format(endOfMonth(currentMonth), 'yyyy-MM-dd'),
-  }), [currentMonth]);
-
-  const isCurrentMonth = useMemo(() => {
+  // L'Hero è sempre ancorato al mese corrente (niente navigazione: ciò che è
+  // navigabile è solo l'analisi storica, dentro i singoli widget analitici).
+  const monthRange = useMemo(() => {
     const now = new Date();
-    return (
-      currentMonth.getMonth() === now.getMonth() &&
-      currentMonth.getFullYear() === now.getFullYear()
-    );
-  }, [currentMonth]);
+    return {
+      startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(now), 'yyyy-MM-dd'),
+    };
+  }, []);
 
-  // ── Query per l'Hero (le altre vivono nei singoli widget) ──
   const { data: summary,      isLoading: summaryLoading }      = useSummary(monthRange);
   const { data: totalSummary, isLoading: totalSummaryLoading } = useSummary();
   const { data: accounts = [], isLoading: accountsLoading }     = useAccounts();
@@ -41,18 +33,17 @@ export default function DashboardPage() {
   const multiAccount = liquidAccounts.length > 1;
   const netWorth = liquidAccounts.reduce((s, a) => s + a.balance, 0);
 
-  // Finché i conti non sono caricati non sappiamo se mostrare netWorth (liquidità
-  // BANK) o il saldo all-time: mostrare quest'ultimo a metà caricamento causa un
-  // flicker (include le CC). Aspettiamo i conti prima di decidere.
   const hasAccounts = liquidAccounts.length > 0;
   const heroValue = hasAccounts ? netWorth : (totalSummary?.balance ?? 0);
   const heroLoading = accountsLoading || (!hasAccounts && totalSummaryLoading);
   const heroPositive = heroValue >= 0;
 
-  const monthContext = useMemo(
-    () => ({ currentMonth, monthRange, isCurrentMonth }),
-    [currentMonth, monthRange, isCurrentMonth]
-  );
+  // ── Raggruppamento widget per zona ──
+  const enabled = items.filter((i) => i.enabled && WIDGET_MAP[i.id]);
+  const barItems = enabled.filter((i) => WIDGET_MAP[i.id].slot === 'bar');
+  const tileItems = enabled.filter((i) => WIDGET_MAP[i.id].slot === 'tile');
+  const contentItems = enabled.filter((i) => WIDGET_MAP[i.id].slot === 'content');
+  const nothingEnabled = enabled.length === 0;
 
   return (
     <div className="container-custom">
@@ -69,7 +60,7 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* ── Hero (fisso) ── */}
+      {/* ── Hero (fisso, mese corrente) ── */}
       <div className="dashboard-hero mb-6" data-tour="dashboard-hero">
         <div className="dashboard-hero-top">
           <div>
@@ -82,22 +73,6 @@ export default function DashboardPage() {
               <p className={`dashboard-hero-value${!heroPositive ? ' is-negative' : ''}`}>
                 {heroPositive ? '+' : '−'}{formatCurrency(Math.abs(heroValue))}
               </p>
-            )}
-          </div>
-          <div className="dashboard-hero-nav">
-            <button onClick={() => setCurrentMonth((d) => subMonths(d, 1))} className="dashboard-nav-btn">
-              <ChevronLeft size={15} />
-            </button>
-            <span className="dashboard-month-pill">
-              {formatMonthYear(currentMonth)}
-            </span>
-            <button onClick={() => setCurrentMonth((d) => addMonths(d, 1))} disabled={isCurrentMonth} className="dashboard-nav-btn">
-              <ChevronRight size={15} />
-            </button>
-            {!isCurrentMonth && (
-              <button onClick={() => setCurrentMonth(new Date())} className="dashboard-today-btn">
-                Oggi
-              </button>
             )}
           </div>
         </div>
@@ -122,7 +97,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div key={format(currentMonth, 'yyyy-MM')} className="dashboard-hero-stats dashboard-stats-reveal">
+        <div className="dashboard-hero-stats dashboard-stats-reveal">
           {summaryLoading ? (
             [0, 1, 2, 3].map((i) => (
               <div key={i} className="dashboard-hero-stat animate-pulse">
@@ -156,27 +131,56 @@ export default function DashboardPage() {
 
         {!summaryLoading && (
           <p className="dashboard-hero-stats-caption">
-            Movimenti del mese · tutti i conti (CC inclusa)
+            Movimenti del mese corrente · tutti i conti (CC inclusa)
           </p>
         )}
       </div>
 
-      {/* ── Griglia widget personalizzabile ── */}
-      <DashboardMonthProvider value={monthContext}>
-        <div className="dashboard-widget-grid">
-          {items
-            .filter((item) => item.enabled && WIDGET_MAP[item.id])
-            .map((item) => {
-              const def = WIDGET_MAP[item.id];
-              const Widget = def.component;
-              return (
-                <div key={item.id} className={`dashboard-widget is-${def.size}`}>
-                  <Widget />
-                </div>
-              );
-            })}
+      {/* ── Barra azioni rapide ── */}
+      {barItems.map((item) => {
+        const Widget = WIDGET_MAP[item.id].component;
+        return <Widget key={item.id} />;
+      })}
+
+      {/* ── Fascia tessere KPI ── */}
+      {tileItems.length > 0 && (
+        <div className="dashboard-tiles-row">
+          {tileItems.map((item) => {
+            const Widget = WIDGET_MAP[item.id].component;
+            return <Widget key={item.id} />;
+          })}
         </div>
-      </DashboardMonthProvider>
+      )}
+
+      {/* ── Griglia contenuti ── */}
+      {contentItems.length > 0 && (
+        <div className="dashboard-widget-grid">
+          {contentItems.map((item) => {
+            const def = WIDGET_MAP[item.id];
+            const Widget = def.component;
+            return (
+              <div key={item.id} className={`dashboard-widget is-${def.size}`}>
+                <Widget />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Empty state (nessun widget attivo) ── */}
+      {nothingEnabled && (
+        <div className="dashboard-empty-grid">
+          <LayoutGrid size={28} className="dashboard-empty-grid-icon" />
+          <p className="dashboard-empty-grid-title">Nessun widget attivo</p>
+          <p className="dashboard-empty-grid-text">
+            La dashboard è vuota. Aggiungi i riquadri che ti servono.
+          </p>
+          <button type="button" className="btn btn-primary btn-md" onClick={() => setShowCustomize(true)}>
+            <SlidersHorizontal size={15} />
+            Aggiungi widget
+          </button>
+        </div>
+      )}
 
       <CustomizeDashboardModal
         isOpen={showCustomize}

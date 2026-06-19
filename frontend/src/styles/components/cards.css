@@ -763,67 +763,6 @@
   border-radius: 0.375rem;
 }
 
-.dashboard-hero-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.dashboard-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 0.375rem;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: white;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.dashboard-nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.dashboard-nav-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.dashboard-month-pill {
-  padding: 0.375rem 0.875rem;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: white;
-  text-transform: capitalize;
-  min-width: 130px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.dashboard-today-btn {
-  padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 0.375rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  white-space: nowrap;
-}
-
-.dashboard-today-btn:hover {
-  background: rgba(255, 255, 255, 0.24);
-}
-
 /* Account breakdown inside hero (multi-account mode) */
 .dashboard-hero-accounts {
   display: flex;
@@ -969,11 +908,6 @@
 
   .dashboard-hero-value {
     font-size: 2rem;
-  }
-
-  .dashboard-hero-nav {
-    flex-wrap: wrap;
-    gap: 0.375rem;
   }
 }
 
@@ -1986,14 +1920,6 @@
 .dashboard-chart-dot-income  { background-color: #10b981; }
 .dashboard-chart-dot-expense { background-color: #f87171; }
 
-.dashboard-pie-month {
-  font-size: 0.875rem;
-  font-weight: 400;
-  color: #9ca3af;
-  margin-left: 0.5rem;
-  text-transform: capitalize;
-}
-
 .dashboard-chart-empty {
   display: flex;
   align-items: center;
@@ -2183,7 +2109,6 @@
 .dark .dashboard-tooltip-label  { color: #d6d3d1; }
 .dark .dashboard-tooltip-amount { color: #f87171; }
 .dark .dashboard-chart-legend   { color: #78716c; }
-.dark .dashboard-pie-month      { color: #78716c; }
 .dark .dashboard-chart-empty    { color: #78716c; }
 .dark .dashboard-empty-state    { color: #78716c; }
 .dark .dashboard-legend-name    { color: #a8a29e; }

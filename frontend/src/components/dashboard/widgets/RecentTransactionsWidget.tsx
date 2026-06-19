@@ -10,8 +10,8 @@ export default function RecentTransactionsWidget() {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h2 className="card-header-title">Transazioni Recenti</h2>
+      <div className="widget-head">
+        <h3 className="widget-title">Transazioni recenti</h3>
       </div>
       <div className="card-divided">
         {recentTransactions.length === 0 ? (

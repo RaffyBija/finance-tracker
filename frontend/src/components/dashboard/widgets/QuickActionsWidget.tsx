@@ -5,7 +5,8 @@ import TransferModal from '../../transactions/TransferModal';
 import PlannedFormModal from '../../planned/PlannedFormModal';
 import { useCategories } from '../../../hooks/useCategories';
 
-// Widget "Azioni rapide" — apre al volo i form più usati da qualsiasi punto della dashboard.
+// Barra azioni rapide: riga compatta icona+label, senza card né titolo.
+// Apre al volo i form più usati da qualsiasi punto della dashboard.
 export default function QuickActionsWidget() {
   const { data: categories = [] } = useCategories('ALL');
   const [showTransaction, setShowTransaction] = useState(false);
@@ -13,44 +14,19 @@ export default function QuickActionsWidget() {
   const [showPlanned, setShowPlanned] = useState(false);
 
   return (
-    <div className="card quick-actions">
-      <div className="card-header">
-        <h2 className="card-header-title">Azioni rapide</h2>
-      </div>
-      <div className="quick-actions-grid">
-        <button
-          type="button"
-          className="quick-action-btn"
-          onClick={() => setShowTransaction(true)}
-        >
-          <span className="quick-action-icon quick-action-icon-income">
-            <Plus size={18} />
-          </span>
-          <span className="quick-action-label">Nuova transazione</span>
-        </button>
-
-        <button
-          type="button"
-          className="quick-action-btn"
-          onClick={() => setShowTransfer(true)}
-        >
-          <span className="quick-action-icon quick-action-icon-transfer">
-            <ArrowLeftRight size={18} />
-          </span>
-          <span className="quick-action-label">Trasferimento</span>
-        </button>
-
-        <button
-          type="button"
-          className="quick-action-btn"
-          onClick={() => setShowPlanned(true)}
-        >
-          <span className="quick-action-icon quick-action-icon-planned">
-            <CalendarClock size={18} />
-          </span>
-          <span className="quick-action-label">Nuova pianificata</span>
-        </button>
-      </div>
+    <div className="quick-bar">
+      <button type="button" className="quick-bar-btn" onClick={() => setShowTransaction(true)}>
+        <Plus size={16} className="quick-bar-icon quick-bar-icon-income" />
+        Transazione
+      </button>
+      <button type="button" className="quick-bar-btn" onClick={() => setShowTransfer(true)}>
+        <ArrowLeftRight size={16} className="quick-bar-icon quick-bar-icon-transfer" />
+        Trasferimento
+      </button>
+      <button type="button" className="quick-bar-btn" onClick={() => setShowPlanned(true)}>
+        <CalendarClock size={16} className="quick-bar-icon quick-bar-icon-planned" />
+        Pianificata
+      </button>
 
       <TransactionModal
         isOpen={showTransaction}

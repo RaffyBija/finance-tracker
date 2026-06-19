@@ -79,11 +79,11 @@ const SECTIONS: Section[] = [
     emoji: '📊',
     content: (
       <>
-        <p>In cima trovi sempre l'<strong>Hero</strong> con la liquidità disponibile, le entrate/uscite del mese e la navigazione tra i mesi. Tutto il resto è organizzato in <strong>riquadri (widget)</strong> che puoi personalizzare.</p>
-        <p>Tocca <strong>«Personalizza»</strong> in alto per <strong>mostrare/nascondere</strong> i widget e <strong>riordinarli</strong> con le frecce: azioni rapide (nuova transazione, trasferimento, pianificata), utilizzo delle carte di credito, scadenze imminenti, budget, andamento del saldo, trend mensile, spese per categoria, transazioni recenti e spese ricorrenti. La tua scelta viene ricordata su questo dispositivo.</p>
+        <p>In cima trovi sempre l'<strong>Hero</strong> con la liquidità disponibile e le entrate/uscite del <strong>mese corrente</strong>. Sotto, una <strong>barra di azioni rapide</strong> (transazione, trasferimento, pianificata) e una fascia di <strong>tessere</strong> a colpo d'occhio: una per ogni carta di credito (debito e utilizzo), la prossima uscita, i budget a rischio.</p>
+        <p>Tocca <strong>«Personalizza»</strong> in alto per <strong>mostrare/nascondere</strong> i riquadri e <strong>riordinarli</strong> con le frecce: barra azioni, tessere, andamento del saldo, in scadenza, budget, trend mensile, spese per categoria, transazioni recenti e spese ricorrenti. La tua scelta viene ricordata su questo dispositivo. Il <strong>selettore del mese</strong> vive sui soli widget analitici (es. Spese per categoria): l'Hero resta sempre sul presente.</p>
         <p>La card <strong>Andamento del saldo</strong> ha due modalità: <strong>Impegni certi</strong> (solo ricorrenti, pianificate e addebiti CC programmati) e <strong>Stima realistica</strong> (aggiunge una stima delle spese abituali per categoria a fine mese). Mostra un <strong>grafico</strong>: linea piena per la storia recente, tratteggiata per la proiezione futura.</p>
         <p>Tocca <strong>«Vedi dettaglio»</strong> per aprire la pagina <strong>Andamento del saldo</strong>: orizzonte esteso (fino a 24 mesi o intervallo personalizzato), <strong>dettaglio per voce</strong> degli impegni futuri e uno <strong>scenario «what-if»</strong> per simulare una variazione di liquidità oggi.</p>
-        <p>Usa le frecce per navigare i mesi storici e confrontare i trend.</p>
+        <p>Nel widget <strong>Spese per categoria</strong> usa le frecce per navigare i mesi e confrontare le uscite.</p>
       </>
     ),
   },

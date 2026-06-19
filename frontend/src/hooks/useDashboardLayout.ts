@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { WIDGET_REGISTRY, type WidgetId } from '../components/dashboard/widgets/registry';
+import { WIDGET_REGISTRY, WIDGET_MAP, type WidgetId } from '../components/dashboard/widgets/registry';
 
 export const STORAGE_KEY = 'dashboard:layout:v1';
 
@@ -69,12 +69,25 @@ export function useDashboardLayout() {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, enabled: !it.enabled } : it)));
   }, []);
 
+  // Il riordino agisce SOLO all'interno della stessa zona (bar/tile/content):
+  // scambia con il vicino più prossimo dello stesso slot, così le frecce non
+  // attraversano mai i confini di zona (che il rendering ignora comunque).
   const move = useCallback((id: WidgetId, dir: 'up' | 'down') => {
     setItems((prev) => {
       const idx = prev.findIndex((it) => it.id === id);
       if (idx === -1) return prev;
-      const target = dir === 'up' ? idx - 1 : idx + 1;
-      if (target < 0 || target >= prev.length) return prev;
+      const slot = WIDGET_MAP[id]?.slot;
+      let target = -1;
+      if (dir === 'up') {
+        for (let j = idx - 1; j >= 0; j--) {
+          if (WIDGET_MAP[prev[j].id]?.slot === slot) { target = j; break; }
+        }
+      } else {
+        for (let j = idx + 1; j < prev.length; j++) {
+          if (WIDGET_MAP[prev[j].id]?.slot === slot) { target = j; break; }
+        }
+      }
+      if (target === -1) return prev;
       const next = [...prev];
       [next[idx], next[target]] = [next[target], next[idx]];
       return next;
