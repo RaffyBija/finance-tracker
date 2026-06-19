@@ -277,6 +277,7 @@ export default function Navbar() {
             key={path}
             to={path}
             className={`navbar-mobile-tab${location.pathname === path ? ' is-active' : ''}`}
+            data-tour={path === '/accounts' ? 'conti-tab' : undefined}
           >
             <Icon size={20} />
             <span className="navbar-mobile-tab-label">{label}</span>

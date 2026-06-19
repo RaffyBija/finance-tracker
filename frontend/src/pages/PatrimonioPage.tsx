@@ -131,14 +131,18 @@ export default function PatrimonioPage() {
           {stats.best && (
             <div className="patrimonio-stat">
               <span className="patrimonio-stat-label">Mese migliore</span>
-              <span className="patrimonio-stat-value is-positive">+{formatCurrency(Math.abs(stats.best.delta))}</span>
+              <span className={`patrimonio-stat-value ${stats.best.delta >= 0 ? 'is-positive' : 'is-negative'}`}>
+                {stats.best.delta >= 0 ? '+' : '−'}{formatCurrency(Math.abs(stats.best.delta))}
+              </span>
               <span className="patrimonio-stat-meta">{formatMonth(stats.best.month + '-01')}</span>
             </div>
           )}
           {stats.worst && (
             <div className="patrimonio-stat">
               <span className="patrimonio-stat-label">Mese peggiore</span>
-              <span className="patrimonio-stat-value is-negative">−{formatCurrency(Math.abs(stats.worst.delta))}</span>
+              <span className={`patrimonio-stat-value ${stats.worst.delta >= 0 ? 'is-positive' : 'is-negative'}`}>
+                {stats.worst.delta >= 0 ? '+' : '−'}{formatCurrency(Math.abs(stats.worst.delta))}
+              </span>
               <span className="patrimonio-stat-meta">{formatMonth(stats.worst.month + '-01')}</span>
             </div>
           )}

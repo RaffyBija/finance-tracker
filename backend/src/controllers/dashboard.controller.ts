@@ -113,7 +113,7 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   try {
     const userId      = req.userId!;
     const monthsCount = parseInt((req.query.months as string) || '6');
-    const cacheKey    = analyticsCache.keys.monthlyTrend(userId);
+    const cacheKey    = analyticsCache.keys.monthlyTrend(userId, `m${monthsCount}`);
 
     const cached = analyticsCache.get<object[]>(cacheKey);
     if (cached) return res.json(cached);
@@ -666,18 +666,23 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
 
     const now = new Date();
 
-    // Patrimonio attuale = liquidità (Σ conti BANK), stessa fonte di verità dell'hero.
+    // Saldo all-time = liquidità (Σ conti BANK) da getAccountsWithBalances, che
+    // somma TUTTE le transazioni senza filtro data → include anche righe datate nel
+    // futuro. Lo usiamo come ancora: la ricostruzione sottrae i delta successivi a
+    // ogni fine-periodo, quindi i delta DEVONO usare lo stesso universo (nessun
+    // filtro su data superiore), altrimenti i mesi passati risulterebbero gonfiati
+    // del netto delle righe future.
     const accounts = await getAccountsWithBalances(userId);
-    const current = await getLiquidBalance(userId, accounts);
+    const allTimeBalance = await getLiquidBalance(userId, accounts);
 
-    // Movimenti reali dal primo mese mostrato fino a ora, nello scope coerente con
-    // currentBalance: solo conti BANK (la liquidità esclude le CC); se l'utente non
+    // Movimenti reali dal primo mese mostrato in poi, nello scope coerente con
+    // allTimeBalance: solo conti BANK (la liquidità esclude le CC); se l'utente non
     // ha conti, fallback su tutte le transazioni (come getLiquidBalance).
     const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
     firstMonthStart.setHours(0, 0, 0, 0);
 
     const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
-    const where: any = { userId, date: { gte: firstMonthStart, lte: now } };
+    const where: any = { userId, date: { gte: firstMonthStart } };
     // Con conti presenti filtra ai soli BANK. Se l'utente ha SOLO carte (nessun
     // BANK) bankIds è vuoto → nessun movimento conteggiato e serie costante a 0,
     // coerente con getLiquidBalance (la liquidità è 0). Senza alcun conto si cade
@@ -690,17 +695,21 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
     });
 
     const points = reconstructNetWorthSeries(
-      current,
+      allTimeBalance,
       txns.map((t) => ({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) })),
       months,
       now,
     );
 
-    const first = points[0]?.netWorth ?? current;
-    const change = round2(current - first);
+    // Patrimonio "oggi" = punto del mese corrente: è allTimeBalance meno le righe
+    // future (boundary = now), cioè ciò che si possiede realmente adesso. Coincide
+    // con allTimeBalance/hero quando non esistono transazioni datate nel futuro.
+    const currentNetWorth = points[points.length - 1]?.netWorth ?? round2(allTimeBalance);
+    const first = points[0]?.netWorth ?? currentNetWorth;
+    const change = round2(currentNetWorth - first);
     const changePct = first !== 0 ? round2((change / Math.abs(first)) * 100) : null;
 
-    const result = { points, current: round2(current), change, changePct };
+    const result = { points, current: currentNetWorth, change, changePct };
     analyticsCache.set(cacheKey, result);
     res.json(result);
   } catch (error) {

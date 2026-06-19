@@ -14,7 +14,7 @@ const SECTIONS: Section[] = [
     emoji: '🏦',
     content: (
       <>
-        <p>Vai su <strong>Conti</strong> (nella barra principale, o <strong>Menu → Gestione</strong> su mobile) per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
+        <p>Vai su <strong>Conti</strong> (nella barra principale, anche nella barra in basso su mobile) per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
         <p>La pagina principale elenca i tuoi <strong>conti bancari</strong>; un conto con una carta collegata mostra una piccola icona <strong>💳</strong>. Le carte non associate ad alcun conto compaiono in una sezione <strong>Carte di credito</strong> a parte. <strong>Tocca un conto</strong> per aprire la sua pagina dedicata: saldo, entrate/uscite del mese, proiezione di fine mese, ultime transazioni e le carte collegate.</p>
         <p>Per le <strong>carte di credito</strong>: imposta il limite, il <strong>giorno di chiusura</strong> del ciclo, il giorno di addebito e il conto collegato. Al giorno di chiusura l'app chiude il ciclo (le spese diventano un addebito pianificato) e ne apre uno nuovo; al giorno di addebito ti avvisa di registrare il pagamento.</p>
         <p>Tocca una carta (dalla pagina del conto o dalla sezione Carte) per la sua <strong>pagina dedicata</strong>: debito attuale, utilizzo del limite, prossimo addebito, ultime transazioni e lo <strong>Storico cicli</strong> direttamente in pagina. La chiusura del ciclo e l'avviso di pagamento sono <strong>automatici</strong> (al giorno di chiusura e al giorno di addebito).</p>
