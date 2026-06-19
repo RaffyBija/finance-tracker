@@ -33,6 +33,7 @@ const CalendarPage = lazyWithReload(() => import("./pages/CalendarPage"));
 const AccountsPage = lazyWithReload(() => import("./pages/AccountsPage"));
 const AccountDetailPage = lazyWithReload(() => import("./pages/AccountDetailPage"));
 const ProjectionPage = lazyWithReload(() => import("./pages/ProjectionPage"));
+const PatrimonioPage = lazyWithReload(() => import("./pages/PatrimonioPage"));
 
 inject();
 
@@ -163,6 +164,17 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <ProjectionPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patrimonio"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PatrimonioPage />
                   </Layout>
                 </ProtectedRoute>
               }

@@ -77,3 +77,12 @@ export const useProjectionSeries = (params: ProjectionSeriesParams, enabled = tr
     enabled,
   });
 };
+
+// Andamento storico del patrimonio netto: dati storici stabili → cache 5 min.
+export const useNetWorthSeries = (months: number = 12) => {
+  return useQuery({
+    queryKey: ['dashboard', 'networth-series', months],
+    queryFn: () => dashboardAPI.getNetWorthSeries({ months }),
+    staleTime: 5 * 60 * 1000,
+  });
+};

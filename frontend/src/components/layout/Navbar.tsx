@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
   Repeat, Calendar, CalendarDays, Settings2, ChevronDown,
   SlidersHorizontal, FileText, LogOut, Landmark,
-  BookOpen, PlayCircle,
+  BookOpen, PlayCircle, PiggyBank, LineChart, Menu,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,21 +21,32 @@ interface NavItem {
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
+// Link primari (desktop top bar + mobile bottom bar): le stesse 4 voci operative.
+// Analisi (Patrimonio, Proiezione) e Gestione vivono nel dropdown/tray, non qui.
 const PRIMARY: NavItem[] = [
   { path: '/dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/transactions', label: 'Transazioni', icon: ArrowLeftRight  },
-  { path: '/budgets',      label: 'Budget',      icon: Wallet          },
+  { path: '/accounts',     label: 'Conti',       icon: Landmark        },
   { path: '/calendar',     label: 'Calendario',  icon: CalendarDays    },
 ];
 
-const GESTIONE: NavItem[] = [
-  { path: '/accounts',   label: 'Conti',       icon: Landmark },
-  { path: '/categories', label: 'Categorie',   icon: Tags     },
-  { path: '/recurring',  label: 'Ricorrenti',  icon: Repeat   },
+// Sezione "Analisi" del menu (dropdown desktop + tray mobile).
+const ANALISI: NavItem[] = [
+  { path: '/patrimonio', label: 'Patrimonio', icon: PiggyBank },
+  { path: '/projection', label: 'Proiezione', icon: LineChart },
+];
+
+// Sezione "Gestione": configurazione delle entità.
+const CONFIG: NavItem[] = [
+  { path: '/budgets',    label: 'Budget',      icon: Wallet  },
+  { path: '/categories', label: 'Categorie',   icon: Tags    },
+  { path: '/recurring',  label: 'Ricorrenti',  icon: Repeat  },
   { path: '/planned',    label: 'Pianificati', icon: Calendar },
 ];
 
-const GESTIONE_PATHS = GESTIONE.map((g) => g.path);
+const CONFIG_PATHS = CONFIG.map((g) => g.path);
+// Voci raggiungibili dal menu mobile (per evidenziare il tab "Menu").
+const MENU_PATHS = [...ANALISI.map((a) => a.path), ...CONFIG_PATHS];
 
 // ── UserAvatar ────────────────────────────────────────────────────────────────
 
@@ -140,7 +151,11 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const isGestioneActive = GESTIONE_PATHS.includes(location.pathname);
+  const isMenuActive = MENU_PATHS.includes(location.pathname);
+  // Il dropdown desktop contiene Analisi + Gestione: evidenzialo quando si è su una
+  // sua pagina che NON è già un link primario (es. /projection, o le pagine Gestione).
+  const isDropdownActive =
+    isMenuActive && !PRIMARY.some((p) => p.path === location.pathname);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -190,7 +205,7 @@ export default function Navbar() {
             <div className="navbar-dropdown" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen((v) => !v)}
-                className={`navbar-dropdown-trigger${isGestioneActive ? ' is-active-group' : ''}`}
+                className={`navbar-dropdown-trigger${isDropdownActive ? ' is-active-group' : ''}`}
               >
                 <Settings2 size={15} />
                 Gestione
@@ -202,8 +217,20 @@ export default function Navbar() {
 
               {dropdownOpen && (
                 <div className="navbar-dropdown-panel">
-                  <p className="navbar-dropdown-section">Configura</p>
-                  {GESTIONE.map(({ path, label, icon: Icon }) => {
+                  <p className="navbar-dropdown-section">Analisi</p>
+                  {ANALISI.map(({ path, label, icon: Icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      className={`navbar-dropdown-item${location.pathname === path ? ' is-active' : ''}`}
+                    >
+                      <Icon size={15} className="navbar-dropdown-item-icon" />
+                      {label}
+                    </Link>
+                  ))}
+
+                  <p className="navbar-dropdown-section navbar-dropdown-section--divided">Gestione</p>
+                  {CONFIG.map(({ path, label, icon: Icon }) => {
                     const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
                     return (
                       <Link
@@ -243,7 +270,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile bottom bar — 5 tabs: 4 primary + Gestione */}
+      {/* Mobile bottom bar — 5 tabs: 4 primary + Menu */}
       <div className="navbar-mobile-bar" data-tour="mobile-nav">
         {PRIMARY.map(({ path, label, icon: Icon }) => (
           <Link
@@ -257,29 +284,42 @@ export default function Navbar() {
         ))}
         <button
           onClick={() => setTrayOpen((v) => !v)}
-          className={`navbar-mobile-tab${isGestioneActive ? ' is-active' : ''}`}
+          className={`navbar-mobile-tab${isMenuActive ? ' is-active' : ''}`}
           data-tour="gestione-btn"
         >
           <span className="navbar-badge-wrap">
-            <Settings2 size={20} />
+            <Menu size={20} />
             {(recurringDueCount + plannedDueCount) > 0 && (
               <span className="navbar-badge">
                 {(recurringDueCount + plannedDueCount) > 99 ? '99+' : recurringDueCount + plannedDueCount}
               </span>
             )}
           </span>
-          <span className="navbar-mobile-tab-label">Gestione</span>
+          <span className="navbar-mobile-tab-label">Menu</span>
         </button>
       </div>
 
-      {/* Mobile Gestione tray */}
+      {/* Mobile menu tray — sezioni Analisi + Gestione */}
       {trayOpen && (
         <>
           <div className="navbar-tray-backdrop" onClick={() => setTrayOpen(false)} />
           <div className="navbar-tray">
             <div className="navbar-tray-handle" />
-            <p className="navbar-tray-title">Gestione</p>
-            {GESTIONE.map(({ path, label, icon: Icon }) => {
+
+            <p className="navbar-tray-title">Analisi</p>
+            {ANALISI.map(({ path, label, icon: Icon }) => (
+              <Link
+                key={path}
+                to={path}
+                className={`navbar-tray-item${location.pathname === path ? ' is-active' : ''}`}
+              >
+                <Icon size={19} className="navbar-tray-item-icon" />
+                {label}
+              </Link>
+            ))}
+
+            <p className="navbar-tray-title navbar-tray-section">Gestione</p>
+            {CONFIG.map(({ path, label, icon: Icon }) => {
               const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
               return (
                 <Link

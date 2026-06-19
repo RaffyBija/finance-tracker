@@ -16,6 +16,7 @@ import type {
   MonthlyTrend,
   ProjectedBalance,
   ProjectionSeries,
+  NetWorthSeries,
   TransactionType,
 } from "../types";
 import { getToken, clearToken } from "../utils/tokenStorage";
@@ -263,6 +264,10 @@ export const dashboardAPI = {
   return response.data;
 },
 
+  getNetWorthSeries: async (params: { months?: number }): Promise<NetWorthSeries> => {
+    const { data } = await api.get<NetWorthSeries>('/dashboard/networth-series', { params });
+    return data;
+  },
 
 };
 

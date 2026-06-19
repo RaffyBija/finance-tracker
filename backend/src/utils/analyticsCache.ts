@@ -11,6 +11,14 @@ const delProjections = (uid: string): void => {
     .forEach(k => cache.del(k));
 };
 
+// Il patrimonio storico cambia solo dai movimenti reali (create/update/delete o
+// esecuzione di ricorrenti/pianificate, che generano una transazione).
+const delNetWorth = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`networth-series:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
 export const analyticsCache = {
   get: <T>(key: string): T | undefined => cache.get<T>(key),
   set: <T>(key: string, value: T): void => { cache.set(key, value); },
@@ -23,6 +31,7 @@ export const analyticsCache = {
     monthlyTrend:     (uid: string) => `monthly-trend:${uid}`,
     projectedBalance: (uid: string, suffix: string) => `projected-balance:${uid}:${suffix}`,
     projectionSeries: (uid: string, suffix: string) => `projection-series:${uid}:${suffix}`,
+    netWorthSeries:   (uid: string, suffix: string) => `networth-series:${uid}:${suffix}`,
     recurringDue:     (uid: string) => `recurring-due:${uid}`,
     plannedDue:       (uid: string) => `planned-due:${uid}`,
   },
@@ -34,6 +43,7 @@ export const analyticsCache = {
     cache.del(`forecast:${uid}`);
     cache.del(`monthly-trend:${uid}`);
     delProjections(uid);
+    delNetWorth(uid);
   },
 
   // Una ricorrente è cambiata (create/update/delete/toggle)
@@ -48,6 +58,7 @@ export const analyticsCache = {
     cache.del(`monthly-trend:${uid}`);
     cache.del(`recurring-due:${uid}`);
     delProjections(uid);
+    delNetWorth(uid);
   },
 
   // Una pianificata è cambiata (create/update/delete)
@@ -63,5 +74,6 @@ export const analyticsCache = {
     cache.del(`monthly-trend:${uid}`);
     cache.del(`planned-due:${uid}`);
     delProjections(uid);
+    delNetWorth(uid);
   },
 };

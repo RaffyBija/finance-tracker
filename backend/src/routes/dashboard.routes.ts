@@ -5,7 +5,8 @@ import {
   getRecentTransactions,
   getMonthlyTrend,
   getProjectedBalance,
-  getProjectionSeries
+  getProjectionSeries,
+  getNetWorthSeries
 } from '../controllers/dashboard.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -31,4 +32,7 @@ router.get('/projected-balance', getProjectedBalance);
 
 // GET /api/dashboard/projection-series - Serie temporale andamento saldo (storia + proiezione)
 router.get('/projection-series', getProjectionSeries);
+
+// GET /api/dashboard/networth-series - Andamento storico del patrimonio netto (liquidità)
+router.get('/networth-series', getNetWorthSeries);
 export default router;
