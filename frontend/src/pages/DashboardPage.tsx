@@ -1,96 +1,23 @@
 // frontend/src/pages/DashboardPage.tsx
 
-import { useState, useMemo, memo } from 'react';
-import {
-  useSummary,
-  useCategoryStats,
-  useMonthlyTrend,
-  useRecentTransactions,
-} from '../hooks/useDashboard';
-import { useAccounts } from '../hooks/useAccounts';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
+import { useState, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { formatMonthYear, formatMonth, formatMonthShort } from '../utils/date';
-import BalanceOutlookCard from '../components/dashboard/BalanceOutlookCard';
-import SubscriptionCostCard from '../components/dashboard/SubscriptionCostCard';
-import TransactionRow from '../components/shared/TransactionRow';
-import {
-  SkeletonChart,
-  SkeletonPieChart,
-  SkeletonList,
-} from '../components/shared/Skeleton';
+import { formatMonthYear } from '../utils/date';
+import { useSummary } from '../hooks/useDashboard';
+import { useAccounts } from '../hooks/useAccounts';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
-
-// ── Costanti colori ───────────────────────────────────────────────────────────
-
-const FALLBACK_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#84CC16', '#06B6D4',
-  '#6366F1', '#D97706', '#BE185D', '#059669', '#DC2626',
-  '#7C3AED', '#0284C7', '#CA8A04', '#16A34A', '#DB2777',
-];
-
-const isValidColor = (color?: string) =>
-  !!color && color !== '#gray' && /^#[0-9A-Fa-f]{3,6}$/.test(color);
-
-const getCategoryColor = (entry: { categoryColor?: string }, index: number) =>
-  isValidColor(entry.categoryColor) ? entry.categoryColor! : FALLBACK_COLORS[index % FALLBACK_COLORS.length];
-
-// ── Tooltip personalizzati ────────────────────────────────────────────────────
-
-const CustomBarTooltip = memo(({ active, payload, label }: any) => {
-  const { formatCurrency } = useFormatCurrency();
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="card card-md dashboard-tooltip">
-      <p className="dashboard-tooltip-label">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }} className="dashboard-tooltip-value">
-          {p.name}: {formatCurrency(Number(p.value))}
-        </p>
-      ))}
-    </div>
-  );
-});
-
-const CustomPieTooltip = memo(({ active, payload }: any) => {
-  const { formatCurrency } = useFormatCurrency();
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="card card-md dashboard-tooltip">
-      <p className="dashboard-tooltip-label">{payload[0].name}</p>
-      <p className="dashboard-tooltip-amount">{formatCurrency(Number(payload[0].value))}</p>
-    </div>
-  );
-});
-
-const CustomPieLegend = memo(({ data }: { data: any[] }) => {
-  const { formatCurrency } = useFormatCurrency();
-  return (
-  <div className="dashboard-legend">
-    {data.slice(0, 8).map((entry, i) => (
-      <div key={entry.categoryName} className="dashboard-legend-item">
-        <span
-          className="dashboard-legend-dot"
-          style={{ width: 10, height: 10, background: getCategoryColor(entry, i) }}
-        />
-        <span className="dashboard-legend-name">{entry.categoryName}</span>
-        <span className="dashboard-legend-value">{formatCurrency(Number(entry.total))}</span>
-      </div>
-    ))}
-  </div>
-  );
-});
-
-// ── Componente principale ─────────────────────────────────────────────────────
+import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { WIDGET_MAP } from '../components/dashboard/widgets/registry';
+import { DashboardMonthProvider } from '../contexts/DashboardMonthContext';
+import CustomizeDashboardModal from '../components/dashboard/CustomizeDashboardModal';
 
 export default function DashboardPage() {
   const { formatCurrency } = useFormatCurrency();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showCustomize, setShowCustomize] = useState(false);
+
+  const { items, toggle, move, reset } = useDashboardLayout();
 
   const monthRange = useMemo(() => ({
     startDate: format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
@@ -105,26 +32,10 @@ export default function DashboardPage() {
     );
   }, [currentMonth]);
 
-  // ── Query indipendenti — ognuna gestisce il proprio skeleton ──
-  const { data: summary,           isLoading: summaryLoading }      = useSummary(monthRange);
-  const { data: totalSummary,      isLoading: totalSummaryLoading }  = useSummary();
-  const { data: categoryStats = [], isLoading: statsLoading }        = useCategoryStats(monthRange);
-  const { data: monthlyTrend = [],  isLoading: trendLoading }        = useMonthlyTrend(6);
-  const { data: recentTransactions = [], isLoading: recentLoading }  = useRecentTransactions(5);
-  const { data: accounts = [], isLoading: accountsLoading }           = useAccounts();
-
-  const expenseCategoryStats = useMemo(
-    () => categoryStats.filter((s) => s.type === 'EXPENSE'),
-    [categoryStats]
-  );
-
-  const formattedTrend = useMemo(() =>
-    monthlyTrend.map((item) => ({
-      ...item,
-      month: formatMonthShort(item.month + '-01'),
-    })),
-    [monthlyTrend]
-  );
+  // ── Query per l'Hero (le altre vivono nei singoli widget) ──
+  const { data: summary,      isLoading: summaryLoading }      = useSummary(monthRange);
+  const { data: totalSummary, isLoading: totalSummaryLoading } = useSummary();
+  const { data: accounts = [], isLoading: accountsLoading }     = useAccounts();
 
   const liquidAccounts = accounts.filter((a) => a.type !== 'CREDIT_CARD');
   const multiAccount = liquidAccounts.length > 1;
@@ -138,11 +49,27 @@ export default function DashboardPage() {
   const heroLoading = accountsLoading || (!hasAccounts && totalSummaryLoading);
   const heroPositive = heroValue >= 0;
 
+  const monthContext = useMemo(
+    () => ({ currentMonth, monthRange, isCurrentMonth }),
+    [currentMonth, monthRange, isCurrentMonth]
+  );
 
   return (
     <div className="container-custom">
 
-      {/* ── Hero ── */}
+      {/* ── Toolbar ── */}
+      <div className="dashboard-toolbar">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm dashboard-customize-btn"
+          onClick={() => setShowCustomize(true)}
+        >
+          <SlidersHorizontal size={15} />
+          Personalizza
+        </button>
+      </div>
+
+      {/* ── Hero (fisso) ── */}
       <div className="dashboard-hero mb-6" data-tour="dashboard-hero">
         <div className="dashboard-hero-top">
           <div>
@@ -234,127 +161,31 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Andamento del saldo (impegni certi / stima realistica) ── */}
-      <BalanceOutlookCard />
-
-      {/* ── Spese ricorrenti ── */}
-      <div className="dashboard-analytics-grid">
-        <SubscriptionCostCard />
-      </div>
-
-      {/* ── Grafici ── */}
-      <div className="dashboard-charts-grid">
-
-        {/* Trend mensile */}
-        {trendLoading ? (
-          <SkeletonChart />
-        ) : (
-          <div className="card card-lg">
-            <div className="dashboard-chart-header">
-              <h2 className="card-header-title">Trend Mensile</h2>
-              <div className="dashboard-chart-legend">
-                <span className="dashboard-chart-legend-item">
-                  <span className="dashboard-chart-dot dashboard-chart-dot-income" /> Entrate
-                </span>
-                <span className="dashboard-chart-legend-item">
-                  <span className="dashboard-chart-dot dashboard-chart-dot-expense" /> Uscite
-                </span>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={formattedTrend} barCategoryGap="30%" barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 12, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `€${v}`}
-                  width={60}
-                />
-                <Tooltip content={CustomBarTooltip} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Uscite" fill="#EF4444" radius={[4, 4, 0, 0]} opacity={0.8} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Spese per categoria */}
-        {statsLoading ? (
-          <SkeletonPieChart />
-        ) : (
-          <div className="card card-lg">
-            <h2 className="card-header-title mb-4">
-              Spese per Categoria
-              <span className="dashboard-pie-month">
-                {formatMonth(currentMonth)}
-              </span>
-            </h2>
-            {expenseCategoryStats.length === 0 ? (
-              <div className="dashboard-chart-empty">
-                Nessuna spesa registrata questo mese
-              </div>
-            ) : (
-              <div className="dashboard-pie-body">
-                <ResponsiveContainer width="55%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseCategoryStats}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={100}
-                      dataKey="total"
-                      nameKey="categoryName"
-                      paddingAngle={2}
-                    >
-                      {expenseCategoryStats.map((entry, index) => (
-                        <Cell
-                          key={`cell-${entry.categoryName}`}
-                          fill={getCategoryColor(entry, index)}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip content={CustomPieTooltip} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="dashboard-pie-legend-wrap">
-                  <CustomPieLegend data={expenseCategoryStats} />
+      {/* ── Griglia widget personalizzabile ── */}
+      <DashboardMonthProvider value={monthContext}>
+        <div className="dashboard-widget-grid">
+          {items
+            .filter((item) => item.enabled && WIDGET_MAP[item.id])
+            .map((item) => {
+              const def = WIDGET_MAP[item.id];
+              const Widget = def.component;
+              return (
+                <div key={item.id} className={`dashboard-widget is-${def.size}`}>
+                  <Widget />
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Transazioni recenti ── */}
-      {recentLoading ? (
-        <SkeletonList rows={5} />
-      ) : (
-        <div className="card mb-8">
-          <div className="card-header">
-            <h2 className="card-header-title">Transazioni Recenti</h2>
-          </div>
-          <div className="card-divided">
-            {recentTransactions.length === 0 ? (
-              <div className="dashboard-empty-state">
-                Nessuna transazione recente
-              </div>
-            ) : (
-              recentTransactions.map((transaction) => (
-                <TransactionRow key={transaction.id} transaction={transaction} />
-              ))
-            )}
-          </div>
+              );
+            })}
         </div>
-      )}
+      </DashboardMonthProvider>
 
+      <CustomizeDashboardModal
+        isOpen={showCustomize}
+        onClose={() => setShowCustomize(false)}
+        items={items}
+        toggle={toggle}
+        move={move}
+        reset={reset}
+      />
     </div>
   );
 }

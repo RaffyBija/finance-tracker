@@ -1928,30 +1928,6 @@
   padding-top: 0.25rem;
 }
 
-/* Contenitore Spese ricorrenti (full-width sotto la card Andamento del saldo) */
-.dashboard-analytics-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-/* ============================================================
-   DASHBOARD CHARTS GRID
-   ============================================================ */
-.dashboard-charts-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-@media (min-width: 1024px) {
-  .dashboard-charts-grid {
-    grid-template-columns: 3fr 2fr;
-  }
-}
-
 /* ============================================================
    DASHBOARD TOOLTIP
    ============================================================ */
