@@ -11,6 +11,22 @@ const delProjections = (uid: string): void => {
     .forEach(k => cache.del(k));
 };
 
+// Il patrimonio storico cambia solo dai movimenti reali (create/update/delete o
+// esecuzione di ricorrenti/pianificate, che generano una transazione).
+const delNetWorth = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`networth-series:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
+// Il trend mensile è cacheato per-orizzonte (suffisso months) → invalida tutte
+// le varianti dell'utente con un delete per prefisso.
+const delMonthlyTrend = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`monthly-trend:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
 export const analyticsCache = {
   get: <T>(key: string): T | undefined => cache.get<T>(key),
   set: <T>(key: string, value: T): void => { cache.set(key, value); },
@@ -20,9 +36,10 @@ export const analyticsCache = {
 
   keys: {
     forecast:         (uid: string) => `forecast:${uid}`,
-    monthlyTrend:     (uid: string) => `monthly-trend:${uid}`,
+    monthlyTrend:     (uid: string, suffix: string) => `monthly-trend:${uid}:${suffix}`,
     projectedBalance: (uid: string, suffix: string) => `projected-balance:${uid}:${suffix}`,
     projectionSeries: (uid: string, suffix: string) => `projection-series:${uid}:${suffix}`,
+    netWorthSeries:   (uid: string, suffix: string) => `networth-series:${uid}:${suffix}`,
     recurringDue:     (uid: string) => `recurring-due:${uid}`,
     plannedDue:       (uid: string) => `planned-due:${uid}`,
   },
@@ -32,8 +49,9 @@ export const analyticsCache = {
   // Una transazione è cambiata (create/update/delete)
   onTransactionMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`monthly-trend:${uid}`);
+    delMonthlyTrend(uid);
     delProjections(uid);
+    delNetWorth(uid);
   },
 
   // Una ricorrente è cambiata (create/update/delete/toggle)
@@ -45,9 +63,10 @@ export const analyticsCache = {
   // Una ricorrente è stata eseguita (crea anche una transazione reale)
   onRecurringExecuted: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`monthly-trend:${uid}`);
+    delMonthlyTrend(uid);
     cache.del(`recurring-due:${uid}`);
     delProjections(uid);
+    delNetWorth(uid);
   },
 
   // Una pianificata è cambiata (create/update/delete)
@@ -60,8 +79,9 @@ export const analyticsCache = {
   // Una pianificata è stata pagata (crea anche una transazione reale)
   onPlannedPaid: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`monthly-trend:${uid}`);
+    delMonthlyTrend(uid);
     cache.del(`planned-due:${uid}`);
     delProjections(uid);
+    delNetWorth(uid);
   },
 };

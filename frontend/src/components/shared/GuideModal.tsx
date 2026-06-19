@@ -14,7 +14,7 @@ const SECTIONS: Section[] = [
     emoji: '🏦',
     content: (
       <>
-        <p>Vai su <strong>Gestione → Conti</strong> per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
+        <p>Vai su <strong>Conti</strong> (nella barra principale, anche nella barra in basso su mobile) per aggiungere conti bancari e carte di credito (fino a 3 sul piano gratuito, 10 sul piano Pro).</p>
         <p>La pagina principale elenca i tuoi <strong>conti bancari</strong>; un conto con una carta collegata mostra una piccola icona <strong>💳</strong>. Le carte non associate ad alcun conto compaiono in una sezione <strong>Carte di credito</strong> a parte. <strong>Tocca un conto</strong> per aprire la sua pagina dedicata: saldo, entrate/uscite del mese, proiezione di fine mese, ultime transazioni e le carte collegate.</p>
         <p>Per le <strong>carte di credito</strong>: imposta il limite, il <strong>giorno di chiusura</strong> del ciclo, il giorno di addebito e il conto collegato. Al giorno di chiusura l'app chiude il ciclo (le spese diventano un addebito pianificato) e ne apre uno nuovo; al giorno di addebito ti avvisa di registrare il pagamento.</p>
         <p>Tocca una carta (dalla pagina del conto o dalla sezione Carte) per la sua <strong>pagina dedicata</strong>: debito attuale, utilizzo del limite, prossimo addebito, ultime transazioni e lo <strong>Storico cicli</strong> direttamente in pagina. La chiusura del ciclo e l'avviso di pagamento sono <strong>automatici</strong> (al giorno di chiusura e al giorno di addebito).</p>
@@ -84,6 +84,17 @@ const SECTIONS: Section[] = [
         <p>La card <strong>Andamento del saldo</strong> ha due modalità: <strong>Impegni certi</strong> (solo ricorrenti, pianificate e addebiti CC programmati) e <strong>Stima realistica</strong> (aggiunge una stima delle spese abituali per categoria a fine mese). Mostra un <strong>grafico</strong>: linea piena per la storia recente, tratteggiata per la proiezione futura.</p>
         <p>Tocca <strong>«Vedi dettaglio»</strong> per aprire la pagina <strong>Andamento del saldo</strong>: orizzonte esteso (fino a 24 mesi o intervallo personalizzato), <strong>dettaglio per voce</strong> degli impegni futuri e uno <strong>scenario «what-if»</strong> per simulare una variazione di liquidità oggi.</p>
         <p>Nel widget <strong>Spese per categoria</strong> usa le frecce per navigare i mesi e confrontare le uscite.</p>
+      </>
+    ),
+  },
+  {
+    title: 'Patrimonio',
+    emoji: '🐖',
+    content: (
+      <>
+        <p>La pagina <strong>Patrimonio</strong> (dalla barra principale, o <strong>Menu → Analisi</strong> su mobile) raccoglie le statistiche del tuo patrimonio: <strong>quanto vali, dov'è il tuo denaro e come è cresciuto</strong>. È uno sguardo all'indietro e al presente, diverso dalla <strong>Proiezione</strong> che guarda al futuro.</p>
+        <p>In cima trovi la <strong>liquidità totale</strong> (somma dei conti bancari) con la variazione del periodo; l'<strong>esposizione delle carte</strong> è mostrata a parte, mai sottratta. Il grafico <strong>Andamento del patrimonio</strong> ricostruisce il valore mese per mese (orizzonte 6/12/24 mesi).</p>
+        <p>Sotto trovi le <strong>statistiche chiave</strong> (patrimonio medio, massimo, minimo, mese migliore e peggiore), la <strong>composizione</strong> per conto, il <strong>risparmio e flusso mensile</strong> con il tasso di risparmio, e le <strong>spese per categoria</strong>.</p>
       </>
     ),
   },

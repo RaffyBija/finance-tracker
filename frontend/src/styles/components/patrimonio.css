@@ -1,0 +1,234 @@
+/* ── Pagina Patrimonio ──────────────────────────────────────────────────────
+   Stili semantici (zero Tailwind inline). Palette warm Stone, accento teal.
+   Gli override .dark sono regole esplicite in fondo al file (fuori da @layer). */
+
+/* Hero patrimonio */
+.patrimonio-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.patrimonio-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.patrimonio-hero-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #78716c;
+}
+
+.patrimonio-hero-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+}
+
+.patrimonio-hero-change {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.patrimonio-hero-change.is-positive { color: #059669; }
+.patrimonio-hero-change.is-negative { color: #dc2626; }
+
+.patrimonio-hero-change-pct { opacity: 0.85; }
+
+.patrimonio-hero-change-period {
+  color: #a8a29e;
+  font-weight: 500;
+  margin-left: 0.15rem;
+}
+
+.patrimonio-hero-cc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #faf5f0;
+  border: 1px solid #f0e6dd;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+.patrimonio-hero-cc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.patrimonio-hero-cc > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.patrimonio-hero-cc-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #78716c;
+}
+
+.patrimonio-hero-cc-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #dc2626;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sottotitolo header widget (riusabile) */
+.widget-subtitle {
+  font-size: 0.78rem;
+  color: #a8a29e;
+  font-weight: 500;
+}
+
+/* Statistiche chiave */
+.patrimonio-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.patrimonio-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #ffffff;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.patrimonio-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #78716c;
+}
+
+.patrimonio-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+}
+
+.patrimonio-stat-value.is-positive { color: #059669; }
+.patrimonio-stat-value.is-negative { color: #dc2626; }
+
+.patrimonio-stat-meta {
+  font-size: 0.72rem;
+  color: #a8a29e;
+}
+
+/* Griglia composizione + risparmio */
+.patrimonio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .patrimonio-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Composizione: importo accanto alla quota % */
+.composition-amount { color: #a8a29e; font-weight: 500; }
+
+/* Risparmio: riga statistiche sopra il grafico */
+.savings-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.savings-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.savings-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #78716c;
+}
+
+.savings-stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+}
+
+.savings-stat-value.is-positive { color: #059669; }
+.savings-stat-value.is-negative { color: #dc2626; }
+.savings-stat-value.savings-stat-muted { font-size: 0.9rem; color: #78716c; font-weight: 600; }
+
+/* ── Dark mode (override espliciti) ─────────────────────────────────────── */
+.dark .patrimonio-hero,
+.dark .patrimonio-stat {
+  background: #292524;
+  border-color: #44403c;
+}
+
+.dark .patrimonio-hero-value,
+.dark .patrimonio-stat-value { color: #f5f5f4; }
+
+.dark .patrimonio-hero-label,
+.dark .patrimonio-stat-label,
+.dark .savings-stat-label,
+.dark .patrimonio-hero-cc-label { color: #a8a29e; }
+
+.dark .patrimonio-hero-change-period,
+.dark .patrimonio-stat-meta,
+.dark .widget-subtitle,
+.dark .composition-amount { color: #78716c; }
+
+.dark .patrimonio-hero-cc {
+  background: #2a201c;
+  border-color: #5c2f28;
+}
+
+.dark .patrimonio-hero-cc-icon {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+.dark .patrimonio-hero-cc-value { color: #fca5a5; }
+
+.dark .savings-stat-value { color: #f5f5f4; }
+.dark .savings-stat-value.savings-stat-muted { color: #a8a29e; }
+.dark .patrimonio-stat-value.is-positive,
+.dark .savings-stat-value.is-positive,
+.dark .patrimonio-hero-change.is-positive { color: #34d399; }
+.dark .patrimonio-stat-value.is-negative,
+.dark .savings-stat-value.is-negative,
+.dark .patrimonio-hero-change.is-negative { color: #f87171; }

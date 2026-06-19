@@ -113,7 +113,7 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   try {
     const userId      = req.userId!;
     const monthsCount = parseInt((req.query.months as string) || '6');
-    const cacheKey    = analyticsCache.keys.monthlyTrend(userId);
+    const cacheKey    = analyticsCache.keys.monthlyTrend(userId, `m${monthsCount}`);
 
     const cached = analyticsCache.get<object[]>(cacheKey);
     if (cached) return res.json(cached);
@@ -606,6 +606,114 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error('Get projection series error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// ── Andamento storico del patrimonio netto (liquidità) ─────────────────────────
+//
+//   Diversamente da getProjectionSeries (future-looking), questa serie guarda
+//   ALL'INDIETRO: ricostruisce il patrimonio netto (Σ conti BANK) a fine di ogni
+//   mese passato, partendo dalla liquidità attuale (getLiquidBalance) e sottraendo
+//   i movimenti avvenuti dopo ciascun fine-mese. Granularità mensile.
+//
+//   Il punto "corrente" coincide per costruzione con l'hero della dashboard, così
+//   non c'è drift tra le due viste. I trasferimenti tra conti BANK si annullano
+//   nella somma totale, quindi includerli è neutro (coerente con getLiquidBalance).
+
+type NetWorthDelta = { date: Date | string; type: 'INCOME' | 'EXPENSE'; amount: number | string };
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+// Funzione PURA (testabile): dato il patrimonio attuale, i movimenti BANK e
+// l'orizzonte in mesi, ritorna il patrimonio a fine di ciascun mese.
+export const reconstructNetWorthSeries = (
+  current: number,
+  txns: NetWorthDelta[],
+  months: number,
+  now: Date,
+): { month: string; netWorth: number }[] => {
+  const deltas = txns.map((t) => ({
+    time: new Date(t.date).getTime(),
+    v: Number(t.amount) * (t.type === 'INCOME' ? 1 : -1),
+  }));
+
+  const points: { month: string; netWorth: number }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    // Per il mese corrente l'estremo è "adesso" (il valore = patrimonio attuale);
+    // per i mesi passati è la fine del mese.
+    const boundary = i === 0
+      ? now
+      : new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    const after = deltas
+      .filter((x) => x.time > boundary.getTime())
+      .reduce((s, x) => s + x.v, 0);
+    points.push({ month: monthKey, netWorth: round2(current - after) });
+  }
+  return points;
+};
+
+export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const months = Math.min(Math.max(parseInt((req.query.months as string) || '12', 10) || 12, 3), 60);
+
+    const cacheKey = analyticsCache.keys.netWorthSeries(userId, `m${months}`);
+    const cached = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
+    const now = new Date();
+
+    // Saldo all-time = liquidità (Σ conti BANK) da getAccountsWithBalances, che
+    // somma TUTTE le transazioni senza filtro data → include anche righe datate nel
+    // futuro. Lo usiamo come ancora: la ricostruzione sottrae i delta successivi a
+    // ogni fine-periodo, quindi i delta DEVONO usare lo stesso universo (nessun
+    // filtro su data superiore), altrimenti i mesi passati risulterebbero gonfiati
+    // del netto delle righe future.
+    const accounts = await getAccountsWithBalances(userId);
+    const allTimeBalance = await getLiquidBalance(userId, accounts);
+
+    // Movimenti reali dal primo mese mostrato in poi, nello scope coerente con
+    // allTimeBalance: solo conti BANK (la liquidità esclude le CC); se l'utente non
+    // ha conti, fallback su tutte le transazioni (come getLiquidBalance).
+    const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    firstMonthStart.setHours(0, 0, 0, 0);
+
+    const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
+    const where: any = { userId, date: { gte: firstMonthStart } };
+    // Con conti presenti filtra ai soli BANK. Se l'utente ha SOLO carte (nessun
+    // BANK) bankIds è vuoto → nessun movimento conteggiato e serie costante a 0,
+    // coerente con getLiquidBalance (la liquidità è 0). Senza alcun conto si cade
+    // invece nel fallback all-time di getLiquidBalance, qui niente filtro account.
+    if (accounts.length > 0) where.accountId = { in: bankIds };
+
+    const txns = await prisma.transaction.findMany({
+      where,
+      select: { date: true, type: true, amount: true },
+    });
+
+    const points = reconstructNetWorthSeries(
+      allTimeBalance,
+      txns.map((t) => ({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) })),
+      months,
+      now,
+    );
+
+    // Patrimonio "oggi" = punto del mese corrente: è allTimeBalance meno le righe
+    // future (boundary = now), cioè ciò che si possiede realmente adesso. Coincide
+    // con allTimeBalance/hero quando non esistono transazioni datate nel futuro.
+    const currentNetWorth = points[points.length - 1]?.netWorth ?? round2(allTimeBalance);
+    const first = points[0]?.netWorth ?? currentNetWorth;
+    const change = round2(currentNetWorth - first);
+    const changePct = first !== 0 ? round2((change / Math.abs(first)) * 100) : null;
+
+    const result = { points, current: currentNetWorth, change, changePct };
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Get net worth series error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

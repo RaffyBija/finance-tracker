@@ -166,6 +166,19 @@ export interface ProjectionSeries {
   events: ProjectionEvent[];
 }
 
+// ── Andamento storico del patrimonio netto (liquidità) ──
+export interface NetWorthPoint {
+  month: string;    // YYYY-MM
+  netWorth: number; // patrimonio (Σ conti BANK) a fine mese
+}
+
+export interface NetWorthSeries {
+  points: NetWorthPoint[];
+  current: number;            // patrimonio attuale (= hero dashboard)
+  change: number;             // variazione tra primo e ultimo punto
+  changePct: number | null;   // variazione % (null se base = 0)
+}
+
 export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
