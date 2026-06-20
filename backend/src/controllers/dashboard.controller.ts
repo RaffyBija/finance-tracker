@@ -625,17 +625,34 @@ type NetWorthDelta = { date: Date | string; type: 'INCOME' | 'EXPENSE'; amount: 
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
+// Ancora di un conto: il suo saldo iniziale (`openingBalance`) e QUANDO il conto
+// è stato creato. `openingBalance` è un valore senza data; `createdAt` è l'unico
+// timestamp che ci dice da quando quell'ancora è "reale".
+type NetWorthAnchor = { openingBalance: number | string; createdAt: Date | string };
+
 // Funzione PURA (testabile): dato il patrimonio attuale, i movimenti BANK e
 // l'orizzonte in mesi, ritorna il patrimonio a fine di ciascun mese.
+//
+//   `anchors` (opzionale) corregge la "linea piatta fasulla" prima della nascita
+//   di un conto: per i mesi precedenti al suo `createdAt` il conto non esisteva,
+//   quindi il suo `openingBalance` non deve contare nel patrimonio storico. Le sue
+//   transazioni sono già escluse (tutte successive a createdAt → dopo il boundary),
+//   perciò basta sottrarre anche l'ancora dei conti "non ancora creati" a quel
+//   fine-mese. Senza `anchors` il comportamento resta quello originale.
 export const reconstructNetWorthSeries = (
   current: number,
   txns: NetWorthDelta[],
   months: number,
   now: Date,
+  anchors?: NetWorthAnchor[],
 ): { month: string; netWorth: number }[] => {
   const deltas = txns.map((t) => ({
     time: new Date(t.date).getTime(),
     v: Number(t.amount) * (t.type === 'INCOME' ? 1 : -1),
+  }));
+  const openings = (anchors ?? []).map((a) => ({
+    time: new Date(a.createdAt).getTime(),
+    ob: Number(a.openingBalance),
   }));
 
   const points: { month: string; netWorth: number }[] = [];
@@ -650,7 +667,11 @@ export const reconstructNetWorthSeries = (
     const after = deltas
       .filter((x) => x.time > boundary.getTime())
       .reduce((s, x) => s + x.v, 0);
-    points.push({ month: monthKey, netWorth: round2(current - after) });
+    // Ancore dei conti non ancora esistenti a questo fine-mese: vanno tolte.
+    const notYetCreated = openings
+      .filter((x) => x.time > boundary.getTime())
+      .reduce((s, x) => s + x.ob, 0);
+    points.push({ month: monthKey, netWorth: round2(current - after - notYetCreated) });
   }
   return points;
 };
@@ -681,7 +702,8 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
     const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
     firstMonthStart.setHours(0, 0, 0, 0);
 
-    const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
+    const bankAccounts = accounts.filter((a) => a.type === 'BANK');
+    const bankIds = bankAccounts.map((a) => a.id);
     const where: any = { userId, date: { gte: firstMonthStart } };
     // Con conti presenti filtra ai soli BANK. Se l'utente ha SOLO carte (nessun
     // BANK) bankIds è vuoto → nessun movimento conteggiato e serie costante a 0,
@@ -694,11 +716,25 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
       select: { date: true, type: true, amount: true },
     });
 
+    // Ancore per la correzione "linea piatta fasulla": openingBalance non è datato,
+    // ma createdAt dice da quando il conto (e quindi la sua ancora) esiste. Per i
+    // mesi precedenti la sua creazione il conto non va contato. createdAt non è in
+    // AccountBalance → lookup leggero sui soli BANK.
+    const bankMeta = bankIds.length === 0 ? [] : await prisma.account.findMany({
+      where: { id: { in: bankIds } },
+      select: { id: true, createdAt: true },
+    });
+    const createdById = new Map(bankMeta.map((m) => [m.id, m.createdAt]));
+    const anchors = bankAccounts
+      .filter((a) => createdById.has(a.id))
+      .map((a) => ({ openingBalance: a.openingBalance, createdAt: createdById.get(a.id)! }));
+
     const points = reconstructNetWorthSeries(
       allTimeBalance,
       txns.map((t) => ({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) })),
       months,
       now,
+      anchors,
     );
 
     // Patrimonio "oggi" = punto del mese corrente: è allTimeBalance meno le righe
@@ -746,10 +782,11 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
     const balances = await getAccountsWithBalances(userId);
     const bankBalances = balances.filter((a) => a.type === 'BANK');
 
-    // Nome/colore non sono in AccountBalance: lookup separato per l'etichetta legenda.
+    // Nome/colore (etichetta legenda) e createdAt (ancora openingBalance) non sono
+    // in AccountBalance: lookup separato.
     const meta = await prisma.account.findMany({
       where: { userId, type: 'BANK' },
-      select: { id: true, name: true, color: true },
+      select: { id: true, name: true, color: true, createdAt: true },
     });
     const metaById = new Map(meta.map((m) => [m.id, m]));
 
@@ -773,8 +810,12 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
     }
 
     const accounts = bankBalances.map((a) => {
-      const points = reconstructNetWorthSeries(a.balance, txnsByAccount.get(a.id) ?? [], months, now);
       const m = metaById.get(a.id);
+      // Ancora del singolo conto: prima del suo createdAt non esisteva → la sua
+      // serie deve valere 0 (non openingBalance). Senza meta (improbabile) si cade
+      // sul comportamento originale.
+      const anchors = m ? [{ openingBalance: a.openingBalance, createdAt: m.createdAt }] : undefined;
+      const points = reconstructNetWorthSeries(a.balance, txnsByAccount.get(a.id) ?? [], months, now, anchors);
       return { id: a.id, name: m?.name ?? 'Conto', color: m?.color ?? null, points };
     });
 
