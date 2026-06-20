@@ -179,6 +179,30 @@ export interface NetWorthSeries {
   changePct: number | null;   // variazione % (null se base = 0)
 }
 
+// ── Andamento del patrimonio scomposto per conto (stacked area) ──
+export interface NetWorthByAccountSeries {
+  months: string[];           // chiavi mese allineate, YYYY-MM
+  accounts: {
+    id: string;
+    name: string;
+    color: string | null;
+    points: NetWorthPoint[];  // un punto per mese (allineato a months)
+  }[];
+}
+
+// ── Trend per categoria nel tempo (top N + "Altre") ──
+export interface CategoryTrendSeries {
+  months: string[];           // chiavi mese allineate, YYYY-MM
+  type: TransactionType;
+  categories: {
+    id: string;
+    name: string;
+    color: string | null;
+    total: number;            // totale del periodo (per ordinamento)
+    totals: number[];         // totale per mese (allineato a months)
+  }[];
+}
+
 export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   formatCurrency as formatCurrencyWith,
+  formatCurrencyAxis as formatCurrencyAxisWith,
   formatSignedCurrency as formatSignedCurrencyWith,
 } from '../utils/format';
 
@@ -17,10 +18,15 @@ export function useFormatCurrency() {
     [currency],
   );
 
+  const formatCurrencyAxis = useCallback(
+    (amount: number) => formatCurrencyAxisWith(amount, currency),
+    [currency],
+  );
+
   const formatSignedCurrency = useCallback(
     (amount: number, type: 'INCOME' | 'EXPENSE') => formatSignedCurrencyWith(amount, type, currency),
     [currency],
   );
 
-  return { formatCurrency, formatSignedCurrency, currency };
+  return { formatCurrency, formatCurrencyAxis, formatSignedCurrency, currency };
 }

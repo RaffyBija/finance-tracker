@@ -92,9 +92,9 @@ const SECTIONS: Section[] = [
     emoji: '🐖',
     content: (
       <>
-        <p>La pagina <strong>Patrimonio</strong> (dalla barra principale, o <strong>Menu → Analisi</strong> su mobile) raccoglie le statistiche del tuo patrimonio: <strong>quanto vali, dov'è il tuo denaro e come è cresciuto</strong>. È uno sguardo all'indietro e al presente, diverso dalla <strong>Proiezione</strong> che guarda al futuro.</p>
-        <p>In cima trovi la <strong>liquidità totale</strong> (somma dei conti bancari) con la variazione del periodo; l'<strong>esposizione delle carte</strong> è mostrata a parte, mai sottratta. Il grafico <strong>Andamento del patrimonio</strong> ricostruisce il valore mese per mese (orizzonte 6/12/24 mesi).</p>
-        <p>Sotto trovi le <strong>statistiche chiave</strong> (patrimonio medio, massimo, minimo, mese migliore e peggiore), la <strong>composizione</strong> per conto, il <strong>risparmio e flusso mensile</strong> con il tasso di risparmio, e le <strong>spese per categoria</strong>.</p>
+        <p>La pagina <strong>Patrimonio</strong> (dalla barra principale, o <strong>Menu → Analisi</strong> su mobile) raccoglie le statistiche del tuo patrimonio: <strong>quanto hai, dov'è e come è cambiato</strong>. È uno sguardo all'indietro e al presente, diverso dalla <strong>Proiezione</strong> che guarda al futuro.</p>
+        <p>In cima resta sempre la <strong>liquidità totale</strong> (somma dei conti bancari) con la variazione del periodo; l'<strong>esposizione delle carte</strong> è mostrata a parte, mai sottratta.</p>
+        <p>Sotto, le <strong>pillole</strong> aprono quattro lenti di analisi: <strong>Andamento</strong> (grafico mese per mese, anche scomposto per conto, con crescita e calo massimo), <strong>Dove sono i soldi</strong> (composizione e concentrazione tra i conti), <strong>Risparmio</strong> (entrate/uscite, tasso e medie mensili) e <strong>Spese</strong> (per categoria, nel mese e nel tempo).</p>
       </>
     ),
   },

@@ -13,6 +13,17 @@ export function formatCurrency(amount: number, currency = 'EUR'): string {
   }).format(amount);
 }
 
+// Formato per i tick degli assi dei grafici: senza centesimi (i ",00" sono
+// rumore di chrome su un asse). La cifra esatta vive nel tooltip e nell'hero.
+// Mantiene simbolo, posizione e separatori della valuta.
+export function formatCurrencyAxis(amount: number, currency = 'EUR'): string {
+  return new Intl.NumberFormat(localeForCurrency(currency), {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 // Importo di una transazione con segno esplicito (+/−), formattato sul valore
 // assoluto: il segno resta coerente con icona e colore della riga.
 export function formatSignedCurrency(

@@ -31,7 +31,7 @@ interface SavingsFlowProps {
 
 export default function SavingsFlow({ months }: SavingsFlowProps) {
   const { data: trend = [], isLoading } = useMonthlyTrend(months);
-  const { formatCurrency } = useFormatCurrency();
+  const { formatCurrency, formatCurrencyAxis } = useFormatCurrency();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -70,15 +70,15 @@ export default function SavingsFlow({ months }: SavingsFlowProps) {
       <div className="savings-stats">
         <div className="savings-stat">
           <span className="savings-stat-label">Risparmiato nel periodo</span>
-          <span className={`savings-stat-value${saved >= 0 ? ' is-positive' : ' is-negative'}`}>
-            {saved >= 0 ? '+' : '−'}{formatCurrency(Math.abs(saved))}
+          <span className={`savings-stat-value${saved > 0 ? ' is-positive' : saved < 0 ? ' is-negative' : ''}`}>
+            {saved > 0 ? '+' : saved < 0 ? '−' : ''}{formatCurrency(Math.abs(saved))}
           </span>
         </div>
         <div className="savings-stat">
           <span className="savings-stat-label">Tasso di risparmio</span>
           <span className="savings-stat-value">{rate === null ? '—' : `${Math.round(rate)}%`}</span>
         </div>
-        <div className="savings-stat">
+        <div className="savings-stat savings-stat--wide">
           <span className="savings-stat-label">Entrate · Uscite</span>
           <span className="savings-stat-value savings-stat-muted">
             {formatCurrency(totalIncome)} · {formatCurrency(totalExpense)}
@@ -89,17 +89,17 @@ export default function SavingsFlow({ months }: SavingsFlowProps) {
       {formatted.length === 0 ? (
         <div className="dashboard-chart-empty">Nessun movimento nel periodo</div>
       ) : (
-        <div className="widget-body">
+        <div className="savings-chart">
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={formatted} barCategoryGap="30%" barGap={4}>
+            <BarChart data={formatted} barCategoryGap="30%" barGap={4} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: axisColor }} axisLine={false} tickLine={false} />
               <YAxis
                 tick={{ fontSize: 11, fill: axisColor }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v) => formatCurrency(Number(v))}
-                width={64}
+                tickFormatter={(v) => formatCurrencyAxis(Number(v))}
+                width={56}
               />
               <Tooltip content={<SavingsTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
               <Bar dataKey="income" name="Entrate" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -108,6 +108,10 @@ export default function SavingsFlow({ months }: SavingsFlowProps) {
           </ResponsiveContainer>
         </div>
       )}
+
+      <p className="savings-stats-note">
+        Entrate meno uscite del periodo, carte incluse. Può differire dalla variazione della liquidità.
+      </p>
     </div>
   );
 }

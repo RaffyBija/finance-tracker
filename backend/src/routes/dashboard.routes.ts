@@ -6,7 +6,9 @@ import {
   getMonthlyTrend,
   getProjectedBalance,
   getProjectionSeries,
-  getNetWorthSeries
+  getNetWorthSeries,
+  getNetWorthByAccount,
+  getCategoryTrend
 } from '../controllers/dashboard.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -35,4 +37,11 @@ router.get('/projection-series', getProjectionSeries);
 
 // GET /api/dashboard/networth-series - Andamento storico del patrimonio netto (liquidità)
 router.get('/networth-series', getNetWorthSeries);
+
+// GET /api/dashboard/networth-by-account - Andamento del patrimonio scomposto per conto
+router.get('/networth-by-account', getNetWorthByAccount);
+
+// GET /api/dashboard/category-trend - Trend per categoria nel tempo (default EXPENSE)
+router.get('/category-trend', getCategoryTrend);
+
 export default router;

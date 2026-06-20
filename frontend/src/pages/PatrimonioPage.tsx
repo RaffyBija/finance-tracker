@@ -1,54 +1,67 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, CreditCard, LineChart } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, CreditCard } from 'lucide-react';
 import { useNetWorthSeries } from '../hooks/useDashboard';
 import { useAccounts } from '../hooks/useAccounts';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
-import NetWorthChart from '../components/patrimonio/NetWorthChart';
-import CompositionDonut from '../components/patrimonio/CompositionDonut';
-import SavingsFlow from '../components/patrimonio/SavingsFlow';
-import CategoryPieWidget from '../components/dashboard/widgets/CategoryPieWidget';
-import { SkeletonChart } from '../components/shared/Skeleton';
-import { formatMonth } from '../utils/date';
+import PatrimonioLensTabs, { LENSES } from '../components/patrimonio/PatrimonioLensTabs';
+import type { LensId } from '../components/patrimonio/PatrimonioLensTabs';
+import TrendLens from '../components/patrimonio/TrendLens';
+import CompositionLens from '../components/patrimonio/CompositionLens';
+import SavingsLens from '../components/patrimonio/SavingsLens';
+import SpendingLens from '../components/patrimonio/SpendingLens';
+import { toneOf, signOf } from '../components/patrimonio/tone';
 
-const MONTH_OPTIONS = [6, 12, 24] as const;
+const STORAGE_KEY = 'patrimonioLens';
+const isLensId = (s: string): s is LensId => LENSES.some((l) => l.id === s);
+
+// Lente iniziale: priorità all'hash URL (link condivisibile), poi all'ultima scelta
+// salvata, infine "andamento".
+const initialLens = (): LensId => {
+  const hash = window.location.hash.replace('#', '');
+  if (hash && isLensId(hash)) return hash;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && isLensId(saved)) return saved;
+  return 'andamento';
+};
 
 export default function PatrimonioPage() {
   const { formatCurrency } = useFormatCurrency();
   const [months, setMonths] = useState<number>(12);
+  const [lens, setLens] = useState<LensId>(initialLens);
 
   const { data, isFetching } = useNetWorthSeries(months);
   const { data: accounts = [] } = useAccounts();
+
+  // Persistenza lente + sync hash (back/forward del browser).
+  const selectLens = (id: LensId) => {
+    setLens(id);
+    localStorage.setItem(STORAGE_KEY, id);
+    if (window.location.hash.replace('#', '') !== id) {
+      window.history.replaceState(null, '', `#${id}`);
+    }
+  };
+
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && isLensId(hash)) setLens(hash);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // Esposizione CC (debito) — mostrata separata, mai sottratta dal patrimonio.
   const ccExposure = useMemo(
     () => accounts.filter((a) => a.type === 'CREDIT_CARD').reduce((s, a) => s + a.balance, 0),
     [accounts]
   );
+  const ccIsDebt = ccExposure < 0;
 
   const current = data?.current ?? 0;
   const change = data?.change ?? 0;
   const changePct = data?.changePct ?? null;
-  const isUp = change >= 0;
-
-  // Statistiche chiave derivate dalla serie (nessuna matematica backend extra).
-  const stats = useMemo(() => {
-    const pts = data?.points ?? [];
-    if (pts.length === 0) return null;
-    const values = pts.map((p) => p.netWorth);
-    const max = Math.max(...values);
-    const min = Math.min(...values);
-    const avg = values.reduce((s, v) => s + v, 0) / values.length;
-
-    let best: { month: string; delta: number } | null = null;
-    let worst: { month: string; delta: number } | null = null;
-    for (let i = 1; i < pts.length; i++) {
-      const delta = pts[i].netWorth - pts[i - 1].netWorth;
-      if (!best || delta > best.delta) best = { month: pts[i].month, delta };
-      if (!worst || delta < worst.delta) worst = { month: pts[i].month, delta };
-    }
-    return { max, min, avg, best, worst };
-  }, [data]);
+  const changeTone = toneOf(change);
 
   return (
     <div className="container-custom">
@@ -60,103 +73,57 @@ export default function PatrimonioPage() {
           </Link>
           <h1 className="page-header-title">Patrimonio</h1>
           <p className="page-header-subtitle">
-            Quanto vali, dov'è il tuo denaro e come è cresciuto nel tempo
+            Quanto hai, dov'è e come è cambiato nel tempo
           </p>
         </div>
       </div>
 
-      {/* ── Hero patrimonio ── */}
-      <div className="patrimonio-hero">
-        <div className="patrimonio-hero-main">
-          <span className="patrimonio-hero-label">Liquidità totale</span>
-          <span className="patrimonio-hero-value">{formatCurrency(current)}</span>
-          <span className={`patrimonio-hero-change${isUp ? ' is-positive' : ' is-negative'}`}>
-            {isUp ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-            {isUp ? '+' : '−'}{formatCurrency(Math.abs(change))}
-            {changePct !== null && <span className="patrimonio-hero-change-pct">({isUp ? '+' : ''}{changePct}%)</span>}
-            <span className="patrimonio-hero-change-period">negli ultimi {months} mesi</span>
-          </span>
-        </div>
-        {ccExposure < 0 && (
-          <div className="patrimonio-hero-cc">
+      <div className="patrimonio-sections">
+        {/* ── Hero patrimonio (ancora, sempre visibile) ── */}
+        <div className="patrimonio-hero">
+          <div className="patrimonio-hero-main">
+            <span className="patrimonio-hero-label">Patrimonio liquido</span>
+            <span className="patrimonio-hero-value">{formatCurrency(current)}</span>
+            <span className={`patrimonio-hero-change is-${changeTone}`}>
+              {changeTone === 'positive' ? <TrendingUp size={15} />
+                : changeTone === 'negative' ? <TrendingDown size={15} />
+                : <Minus size={15} />}
+              {signOf(change)}{formatCurrency(Math.abs(change))}
+              {changePct !== null && (
+                <span className="patrimonio-hero-change-pct">
+                  ({signOf(changePct)}{Math.abs(changePct).toLocaleString('it-IT', { maximumFractionDigits: 2 })}%)
+                </span>
+              )}
+              <span className="patrimonio-hero-change-period">negli ultimi {months} mesi</span>
+            </span>
+          </div>
+          <div className={`patrimonio-hero-cc${ccIsDebt ? ' is-debt' : ''}`}>
             <span className="patrimonio-hero-cc-icon"><CreditCard size={16} /></span>
             <div>
               <span className="patrimonio-hero-cc-label">Esposizione carte</span>
               <span className="patrimonio-hero-cc-value">{formatCurrency(ccExposure)}</span>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* ── Andamento nel tempo ── */}
-      <div className="card">
-        <div className="widget-head">
-          <h3 className="widget-title">Andamento del patrimonio</h3>
-          <div className="projection-pills">
-            {MONTH_OPTIONS.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMonths(m)}
-                className={`projection-pill${months === m ? ' is-active' : ''}`}
-              >
-                {m}M
-              </button>
-            ))}
-          </div>
         </div>
-        {isFetching && !data ? (
-          <SkeletonChart />
-        ) : !data || data.points.length < 2 ? (
-          <div className="dashboard-chart-empty">Dati insufficienti per tracciare l'andamento</div>
-        ) : (
-          <NetWorthChart points={data.points} height={300} />
-        )}
-      </div>
 
-      {/* ── Statistiche chiave ── */}
-      {stats && (
-        <div className="patrimonio-stats">
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label"><LineChart size={14} /> Patrimonio medio</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.avg)}</span>
-          </div>
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label">Massimo</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.max)}</span>
-          </div>
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label">Minimo</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.min)}</span>
-          </div>
-          {stats.best && (
-            <div className="patrimonio-stat">
-              <span className="patrimonio-stat-label">Mese migliore</span>
-              <span className={`patrimonio-stat-value ${stats.best.delta >= 0 ? 'is-positive' : 'is-negative'}`}>
-                {stats.best.delta >= 0 ? '+' : '−'}{formatCurrency(Math.abs(stats.best.delta))}
-              </span>
-              <span className="patrimonio-stat-meta">{formatMonth(stats.best.month + '-01')}</span>
-            </div>
+        {/* ── Lenti di analisi ── */}
+        <PatrimonioLensTabs active={lens} onChange={selectLens} />
+
+        {/* ── Pannello della lente attiva (scorre) ── */}
+        <div
+          className="lens-panel"
+          role="tabpanel"
+          id={`lens-panel-${lens}`}
+          aria-labelledby={`lens-tab-${lens}`}
+        >
+          {lens === 'andamento' && (
+            <TrendLens months={months} setMonths={setMonths} data={data} isFetching={isFetching} />
           )}
-          {stats.worst && (
-            <div className="patrimonio-stat">
-              <span className="patrimonio-stat-label">Mese peggiore</span>
-              <span className={`patrimonio-stat-value ${stats.worst.delta >= 0 ? 'is-positive' : 'is-negative'}`}>
-                {stats.worst.delta >= 0 ? '+' : '−'}{formatCurrency(Math.abs(stats.worst.delta))}
-              </span>
-              <span className="patrimonio-stat-meta">{formatMonth(stats.worst.month + '-01')}</span>
-            </div>
-          )}
+          {lens === 'composizione' && <CompositionLens />}
+          {lens === 'risparmio' && <SavingsLens months={months} />}
+          {lens === 'spese' && <SpendingLens months={months} />}
         </div>
-      )}
-
-      {/* ── Composizione + Risparmio ── */}
-      <div className="patrimonio-grid">
-        <CompositionDonut />
-        <SavingsFlow months={months} />
       </div>
-
-      {/* ── Spese per categoria (riuso widget autonomo) ── */}
-      <CategoryPieWidget />
     </div>
   );
 }

@@ -718,3 +718,156 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// ── Andamento del patrimonio scomposto per conto ──────────────────────────────
+//   Stessa ricostruzione all'indietro del net worth, ma per singolo conto BANK:
+//   per ciascuno si parte dal suo saldo attuale e si sottraggono i suoi movimenti
+//   successivi a ogni fine-mese (riuso dell'helper PURO reconstructNetWorthSeries).
+//   La somma per mese coincide per costruzione con la serie aggregata netWorth.
+
+const monthKeys = (months: number, now: Date): string[] => {
+  const keys: string[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return keys;
+};
+
+export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const months = Math.min(Math.max(parseInt((req.query.months as string) || '12', 10) || 12, 3), 60);
+
+    const cacheKey = analyticsCache.keys.netWorthByAccount(userId, `m${months}`);
+    const cached = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
+    const now = new Date();
+    const balances = await getAccountsWithBalances(userId);
+    const bankBalances = balances.filter((a) => a.type === 'BANK');
+
+    // Nome/colore non sono in AccountBalance: lookup separato per l'etichetta legenda.
+    const meta = await prisma.account.findMany({
+      where: { userId, type: 'BANK' },
+      select: { id: true, name: true, color: true },
+    });
+    const metaById = new Map(meta.map((m) => [m.id, m]));
+
+    const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    firstMonthStart.setHours(0, 0, 0, 0);
+
+    const accounts = await Promise.all(
+      bankBalances.map(async (a) => {
+        const txns = await prisma.transaction.findMany({
+          where: { userId, accountId: a.id, date: { gte: firstMonthStart } },
+          select: { date: true, type: true, amount: true },
+        });
+        const points = reconstructNetWorthSeries(
+          a.balance,
+          txns.map((t) => ({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) })),
+          months,
+          now,
+        );
+        const m = metaById.get(a.id);
+        return { id: a.id, name: m?.name ?? 'Conto', color: m?.color ?? null, points };
+      }),
+    );
+
+    const result = { months: monthKeys(months, now), accounts };
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Get net worth by account error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// ── Trend di spesa/entrata per categoria nel tempo ────────────────────────────
+//   Per ciascun mese dell'orizzonte, il totale per categoria (stessa base di
+//   getCategoryStats/getMonthlyTrend: transferId null). Restituisce le top N
+//   categorie per totale + un aggregato "Altre", così il grafico resta leggibile.
+
+const CATEGORY_TREND_TOP_N = 6;
+
+export const getCategoryTrend = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const months = Math.min(Math.max(parseInt((req.query.months as string) || '12', 10) || 12, 3), 60);
+    const type = req.query.type === 'INCOME' ? 'INCOME' : 'EXPENSE';
+
+    const cacheKey = analyticsCache.keys.categoryTrend(userId, `m${months}:${type}`);
+    const cached = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
+    const now = new Date();
+    const keys = monthKeys(months, now);
+    const idx = new Map(keys.map((k, i) => [k, i]));
+    const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    firstMonthStart.setHours(0, 0, 0, 0);
+
+    const transactions = await prisma.transaction.findMany({
+      where: { userId, type, transferId: null, date: { gte: firstMonthStart } },
+      include: { category: true },
+    });
+
+    // Accumula totale-per-mese per categoria.
+    type Acc = { id: string; name: string; color: string | null; total: number; totals: number[] };
+    const byCat = new Map<string, Acc>();
+
+    for (const t of transactions) {
+      const d = new Date(t.date);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const mi = idx.get(monthKey);
+      if (mi === undefined) continue;
+
+      const key = t.categoryId || 'uncategorized';
+      if (!byCat.has(key)) {
+        byCat.set(key, {
+          id: key,
+          name: t.category?.name || 'Senza categoria',
+          color: t.category?.color || null,
+          total: 0,
+          totals: new Array(keys.length).fill(0),
+        });
+      }
+      const acc = byCat.get(key)!;
+      const amount = Number(t.amount);
+      acc.totals[mi] += amount;
+      acc.total += amount;
+    }
+
+    const sorted = Array.from(byCat.values()).sort((a, b) => b.total - a.total);
+    const top = sorted.slice(0, CATEGORY_TREND_TOP_N);
+    const rest = sorted.slice(CATEGORY_TREND_TOP_N);
+
+    const categories = top.map((c) => ({
+      ...c,
+      totals: c.totals.map((n) => round2(n)),
+      total: round2(c.total),
+    }));
+
+    if (rest.length > 0) {
+      const otherTotals = new Array(keys.length).fill(0);
+      let otherTotal = 0;
+      for (const c of rest) {
+        c.totals.forEach((n, i) => { otherTotals[i] += n; });
+        otherTotal += c.total;
+      }
+      categories.push({
+        id: 'other',
+        name: 'Altre',
+        color: '#a8a29e',
+        totals: otherTotals.map((n) => round2(n)),
+        total: round2(otherTotal),
+      });
+    }
+
+    const result = { months: keys, type, categories };
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Get category trend error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+

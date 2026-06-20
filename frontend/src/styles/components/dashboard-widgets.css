@@ -203,6 +203,50 @@ button.dashboard-tile:hover {
 .dashboard-pie-body { padding: 0 1.25rem 1.25rem; }
 .dashboard-chart-empty { padding: 1.5rem 1.25rem 2rem; }
 
+/* Empty state "Spese per categoria": invito ad agire, non un vuoto morto.
+   Più compatto del placeholder grafico (no 280px), icona neutra + unica CTA teal. */
+.category-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  min-height: 200px;
+  padding: 1.75rem 1.25rem 2rem;
+}
+
+.category-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f5f5f4;
+  color: #a8a29e;
+  margin-bottom: 0.35rem;
+}
+
+.category-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1c1917;
+}
+
+.category-empty-text {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #78716c;
+  max-width: 34ch;
+}
+
+.category-empty-cta { margin-top: 0.6rem; }
+
+.dark .category-empty-icon { background: #1c1917; color: #78716c; }
+.dark .category-empty-title { color: #f5f5f4; }
+.dark .category-empty-text  { color: #a8a29e; }
+
 /* ── Griglia contenuti ── */
 .dashboard-widget-grid {
   display: grid;

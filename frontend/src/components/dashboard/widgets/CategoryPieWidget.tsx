@@ -1,5 +1,6 @@
 import { useMemo, useState, memo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Receipt, Plus } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { useCategoryStats } from '../../../hooks/useDashboard';
@@ -99,7 +100,20 @@ export default function CategoryPieWidget() {
       </div>
 
       {expenseCategoryStats.length === 0 ? (
-        <div className="dashboard-chart-empty">Nessuna spesa registrata questo mese</div>
+        <div className="category-empty">
+          <span className="category-empty-icon"><Receipt size={20} /></span>
+          <p className="category-empty-title">
+            {isCurrentMonth ? 'Ancora nessuna spesa questo mese' : 'Nessuna spesa in questo mese'}
+          </p>
+          <p className="category-empty-text">
+            Qui vedrai la distribuzione delle tue uscite per categoria.
+          </p>
+          {isCurrentMonth && (
+            <Link to="/transactions?new=1" className="btn btn-primary btn-sm category-empty-cta">
+              <Plus size={15} /> Aggiungi una spesa
+            </Link>
+          )}
+        </div>
       ) : (
         <div className="dashboard-pie-body">
           <ResponsiveContainer width="55%" height="100%">
