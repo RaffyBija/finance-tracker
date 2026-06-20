@@ -4,6 +4,7 @@ import {
   formatCurrency as formatCurrencyWith,
   formatCurrencyAxis as formatCurrencyAxisWith,
   formatSignedCurrency as formatSignedCurrencyWith,
+  formatPercent as formatPercentWith,
 } from '../utils/format';
 
 /** Formattazione valuta legata alla preferenza dell'utente (AuthContext).
@@ -28,5 +29,10 @@ export function useFormatCurrency() {
     [currency],
   );
 
-  return { formatCurrency, formatCurrencyAxis, formatSignedCurrency, currency };
+  const formatPercent = useCallback(
+    (value: number, maximumFractionDigits = 1) => formatPercentWith(value, currency, maximumFractionDigits),
+    [currency],
+  );
+
+  return { formatCurrency, formatCurrencyAxis, formatSignedCurrency, formatPercent, currency };
 }

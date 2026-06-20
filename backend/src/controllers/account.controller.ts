@@ -181,6 +181,8 @@ export const createAccount = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onAccountMutated(userId);
+
     res.status(201).json({
       ...account,
       openingBalance: Number(account.openingBalance),
@@ -241,6 +243,8 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onAccountMutated(userId);
+
     res.json({
       ...account,
       openingBalance: Number(account.openingBalance),
@@ -267,6 +271,8 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
 
     // Le transazioni collegate vengono impostate a NULL (onDelete: SetNull)
     await prisma.account.delete({ where: { id } });
+
+    analyticsCache.onAccountMutated(userId);
 
     res.json({ message: 'Conto eliminato con successo' });
   } catch (error) {

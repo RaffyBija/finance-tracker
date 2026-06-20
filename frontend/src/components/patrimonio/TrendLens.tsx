@@ -18,7 +18,7 @@ interface TrendLensProps {
 }
 
 export default function TrendLens({ months, setMonths, data, isFetching }: TrendLensProps) {
-  const { formatCurrency } = useFormatCurrency();
+  const { formatCurrency, formatPercent } = useFormatCurrency();
   const [byAccount, setByAccount] = useState(false);
 
   const { data: byAcc, isFetching: byAccFetching } = useNetWorthByAccount(months, byAccount);
@@ -40,15 +40,17 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
     const avgMonthly = pts.length > 1 ? (data!.change) / (pts.length - 1) : 0;
 
     // Drawdown massimo: peggiore calo da un picco precedente (€ e %).
+    // La % è espressa solo se il picco è > 0: con picco ≤ 0 il rapporto perde
+    // significato (segno invertito), quindi la sopprimiamo (null).
     let peak = values[0];
     let maxDrawdown = 0;
-    let maxDrawdownPct = 0;
+    let maxDrawdownPct: number | null = null;
     for (const v of values) {
       if (v > peak) peak = v;
       const dd = v - peak; // ≤ 0
       if (dd < maxDrawdown) {
         maxDrawdown = dd;
-        maxDrawdownPct = peak > 0 ? (dd / peak) * 100 : 0;
+        maxDrawdownPct = peak > 0 ? (dd / peak) * 100 : null;
       }
     }
 
@@ -140,7 +142,7 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
             </span>
             <span className="patrimonio-stat-meta">
               {changePct !== null
-                ? `${signOf(changePct)}${Math.abs(changePct).toLocaleString('it-IT', { maximumFractionDigits: 1 })}% in ${months} mesi`
+                ? `${signOf(changePct)}${formatPercent(Math.abs(changePct))}% in ${months} mesi`
                 : `ultimi ${months} mesi`}
             </span>
           </div>
@@ -173,7 +175,9 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
             </span>
             <span className="patrimonio-stat-meta">
               {stats.maxDrawdown < 0
-                ? `${stats.maxDrawdownPct.toLocaleString('it-IT', { maximumFractionDigits: 1 })}% dal picco`
+                ? (stats.maxDrawdownPct !== null
+                    ? `${formatPercent(Math.abs(stats.maxDrawdownPct))}% dal picco`
+                    : 'dal picco precedente')
                 : 'nessun calo'}
             </span>
           </div>

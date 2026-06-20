@@ -26,7 +26,7 @@ const initialLens = (): LensId => {
 };
 
 export default function PatrimonioPage() {
-  const { formatCurrency } = useFormatCurrency();
+  const { formatCurrency, formatPercent } = useFormatCurrency();
   const [months, setMonths] = useState<number>(12);
   const [lens, setLens] = useState<LensId>(initialLens);
 
@@ -52,6 +52,7 @@ export default function PatrimonioPage() {
   }, []);
 
   // Esposizione CC (debito) — mostrata separata, mai sottratta dal patrimonio.
+  const hasCreditCard = useMemo(() => accounts.some((a) => a.type === 'CREDIT_CARD'), [accounts]);
   const ccExposure = useMemo(
     () => accounts.filter((a) => a.type === 'CREDIT_CARD').reduce((s, a) => s + a.balance, 0),
     [accounts]
@@ -91,19 +92,21 @@ export default function PatrimonioPage() {
               {signOf(change)}{formatCurrency(Math.abs(change))}
               {changePct !== null && (
                 <span className="patrimonio-hero-change-pct">
-                  ({signOf(changePct)}{Math.abs(changePct).toLocaleString('it-IT', { maximumFractionDigits: 2 })}%)
+                  ({signOf(changePct)}{formatPercent(Math.abs(changePct), 2)}%)
                 </span>
               )}
               <span className="patrimonio-hero-change-period">negli ultimi {months} mesi</span>
             </span>
           </div>
-          <div className={`patrimonio-hero-cc${ccIsDebt ? ' is-debt' : ''}`}>
-            <span className="patrimonio-hero-cc-icon"><CreditCard size={16} /></span>
-            <div>
-              <span className="patrimonio-hero-cc-label">Esposizione carte</span>
-              <span className="patrimonio-hero-cc-value">{formatCurrency(ccExposure)}</span>
+          {hasCreditCard && (
+            <div className={`patrimonio-hero-cc${ccIsDebt ? ' is-debt' : ''}`}>
+              <span className="patrimonio-hero-cc-icon"><CreditCard size={16} /></span>
+              <div>
+                <span className="patrimonio-hero-cc-label">Esposizione carte</span>
+                <span className="patrimonio-hero-cc-value">{formatCurrency(ccExposure)}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ── Lenti di analisi ── */}

@@ -19,9 +19,12 @@ export default function SavingsLens({ months }: SavingsLensProps) {
 
   const metrics = useMemo(() => {
     if (trend.length === 0) return null;
-    const n = trend.length;
-    const avgIncome = trend.reduce((s, t) => s + t.income, 0) / n;
-    const avgExpense = trend.reduce((s, t) => s + t.expense, 0) / n;
+    // getMonthlyTrend emette un bucket solo per i mesi CON movimenti: dividere per
+    // trend.length gonfierebbe le medie per chi ha mesi vuoti nell'orizzonte. La
+    // media "al mese" deve usare l'orizzonte selezionato (defensivo: max coi bucket).
+    const denom = Math.max(months, trend.length);
+    const avgIncome = trend.reduce((s, t) => s + t.income, 0) / denom;
+    const avgExpense = trend.reduce((s, t) => s + t.expense, 0) / denom;
 
     let best: { month: string; saved: number } | null = null;
     let worst: { month: string; saved: number } | null = null;
@@ -32,7 +35,7 @@ export default function SavingsLens({ months }: SavingsLensProps) {
     }
     const hasVariance = !!best && !!worst && best.saved !== worst.saved;
     return { avgIncome, avgExpense, best, worst, hasVariance };
-  }, [trend]);
+  }, [trend, months]);
 
   return (
     <div className="lens-stack">

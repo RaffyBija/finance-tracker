@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateCategoryDTO } from '../types';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // Ottieni tutte le categorie dell'utente
 export const getCategories = async (req: AuthRequest, res: Response) => {
@@ -100,6 +101,8 @@ export const createCategory = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onCategoryMutated(userId);
+
     res.status(201).json(category);
   } catch (error) {
     console.error('Create category error:', error);
@@ -151,6 +154,8 @@ export const updateCategory = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    analyticsCache.onCategoryMutated(userId);
+
     res.json(category);
   } catch (error) {
     console.error('Update category error:', error);
@@ -180,6 +185,8 @@ export const deleteCategory = async (req: AuthRequest, res: Response) => {
     await prisma.category.delete({
       where: { id },
     });
+
+    analyticsCache.onCategoryMutated(userId);
 
     res.json({ message: 'Categoria eliminata con successo' });
   } catch (error) {

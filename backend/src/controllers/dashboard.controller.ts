@@ -756,22 +756,27 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
     const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
     firstMonthStart.setHours(0, 0, 0, 0);
 
-    const accounts = await Promise.all(
-      bankBalances.map(async (a) => {
-        const txns = await prisma.transaction.findMany({
-          where: { userId, accountId: a.id, date: { gte: firstMonthStart } },
-          select: { date: true, type: true, amount: true },
-        });
-        const points = reconstructNetWorthSeries(
-          a.balance,
-          txns.map((t) => ({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) })),
-          months,
-          now,
-        );
-        const m = metaById.get(a.id);
-        return { id: a.id, name: m?.name ?? 'Conto', color: m?.color ?? null, points };
-      }),
-    );
+    // Una sola query per tutti i conti BANK (come getNetWorthSeries), poi raggruppo
+    // in memoria: evita un round-trip per conto.
+    const bankIds = bankBalances.map((a) => a.id);
+    const txns = bankIds.length === 0 ? [] : await prisma.transaction.findMany({
+      where: { userId, accountId: { in: bankIds }, date: { gte: firstMonthStart } },
+      select: { accountId: true, date: true, type: true, amount: true },
+    });
+
+    const txnsByAccount = new Map<string, { date: Date; type: 'INCOME' | 'EXPENSE'; amount: number }[]>();
+    for (const t of txns) {
+      if (!t.accountId) continue;
+      const list = txnsByAccount.get(t.accountId) ?? [];
+      list.push({ date: t.date, type: t.type as 'INCOME' | 'EXPENSE', amount: Number(t.amount) });
+      txnsByAccount.set(t.accountId, list);
+    }
+
+    const accounts = bankBalances.map((a) => {
+      const points = reconstructNetWorthSeries(a.balance, txnsByAccount.get(a.id) ?? [], months, now);
+      const m = metaById.get(a.id);
+      return { id: a.id, name: m?.name ?? 'Conto', color: m?.color ?? null, points };
+    });
 
     const result = { months: monthKeys(months, now), accounts };
     analyticsCache.set(cacheKey, result);

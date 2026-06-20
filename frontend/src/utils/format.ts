@@ -24,6 +24,14 @@ export function formatCurrencyAxis(amount: number, currency = 'EUR'): string {
   }).format(amount);
 }
 
+// Percentuale formattata col locale della valuta dell'utente (separatori coerenti
+// con gli importi accanto). Niente simbolo % qui: lo aggiunge il chiamante.
+export function formatPercent(value: number, currency = 'EUR', maximumFractionDigits = 1): string {
+  return new Intl.NumberFormat(localeForCurrency(currency), {
+    maximumFractionDigits,
+  }).format(value);
+}
+
 // Importo di una transazione con segno esplicito (+/−), formattato sul valore
 // assoluto: il segno resta coerente con icona e colore della riga.
 export function formatSignedCurrency(

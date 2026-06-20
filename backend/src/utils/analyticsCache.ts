@@ -98,4 +98,17 @@ export const analyticsCache = {
     delProjections(uid);
     delNetWorth(uid);
   },
+
+  // Un conto è cambiato (create/update/delete): nome/colore e composizione sono
+  // embeddati nella serie per-conto → invalida le serie patrimonio.
+  onAccountMutated: (uid: string) => {
+    delNetWorth(uid);
+  },
+
+  // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati
+  // nel trend per categoria → invalidalo (il delete riassegna le tx a "Senza
+  // categoria", cambiando anche gli aggregati).
+  onCategoryMutated: (uid: string) => {
+    delCategoryTrend(uid);
+  },
 };
