@@ -559,6 +559,83 @@
   }
 
   /* ============================
+     TRANSAZIONE DIVISA (SPLIT)
+     ============================ */
+
+  /* Label nascosta visivamente ma disponibile agli screen reader (righe split). */
+  .form-label-hidden {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  /* Pulsante testuale teal: attiva/disattiva la divisione. */
+  .split-toggle-btn {
+    @apply inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary-600;
+    @apply transition-colors;
+  }
+  .split-toggle-btn:hover {
+    @apply text-primary-700;
+  }
+
+  .split-header {
+    @apply flex items-center justify-between mb-2;
+  }
+  .split-header .form-label {
+    @apply mb-0;
+  }
+
+  .split-rows {
+    @apply flex flex-col gap-2;
+  }
+
+  .split-row {
+    @apply flex items-center gap-2;
+  }
+
+  .split-row-category {
+    @apply flex-1 min-w-0;
+  }
+
+  /* L'InputDecimal porta un .form-group con margine: azzerato in riga. */
+  .split-row-amount {
+    @apply shrink-0;
+    width: 7.5rem;
+  }
+  .split-row-amount .form-group {
+    @apply mb-0;
+  }
+
+  .split-row-remove {
+    @apply shrink-0 flex items-center justify-center w-9 h-9 rounded-lg text-neutral-400;
+    @apply transition-colors;
+  }
+  .split-row-remove:hover:not(:disabled) {
+    @apply bg-danger-50 text-danger-500;
+  }
+  .split-row-remove:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  .split-add-btn {
+    @apply inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary-600;
+    @apply transition-colors;
+  }
+  .split-add-btn:hover {
+    @apply text-primary-700;
+  }
+
+  /* Indicatore "rimanente da assegnare": verde quando bilanciato, ambra altrimenti. */
+  .split-remainder {
+    @apply mt-3 px-3 py-2 rounded-lg text-sm font-medium tabular-nums;
+  }
+  .split-remainder.is-balanced {
+    @apply bg-success-50 text-success-700;
+  }
+  .split-remainder.is-unbalanced {
+    @apply bg-warning-50 text-warning-700;
+  }
+
+  /* ============================
      RESPONSIVE
      ============================ */
   @media (max-width: 640px) {
@@ -717,3 +794,13 @@
   border-color: #7f1d1d;
   color: #fca5a5;
 }
+
+/* ── Transazione divisa (split) ── */
+.dark .split-toggle-btn,
+.dark .split-add-btn { color: #5eead4; }
+.dark .split-toggle-btn:hover,
+.dark .split-add-btn:hover { color: #99f6e4; }
+.dark .split-row-remove { color: #78716c; }
+.dark .split-row-remove:hover:not(:disabled) { background-color: rgba(127, 29, 29, 0.4); color: #fca5a5; }
+.dark .split-remainder.is-balanced { background-color: rgba(6, 78, 59, 0.45); color: #6ee7b7; }
+.dark .split-remainder.is-unbalanced { background-color: rgba(120, 53, 15, 0.45); color: #fcd34d; }

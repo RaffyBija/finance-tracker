@@ -89,7 +89,10 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
     const [transactions, plannedTransactions, recurringTransactions, openingBalanceRows] = await Promise.all([
       prisma.transaction.findMany({
         where: { userId, date: { gte: monthStart, lte: monthEnd }, transferId: null },
-        include: { category: { select: { id: true, name: true, color: true, icon: true } } },
+        include: {
+          category: { select: { id: true, name: true, color: true, icon: true } },
+          items: { select: { category: { select: { name: true } } } },
+        },
         orderBy: { date: 'asc' },
       }),
       prisma.plannedTransaction.findMany({
@@ -121,6 +124,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       description: string;
       isPaid?: boolean;
       recurringId?: string;
+      split?: boolean;
       category: { id?: string; name: string; color?: string; icon?: string } | null;
     };
 
@@ -132,22 +136,35 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       return days.get(key)!;
     };
 
-    // Actual transactions
+    // Actual transactions — una transazione divisa (split) resta un singolo evento
+    // con l'importo totale, marcato "Diviso" al posto della singola categoria.
     for (const t of transactions) {
       const dateStr = toDateStr(new Date(t.date));
       const day     = getOrCreate(dateStr);
       const amount  = Number(t.amount);
+      const isSplit = t.items.length > 0;
       if (t.type === 'INCOME') day.income   += amount;
       else                     day.expenses += amount;
+      // Per una transazione divisa mostriamo i nomi delle categorie (es. "Bar · Fumo",
+      // "Bar · Fumo +2" se più di due) invece di un generico "Diviso".
+      const splitNames = isSplit
+        ? t.items.map((it) => it.category?.name).filter((n): n is string => !!n)
+        : [];
+      const splitLabel = splitNames.length <= 2
+        ? splitNames.join(' · ')
+        : `${splitNames.slice(0, 2).join(' · ')} +${splitNames.length - 2}`;
       day.events.push({
         id: t.id,
         source: 'actual',
         transactionType: t.type,
         amount,
         description: t.description || '',
-        category: t.category
-          ? { id: t.category.id, name: t.category.name, color: t.category.color ?? undefined, icon: t.category.icon ?? undefined }
-          : null,
+        ...(isSplit && { split: true }),
+        category: isSplit
+          ? { name: splitLabel || 'Diviso' }
+          : t.category
+            ? { id: t.category.id, name: t.category.name, color: t.category.color ?? undefined, icon: t.category.icon ?? undefined }
+            : null,
       });
     }
 

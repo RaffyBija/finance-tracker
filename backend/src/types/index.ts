@@ -20,6 +20,13 @@ export interface LoginDTO {
   rememberMe?: boolean;
 }
 
+// Riga di ripartizione per una transazione divisa (split)
+export interface TransactionItemDTO {
+  amount: number;
+  categoryId?: string | null;
+  description?: string | null;
+}
+
 // DTO per creare transazione
 export interface CreateTransactionDTO {
   amount: number;
@@ -27,6 +34,9 @@ export interface CreateTransactionDTO {
   description?: string;
   date?: Date;
   categoryId?: string;
+  // Se valorizzato (>= 2 righe): transazione divisa su più categorie.
+  // Consentito solo per EXPENSE. La somma delle righe deve eguagliare amount.
+  items?: TransactionItemDTO[];
 }
 
 // DTO per creare categoria

@@ -30,6 +30,16 @@ export interface RegisterCredentials {
 // Transaction types
 export type TransactionType = 'INCOME' | 'EXPENSE';
 
+// Riga di ripartizione di una transazione divisa (split): l'importo del padre è
+// suddiviso tra le righe, ciascuna con la propria categoria.
+export interface TransactionItem {
+  id?: string;
+  amount: number;
+  categoryId?: string | null;
+  description?: string | null;
+  category?: Category | null;
+}
+
 export interface Transaction {
   id: string;
   amount: number;
@@ -46,6 +56,15 @@ export interface Transaction {
   account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
   // Conto "peer" dell'altra gamba del trasferimento (popolato dal backend).
   transferPeer?: Pick<Account, 'id' | 'name' | 'color'> | null;
+  // Presenti (>= 2) solo per le transazioni divise su più categorie.
+  items?: TransactionItem[];
+}
+
+// Riga inviata al backend per creare/aggiornare una transazione divisa.
+export interface TransactionItemInput {
+  amount: number;
+  categoryId: string;
+  description?: string | null;
 }
 
 export interface CreateTransactionDTO {
@@ -55,6 +74,8 @@ export interface CreateTransactionDTO {
   date?: string;
   categoryId?: string;
   accountId?: string;
+  // Se valorizzato (>= 2 righe): transazione divisa. Solo per EXPENSE.
+  items?: TransactionItemInput[];
 }
 
 export interface CreateTransferDTO {
@@ -72,6 +93,8 @@ export interface UpdateTransactionDTO {
   date?: string;
   categoryId?: string;
   accountId?: string | null;
+  // [] = converti a transazione semplice; >= 2 righe = transazione divisa.
+  items?: TransactionItemInput[];
 }
 
 // Category types

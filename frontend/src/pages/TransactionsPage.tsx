@@ -4,10 +4,12 @@ import { useTransactions, useDeleteTransaction, useDeleteTransfer, PAGE_SIZE } f
 import { useCategories } from '../hooks/useCategories';
 import { useAccounts } from '../hooks/useAccounts';
 import type { Transaction, TransactionType } from '../types';
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, ChevronDown, ArrowLeftRight } from 'lucide-react';
-import { formatDateShort, formatDateLong } from '../utils/date';
+import { Plus, TrendingUp, TrendingDown, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { formatDateShort } from '../utils/date';
+import { splitCategoriesLabel } from '../utils/transactionDisplay';
 import TransactionModal from '../components/transactions/TransactionModal';
 import TransferModal from '../components/transactions/TransferModal';
+import TransactionDetailModal from '../components/transactions/TransactionDetailModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
@@ -31,19 +33,14 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0);
   const [prevPages, setPrevPages] = useState<Transaction[]>([]);
 
-  // ── Espansione riga (solo mobile: su desktop il compact row mostra già tutto) ──
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const toggleExpand = (id: string) => {
-    if (window.matchMedia('(min-width: 481px)').matches) return;
-    setExpandedId(prev => (prev === id ? null : id));
-  };
-
   // ── Modal ──
   const [showModal, setShowModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editingTransfer, setEditingTransfer] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Transazione di cui è aperto il modal di dettaglio (qualsiasi tipo).
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [deletingTransferId, setDeletingTransferId] = useState<string | null>(null);
 
   const toast = useToast();
@@ -62,13 +59,6 @@ export default function TransactionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Su desktop le righe sono statiche: collassa l'eventuale riga espansa al passaggio da mobile
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 481px)');
-    const onChange = () => { if (mq.matches) setExpandedId(null); };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   // Debounce: aggiorna il valore API 400ms dopo l'ultima digitazione e resetta la paginazione
   useEffect(() => {
@@ -294,7 +284,6 @@ export default function TransactionsPage() {
             </div>
           ) : (
             displayItems.map((transaction) => {
-              const isExpanded = expandedId === transaction.id;
               const isTransfer = !!transaction.transferId;
               const peerName = transaction.transferPeer?.name ?? '—';
               // Ruoli origine/destinazione derivati dal tipo della gamba: EXPENSE è
@@ -316,10 +305,19 @@ export default function TransactionsPage() {
               return (
                 <div
                   key={transaction.id}
-                  className={`transaction-card-wrap${isExpanded ? ' is-expanded' : ''}`}
-                  onClick={() => toggleExpand(transaction.id)}
+                  className="transaction-card-wrap"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setDetailTx(transaction)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDetailTx(transaction);
+                    }
+                  }}
+                  aria-label={`Dettaglio: ${isTransfer ? 'Trasferimento' : (transaction.description || 'transazione')}`}
                 >
-                  {/* ── Riga compatta (sempre visibile) ── */}
+                  {/* ── Riga (apre il modal di dettaglio) ── */}
                   <div className="transaction-card">
                     <div className="transaction-card-left">
                       <div className={isTransfer ? 'transaction-card-icon-transfer' : transaction.type === 'INCOME' ? 'transaction-card-icon-income' : 'transaction-card-icon-expense'}>
@@ -336,7 +334,11 @@ export default function TransactionsPage() {
                         </p>
                         <p className="transaction-card-subtitle">
                           <span className="transaction-card-meta-category">
-                            {isTransfer ? transferSubtitle : (transaction.category?.name || 'Senza categoria')}
+                            {isTransfer
+                              ? transferSubtitle
+                              : (transaction.items?.length ?? 0) > 0
+                                ? splitCategoriesLabel(transaction.items)
+                                : (transaction.category?.name || 'Senza categoria')}
                           </span>
                           <span className="transaction-card-meta-sep" aria-hidden="true">·</span>
                           <span className="transaction-card-meta-date">
@@ -361,148 +363,7 @@ export default function TransactionsPage() {
                           ? formatCurrency(Number(transaction.amount))
                           : formatSignedCurrency(Number(transaction.amount), transaction.type)}
                       </span>
-                      {/* Su mobile le azioni vanno nel pannello espanso */}
-                      <div className="transaction-card-actions">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isTransfer) handleEditTransfer(transaction);
-                            else handleEdit(transaction);
-                          }}
-                          className="btn-icon-primary"
-                          title={isTransfer ? 'Modifica trasferimento' : 'Modifica transazione'}
-                          aria-label={isTransfer ? 'Modifica trasferimento' : 'Modifica transazione'}
-                        >
-                          <Pencil className="icon-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isTransfer) setDeletingTransferId(transaction.transferId!);
-                            else setDeletingId(transaction.id);
-                          }}
-                          className="btn-icon-danger"
-                          title={isTransfer ? 'Elimina trasferimento' : 'Elimina transazione'}
-                          aria-label={isTransfer ? 'Elimina trasferimento' : 'Elimina transazione'}
-                        >
-                          <Trash2 className="icon-sm" />
-                        </button>
-                      </div>
-                      <ChevronDown
-                        size={14}
-                        className={`transaction-card-chevron${isExpanded ? ' is-open' : ''}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* ── Pannello dettaglio (espandibile) ── */}
-                  <div className={`transaction-card-detail${isExpanded ? ' is-open' : ''}`}>
-                    <div className="transaction-card-detail-inner">
-                      {/* Griglia dettagli — solo mobile (desktop ha già tutto nel compact row) */}
-                      <div className="transaction-card-detail-body">
-                        {isTransfer ? (
-                          <>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Da</span>
-                              <span className="transaction-card-detail-value transaction-card-detail-account">
-                                {transferFrom && (
-                                  <span className="transaction-card-detail-dot" style={{ backgroundColor: transferFrom.color }} />
-                                )}
-                                {transferFrom?.name ?? '—'}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">A</span>
-                              <span className="transaction-card-detail-value transaction-card-detail-account">
-                                {transferTo && (
-                                  <span className="transaction-card-detail-dot" style={{ backgroundColor: transferTo.color }} />
-                                )}
-                                {transferTo?.name ?? '—'}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Importo</span>
-                              <span className="transaction-card-detail-amount">
-                                {formatCurrency(Number(transaction.amount))}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Data</span>
-                              <span className="transaction-card-detail-value">
-                                {formatDateLong(transaction.date)}
-                              </span>
-                            </div>
-                            {transaction.description && (
-                              <div className="transaction-card-detail-field">
-                                <span className="transaction-card-detail-label">Descrizione</span>
-                                <span className="transaction-card-detail-value">
-                                  {transaction.description}
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Descrizione</span>
-                              <span className="transaction-card-detail-value">
-                                {transaction.description || 'Nessuna descrizione'}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Importo</span>
-                              <span className={`transaction-card-detail-amount ${transaction.type === 'INCOME' ? 'transaction-card-detail-amount-income' : 'transaction-card-detail-amount-expense'}`}>
-                                {formatSignedCurrency(Number(transaction.amount), transaction.type)}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Categoria</span>
-                              <span className="transaction-card-detail-value">
-                                {transaction.category?.name || 'Senza categoria'}
-                              </span>
-                            </div>
-                            <div className="transaction-card-detail-field">
-                              <span className="transaction-card-detail-label">Data</span>
-                              <span className="transaction-card-detail-value">
-                                {formatDateLong(transaction.date)}
-                              </span>
-                            </div>
-                            {transaction.account && (
-                              <div className="transaction-card-detail-field">
-                                <span className="transaction-card-detail-label">Conto</span>
-                                <span className="transaction-card-detail-value transaction-card-detail-account">
-                                  <span className="transaction-card-detail-dot" style={{ backgroundColor: transaction.account.color }} />
-                                  {transaction.account.name}
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Azioni — sempre visibili nel pannello su tutti i breakpoint */}
-                      <div className="transaction-card-detail-actions">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isTransfer) handleEditTransfer(transaction);
-                            else handleEdit(transaction);
-                          }}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          <Pencil size={14} /> Modifica
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isTransfer) setDeletingTransferId(transaction.transferId!);
-                            else setDeletingId(transaction.id);
-                          }}
-                          className="btn btn-danger-outline btn-sm"
-                        >
-                          <Trash2 size={14} /> Elimina
-                        </button>
-                      </div>
+                      <ChevronRight size={14} className="transaction-card-go-chevron" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
@@ -559,6 +420,26 @@ export default function TransactionsPage() {
         isOpen={showTransferModal}
         editingTransfer={editingTransfer}
         onClose={handleCloseTransferModal}
+      />
+
+      <TransactionDetailModal
+        isOpen={!!detailTx}
+        transaction={detailTx}
+        onClose={() => setDetailTx(null)}
+        onEdit={() => {
+          const tx = detailTx;
+          setDetailTx(null);
+          if (!tx) return;
+          if (tx.transferId) handleEditTransfer(tx);
+          else handleEdit(tx);
+        }}
+        onDelete={() => {
+          const tx = detailTx;
+          setDetailTx(null);
+          if (!tx) return;
+          if (tx.transferId) setDeletingTransferId(tx.transferId);
+          else setDeletingId(tx.id);
+        }}
       />
 
       <ConfirmModal

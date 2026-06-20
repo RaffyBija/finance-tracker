@@ -2,6 +2,41 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateBudgetDTO } from '../types';
 
+// Spesa di un budget nel suo periodo. Tiene conto delle transazioni divise (split):
+// - budget globale (senza categoria) → somma di tutte le uscite (l'importo del padre
+//   coincide con la somma delle righe, quindi il totale è corretto);
+// - budget di categoria → uscite semplici con quella categoria + righe split con quella
+//   categoria (i cui padri sono uscite nel periodo). I padri split hanno categoryId null,
+//   quindi non vengono mai contati due volte.
+const computeBudgetSpent = async (
+  userId: string,
+  budget: { categoryId: string | null; startDate: Date; endDate: Date | null },
+): Promise<number> => {
+  const dateFilter = { gte: budget.startDate, ...(budget.endDate && { lte: budget.endDate }) };
+  const baseWhere = { userId, type: 'EXPENSE' as const, transferId: null, date: dateFilter };
+
+  if (!budget.categoryId) {
+    const agg = await prisma.transaction.aggregate({
+      where: baseWhere,
+      _sum: { amount: true },
+    });
+    return Number(agg._sum.amount || 0);
+  }
+
+  const [simple, splitItems] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { ...baseWhere, categoryId: budget.categoryId },
+      _sum: { amount: true },
+    }),
+    prisma.transactionItem.aggregate({
+      where: { categoryId: budget.categoryId, transaction: baseWhere },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  return Number(simple._sum.amount || 0) + Number(splitItems._sum.amount || 0);
+};
+
 // Ottieni tutti i budget
 export const getBudgets = async (req: AuthRequest, res: Response) => {
   try {
@@ -33,32 +68,13 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
     // Calcola spesa corrente per ogni budget
     const budgetsWithSpent = await Promise.all(
       budgets.map(async (budget) => {
-        const whereTransaction: any = {
-          userId,
-          type: 'EXPENSE',
-          transferId: null,
-          date: {
-            gte: budget.startDate,
-            ...(budget.endDate && { lte: budget.endDate }),
-          },
-        };
-
-        if (budget.categoryId) {
-          whereTransaction.categoryId = budget.categoryId;
-        }
-
-        const spent = await prisma.transaction.aggregate({
-          where: whereTransaction,
-          _sum: {
-            amount: true,
-          },
-        });
+        const spent = await computeBudgetSpent(userId, budget);
 
         return {
           ...budget,
-          spent: Number(spent._sum.amount || 0),
-          remaining: Number(budget.amount) - Number(spent._sum.amount || 0),
-          percentage: (Number(spent._sum.amount || 0) / Number(budget.amount)) * 100,
+          spent,
+          remaining: Number(budget.amount) - spent,
+          percentage: (spent / Number(budget.amount)) * 100,
         };
       })
     );
@@ -86,30 +102,13 @@ export const getBudget = async (req: AuthRequest, res: Response) => {
     }
 
     // Calcola spesa corrente
-    const whereTransaction: any = {
-      userId,
-      type: 'EXPENSE',
-      transferId: null,
-      date: {
-        gte: budget.startDate,
-        ...(budget.endDate && { lte: budget.endDate }),
-      },
-    };
-
-    if (budget.categoryId) {
-      whereTransaction.categoryId = budget.categoryId;
-    }
-
-    const spent = await prisma.transaction.aggregate({
-      where: whereTransaction,
-      _sum: { amount: true },
-    });
+    const spent = await computeBudgetSpent(userId, budget);
 
     const budgetWithSpent = {
       ...budget,
-      spent: Number(spent._sum.amount || 0),
-      remaining: Number(budget.amount) - Number(spent._sum.amount || 0),
-      percentage: (Number(spent._sum.amount || 0) / Number(budget.amount)) * 100,
+      spent,
+      remaining: Number(budget.amount) - spent,
+      percentage: (spent / Number(budget.amount)) * 100,
     };
 
     res.json(budgetWithSpent);

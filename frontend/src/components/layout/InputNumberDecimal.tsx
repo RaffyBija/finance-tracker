@@ -21,6 +21,9 @@ interface InputDecimalProps {
   hero?: boolean;
   /** Simbolo valuta mostrato come adornment in testa al campo (solo `hero`). */
   currency?: string;
+  /** Nasconde visivamente la label mantenendola per gli screen reader
+   *  (campi in riga, es. importi delle righe di una transazione divisa). */
+  hideLabel?: boolean;
 }
 
 export const InputDecimal = ({
@@ -35,6 +38,7 @@ export const InputDecimal = ({
   describedBy,
   hero = false,
   currency,
+  hideLabel = false,
 }: InputDecimalProps) => {
   const toRaw = (v: any) =>
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
@@ -109,7 +113,7 @@ export const InputDecimal = ({
 
   return (
     <div className="form-group">
-      <label className={`form-label${required ? ' form-label-required' : ''}`}>{label}</label>
+      <label className={`form-label${required ? ' form-label-required' : ''}${hideLabel ? ' form-label-hidden' : ''}`}>{label}</label>
       {hero ? (
         <div className="amount-control" data-invalid={invalid || undefined}>
           {currency && <span className="amount-currency" aria-hidden="true">{currency}</span>}

@@ -4,6 +4,7 @@ import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { countOccurrences } from './dashboard.controller';
 import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
+import { expandToCategoryLines } from '../utils/categoryContributions';
 
 const HIST_MONTHS = 3;
 
@@ -41,11 +42,17 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     ] = await Promise.all([
       prisma.transaction.findMany({
         where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null, transferId: null },
-        include: { category: { select: { id: true, name: true } } },
+        include: {
+          category: { select: { id: true, name: true, color: true, icon: true } },
+          items: { include: { category: { select: { id: true, name: true, color: true, icon: true } } } },
+        },
       }),
       prisma.transaction.findMany({
         where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null, transferId: null },
-        include: { category: { select: { id: true, name: true, icon: true, color: true } } },
+        include: {
+          category: { select: { id: true, name: true, icon: true, color: true } },
+          items: { include: { category: { select: { id: true, name: true, icon: true, color: true } } } },
+        },
       }),
       getAccountsWithBalances(userId),
       prisma.recurringTransaction.findMany({
@@ -104,22 +111,26 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
 
     historicalTx.forEach((t) => {
       if (t.type !== 'EXPENSE') return;
-      const catKey = t.categoryId || 'no-category';
-      if (!catInfoMap.has(catKey))
-        catInfoMap.set(catKey, {
-          id: t.categoryId ?? undefined,
-          name: t.category?.name || 'Senza categoria',
-          icon: t.category?.icon ?? undefined,
-          color: t.category?.color ?? undefined,
-        });
-
-      histCatCount.set(catKey, (histCatCount.get(catKey) || 0) + 1);
-
       const d = new Date(t.date);
       const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-      if (!histCatMonthMap.has(catKey)) histCatMonthMap.set(catKey, new Map());
-      const mm = histCatMonthMap.get(catKey)!;
-      mm.set(monthKey, (mm.get(monthKey) || 0) + Number(t.amount));
+
+      // Le transazioni divise ripartiscono importo e conteggio tra le righe.
+      for (const line of expandToCategoryLines(t)) {
+        const catKey = line.categoryId || 'no-category';
+        if (!catInfoMap.has(catKey))
+          catInfoMap.set(catKey, {
+            id: line.categoryId ?? undefined,
+            name: line.category?.name || 'Senza categoria',
+            icon: line.category?.icon ?? undefined,
+            color: line.category?.color ?? undefined,
+          });
+
+        histCatCount.set(catKey, (histCatCount.get(catKey) || 0) + 1);
+
+        if (!histCatMonthMap.has(catKey)) histCatMonthMap.set(catKey, new Map());
+        const mm = histCatMonthMap.get(catKey)!;
+        mm.set(monthKey, (mm.get(monthKey) || 0) + line.amount);
+      }
     });
 
     // Media mensile per categoria sull'intera finestra storica
@@ -154,10 +165,12 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     const currentCatSpend = new Map<string, number>();
     currentMonthTx.forEach((t) => {
       if (t.type !== 'EXPENSE') return;
-      const catKey = t.categoryId || 'no-category';
-      if (!catInfoMap.has(catKey))
-        catInfoMap.set(catKey, { id: t.categoryId ?? undefined, name: t.category?.name || 'Senza categoria' });
-      currentCatSpend.set(catKey, (currentCatSpend.get(catKey) || 0) + Number(t.amount));
+      for (const line of expandToCategoryLines(t)) {
+        const catKey = line.categoryId || 'no-category';
+        if (!catInfoMap.has(catKey))
+          catInfoMap.set(catKey, { id: line.categoryId ?? undefined, name: line.category?.name || 'Senza categoria' });
+        currentCatSpend.set(catKey, (currentCatSpend.get(catKey) || 0) + line.amount);
+      }
     });
 
     // Stima rimanente per categoria (solo da storico, non nuove categorie del mese corrente)

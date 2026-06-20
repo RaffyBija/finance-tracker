@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { getAccountsWithBalances, getLiquidBalance, openCCObligations, nextBillingDate } from '../utils/balance';
+import { expandToCategoryLines } from '../utils/categoryContributions';
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
 
@@ -60,23 +61,27 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
 
     const transactions = await prisma.transaction.findMany({
       where,
-      include: { category: true },
+      include: { category: true, items: { include: { category: true } } },
     });
 
     const categoryMap = new Map<string, any>();
 
+    // Le transazioni divise (split) contribuiscono a più categorie: ogni riga
+    // viene accreditata alla propria categoria, le semplici alla categoria del padre.
     transactions.forEach((t) => {
-      const key  = t.categoryId || 'uncategorized';
-      const name  = t.category?.name  || 'Senza categoria';
-      const color = t.category?.color || '#gray';
+      expandToCategoryLines(t).forEach((line) => {
+        const key   = line.categoryId || 'uncategorized';
+        const name  = line.category?.name  || 'Senza categoria';
+        const color = line.category?.color || '#gray';
 
-      if (!categoryMap.has(key)) {
-        categoryMap.set(key, { categoryId: t.categoryId, categoryName: name, categoryColor: color, type: t.type, total: 0, count: 0 });
-      }
+        if (!categoryMap.has(key)) {
+          categoryMap.set(key, { categoryId: line.categoryId, categoryName: name, categoryColor: color, type: t.type, total: 0, count: 0 });
+        }
 
-      const stat = categoryMap.get(key);
-      stat.total += Number(t.amount);
-      stat.count += 1;
+        const stat = categoryMap.get(key);
+        stat.total += line.amount;
+        stat.count += 1;
+      });
     });
 
     res.json(Array.from(categoryMap.values()).sort((a, b) => b.total - a.total));
@@ -95,7 +100,8 @@ export const getRecentTransactions = async (req: AuthRequest, res: Response) => 
 
     const transactions = await prisma.transaction.findMany({
       where: { userId, transferId: null },
-      include: { category: true },
+      // `items` serve a TransactionRow per mostrare la ripartizione (categoria + importo).
+      include: { category: true, items: { select: { id: true, amount: true, category: { select: { name: true, icon: true } } } } },
       orderBy: { date: 'desc' },
       take: limit,
     });
@@ -853,10 +859,11 @@ export const getCategoryTrend = async (req: AuthRequest, res: Response) => {
 
     const transactions = await prisma.transaction.findMany({
       where: { userId, type, transferId: null, date: { gte: firstMonthStart } },
-      include: { category: true },
+      include: { category: true, items: { include: { category: true } } },
     });
 
-    // Accumula totale-per-mese per categoria.
+    // Accumula totale-per-mese per categoria. Le transazioni divise (split)
+    // ripartiscono il loro importo tra le righe, ciascuna sulla propria categoria.
     type Acc = { id: string; name: string; color: string | null; total: number; totals: number[] };
     const byCat = new Map<string, Acc>();
 
@@ -866,20 +873,21 @@ export const getCategoryTrend = async (req: AuthRequest, res: Response) => {
       const mi = idx.get(monthKey);
       if (mi === undefined) continue;
 
-      const key = t.categoryId || 'uncategorized';
-      if (!byCat.has(key)) {
-        byCat.set(key, {
-          id: key,
-          name: t.category?.name || 'Senza categoria',
-          color: t.category?.color || null,
-          total: 0,
-          totals: new Array(keys.length).fill(0),
-        });
+      for (const line of expandToCategoryLines(t)) {
+        const key = line.categoryId || 'uncategorized';
+        if (!byCat.has(key)) {
+          byCat.set(key, {
+            id: key,
+            name: line.category?.name || 'Senza categoria',
+            color: line.category?.color || null,
+            total: 0,
+            totals: new Array(keys.length).fill(0),
+          });
+        }
+        const acc = byCat.get(key)!;
+        acc.totals[mi] += line.amount;
+        acc.total += line.amount;
       }
-      const acc = byCat.get(key)!;
-      const amount = Number(t.amount);
-      acc.totals[mi] += amount;
-      acc.total += amount;
     }
 
     const sorted = Array.from(byCat.values()).sort((a, b) => b.total - a.total);
