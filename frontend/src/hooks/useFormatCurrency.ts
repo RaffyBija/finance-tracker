@@ -2,7 +2,9 @@ import { useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   formatCurrency as formatCurrencyWith,
+  formatCurrencyAxis as formatCurrencyAxisWith,
   formatSignedCurrency as formatSignedCurrencyWith,
+  formatPercent as formatPercentWith,
 } from '../utils/format';
 
 /** Formattazione valuta legata alla preferenza dell'utente (AuthContext).
@@ -17,10 +19,20 @@ export function useFormatCurrency() {
     [currency],
   );
 
+  const formatCurrencyAxis = useCallback(
+    (amount: number) => formatCurrencyAxisWith(amount, currency),
+    [currency],
+  );
+
   const formatSignedCurrency = useCallback(
     (amount: number, type: 'INCOME' | 'EXPENSE') => formatSignedCurrencyWith(amount, type, currency),
     [currency],
   );
 
-  return { formatCurrency, formatSignedCurrency, currency };
+  const formatPercent = useCallback(
+    (value: number, maximumFractionDigits = 1) => formatPercentWith(value, currency, maximumFractionDigits),
+    [currency],
+  );
+
+  return { formatCurrency, formatCurrencyAxis, formatSignedCurrency, formatPercent, currency };
 }

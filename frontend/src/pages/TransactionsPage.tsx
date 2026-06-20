@@ -13,6 +13,7 @@ import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 export default function TransactionsPage() {
@@ -46,6 +47,20 @@ export default function TransactionsPage() {
   const [deletingTransferId, setDeletingTransferId] = useState<string | null>(null);
 
   const toast = useToast();
+
+  // Deep-link "?new=1" (es. dalla CTA dell'empty state Spese per categoria):
+  // apre il modale nuova transazione una volta sola e ripulisce il parametro.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setEditingTransaction(null);
+      setShowModal(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('new');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Su desktop le righe sono statiche: collassa l'eventuale riga espansa al passaggio da mobile
   useEffect(() => {

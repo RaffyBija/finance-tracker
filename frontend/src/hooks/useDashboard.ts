@@ -86,3 +86,23 @@ export const useNetWorthSeries = (months: number = 12) => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+// Andamento del patrimonio scomposto per conto (stacked area). Caricato solo
+// quando la vista "scomponi per conto" è attiva (enabled).
+export const useNetWorthByAccount = (months: number = 12, enabled = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'networth-by-account', months],
+    queryFn: () => dashboardAPI.getNetWorthByAccount({ months }),
+    staleTime: 5 * 60 * 1000,
+    enabled,
+  });
+};
+
+// Trend per categoria nel tempo (default EXPENSE): dati storici → cache 5 min.
+export const useCategoryTrend = (months: number = 12, type: 'INCOME' | 'EXPENSE' = 'EXPENSE') => {
+  return useQuery({
+    queryKey: ['dashboard', 'category-trend', months, type],
+    queryFn: () => dashboardAPI.getCategoryTrend({ months, type }),
+    staleTime: 5 * 60 * 1000,
+  });
+};

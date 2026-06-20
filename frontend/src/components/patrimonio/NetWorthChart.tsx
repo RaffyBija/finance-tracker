@@ -31,7 +31,7 @@ function NetWorthTooltip({ active, payload, formatCurrency }: any) {
 }
 
 export default function NetWorthChart({ points, height = 300 }: NetWorthChartProps) {
-  const { formatCurrency } = useFormatCurrency();
+  const { formatCurrency, formatCurrencyAxis } = useFormatCurrency();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -66,7 +66,7 @@ export default function NetWorthChart({ points, height = 300 }: NetWorthChartPro
             tickLine={false}
             axisLine={false}
             width={56}
-            tickFormatter={(v) => formatCurrency(Number(v))}
+            tickFormatter={(v) => formatCurrencyAxis(Number(v))}
           />
           <Tooltip content={<NetWorthTooltip formatCurrency={formatCurrency} />} />
 

@@ -45,26 +45,28 @@ export default function CompositionDonut() {
       {slices.length === 0 ? (
         <div className="dashboard-chart-empty">Nessun conto con liquidità positiva</div>
       ) : (
-        <div className="dashboard-pie-body">
-          <ResponsiveContainer width="55%" height="100%">
-            <PieChart>
-              <Pie
-                data={slices}
-                cx="50%"
-                cy="50%"
-                innerRadius={65}
-                outerRadius={100}
-                dataKey="balance"
-                nameKey="name"
-                paddingAngle={2}
-              >
-                {slices.map((a) => (
-                  <Cell key={a.id} fill={isValidColor(a.color) ? a.color : FALLBACK} />
-                ))}
-              </Pie>
-              <Tooltip content={<CompositionTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="dashboard-pie-body composition-pie-body">
+          <div className="composition-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={slices}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="56%"
+                  outerRadius="86%"
+                  dataKey="balance"
+                  nameKey="name"
+                  paddingAngle={2}
+                >
+                  {slices.map((a) => (
+                    <Cell key={a.id} fill={isValidColor(a.color) ? a.color : FALLBACK} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CompositionTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
           <div className="dashboard-pie-legend-wrap">
             <div className="dashboard-legend">
               {slices.map((a) => (

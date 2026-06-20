@@ -12,10 +12,19 @@ const delProjections = (uid: string): void => {
 };
 
 // Il patrimonio storico cambia solo dai movimenti reali (create/update/delete o
-// esecuzione di ricorrenti/pianificate, che generano una transazione).
+// esecuzione di ricorrenti/pianificate, che generano una transazione). Invalida sia
+// la serie aggregata sia quella scomposta per conto, che condividono la stessa fonte.
 const delNetWorth = (uid: string): void => {
   cache.keys()
-    .filter(k => k.startsWith(`networth-series:${uid}:`))
+    .filter(k => k.startsWith(`networth-series:${uid}:`) || k.startsWith(`networth-by-account:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
+// Il trend per categoria è cacheato per-orizzonte e per-tipo → invalida tutte le
+// varianti dell'utente con un delete per prefisso (come delMonthlyTrend).
+const delCategoryTrend = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`category-trend:${uid}:`))
     .forEach(k => cache.del(k));
 };
 
@@ -40,6 +49,8 @@ export const analyticsCache = {
     projectedBalance: (uid: string, suffix: string) => `projected-balance:${uid}:${suffix}`,
     projectionSeries: (uid: string, suffix: string) => `projection-series:${uid}:${suffix}`,
     netWorthSeries:   (uid: string, suffix: string) => `networth-series:${uid}:${suffix}`,
+    netWorthByAccount:(uid: string, suffix: string) => `networth-by-account:${uid}:${suffix}`,
+    categoryTrend:    (uid: string, suffix: string) => `category-trend:${uid}:${suffix}`,
     recurringDue:     (uid: string) => `recurring-due:${uid}`,
     plannedDue:       (uid: string) => `planned-due:${uid}`,
   },
@@ -50,6 +61,7 @@ export const analyticsCache = {
   onTransactionMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
     delMonthlyTrend(uid);
+    delCategoryTrend(uid);
     delProjections(uid);
     delNetWorth(uid);
   },
@@ -64,6 +76,7 @@ export const analyticsCache = {
   onRecurringExecuted: (uid: string) => {
     cache.del(`forecast:${uid}`);
     delMonthlyTrend(uid);
+    delCategoryTrend(uid);
     cache.del(`recurring-due:${uid}`);
     delProjections(uid);
     delNetWorth(uid);
@@ -80,8 +93,22 @@ export const analyticsCache = {
   onPlannedPaid: (uid: string) => {
     cache.del(`forecast:${uid}`);
     delMonthlyTrend(uid);
+    delCategoryTrend(uid);
     cache.del(`planned-due:${uid}`);
     delProjections(uid);
     delNetWorth(uid);
+  },
+
+  // Un conto è cambiato (create/update/delete): nome/colore e composizione sono
+  // embeddati nella serie per-conto → invalida le serie patrimonio.
+  onAccountMutated: (uid: string) => {
+    delNetWorth(uid);
+  },
+
+  // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati
+  // nel trend per categoria → invalidalo (il delete riassegna le tx a "Senza
+  // categoria", cambiando anche gli aggregati).
+  onCategoryMutated: (uid: string) => {
+    delCategoryTrend(uid);
   },
 };

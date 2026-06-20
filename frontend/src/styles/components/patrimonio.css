@@ -2,24 +2,30 @@
    Stili semantici (zero Tailwind inline). Palette warm Stone, accento teal.
    Gli override .dark sono regole esplicite in fondo al file (fuori da @layer). */
 
-/* Hero patrimonio */
+/* Ritmo verticale uniforme tra le sezioni della pagina (no card incollate). */
+.patrimonio-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Hero patrimonio — band compatta in cima, ancora sempre visibile sopra le lenti */
 .patrimonio-hero {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem 1.5rem;
+  gap: 0.85rem 1.5rem;
   background: #ffffff;
   border: 1px solid #e7e5e4;
   border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1.15rem 1.5rem;
 }
 
 .patrimonio-hero-main {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .patrimonio-hero-label {
@@ -30,7 +36,7 @@
 }
 
 .patrimonio-hero-value {
-  font-size: 2.1rem;
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.1;
   color: #1c1917;
@@ -49,6 +55,7 @@
 
 .patrimonio-hero-change.is-positive { color: #059669; }
 .patrimonio-hero-change.is-negative { color: #dc2626; }
+.patrimonio-hero-change.is-neutral  { color: #78716c; }
 
 .patrimonio-hero-change-pct { opacity: 0.85; }
 
@@ -58,12 +65,14 @@
   margin-left: 0.15rem;
 }
 
+/* Tessera sempre presente: stabilizza l'hero (due estremi) anche senza debito.
+   Base = neutra (a saldo); .is-debt = stato esposizione (rosso/caldo). */
 .patrimonio-hero-cc {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  background: #faf5f0;
-  border: 1px solid #f0e6dd;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
   border-radius: 12px;
   padding: 0.75rem 1rem;
 }
@@ -75,9 +84,13 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #fef2f2;
-  color: #dc2626;
+  background: #f5f5f4;
+  color: #a8a29e;
 }
+
+.patrimonio-hero-cc.is-debt { background: #faf5f0; border-color: #f0e6dd; }
+.patrimonio-hero-cc.is-debt .patrimonio-hero-cc-icon { background: #fef2f2; color: #dc2626; }
+.patrimonio-hero-cc.is-debt .patrimonio-hero-cc-value { color: #dc2626; }
 
 .patrimonio-hero-cc > div {
   display: flex;
@@ -93,7 +106,7 @@
 .patrimonio-hero-cc-value {
   font-size: 1rem;
   font-weight: 700;
-  color: #dc2626;
+  color: #1c1917;
   font-variant-numeric: tabular-nums;
 }
 
@@ -109,7 +122,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.85rem;
-  margin-bottom: 1.5rem;
 }
 
 .patrimonio-stat {
@@ -140,6 +152,7 @@
 
 .patrimonio-stat-value.is-positive { color: #059669; }
 .patrimonio-stat-value.is-negative { color: #dc2626; }
+.patrimonio-stat-value.is-neutral  { color: #78716c; }
 
 .patrimonio-stat-meta {
   font-size: 0.72rem;
@@ -151,7 +164,6 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  margin-bottom: 1.5rem;
 }
 
 @media (min-width: 900px) {
@@ -161,12 +173,50 @@
 /* Composizione: importo accanto alla quota % */
 .composition-amount { color: #a8a29e; font-weight: 500; }
 
-/* Risparmio: riga statistiche sopra il grafico */
+/* Chart a sinistra della legenda su desktop (riproduce il vecchio 55%). */
+.composition-chart {
+  width: 55%;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+/* Su mobile chart e legenda affiancati stanno stretti: il nome conto si
+   troncava a "C…". Impilo (grafico sopra, legenda a piena larghezza sotto):
+   il grafico resta tondo e la legenda ha spazio per nome, quota % e importo. */
+@media (max-width: 640px) {
+  .composition-pie-body {
+    flex-direction: column;
+    height: auto;
+  }
+  .composition-chart {
+    width: 100%;
+    height: 200px;
+  }
+  .composition-pie-body .dashboard-legend-name { max-width: none; }
+}
+
+/* Risparmio: riga statistiche sopra il grafico.
+   .card non ha padding (lo danno head/body): allineo stats e nota alla testata
+   con lo stesso padding orizzontale, altrimenti vanno a filo bordo. */
 .savings-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.75rem;
-  margin: 0.5rem 0 1rem;
+  margin: 0.25rem 0 1rem;
+  padding: 0 1.25rem;
+}
+
+/* Grafico a piena larghezza (come l'Andamento): l'asse Y dà il margine sinistro,
+   niente padding orizzontale extra che lo spingerebbe troppo all'interno.
+   La nota chiude la card sotto, quindi niente padding inferiore qui. */
+.savings-chart {
+  padding: 0;
+}
+
+/* "Entrate · Uscite" a tutta riga su mobile (valore lungo, sta più comodo). */
+@media (max-width: 540px) {
+  .savings-stats { grid-template-columns: 1fr 1fr; }
+  .savings-stat--wide { grid-column: 1 / -1; }
 }
 
 .savings-stat {
@@ -192,6 +242,167 @@
 .savings-stat-value.is-negative { color: #dc2626; }
 .savings-stat-value.savings-stat-muted { font-size: 0.9rem; color: #78716c; font-weight: 600; }
 
+/* Nota = footer della card: chiude in basso, sotto al grafico. */
+.savings-stats-note {
+  margin: 0;
+  padding: 0.75rem 1.25rem 1.25rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #a8a29e;
+}
+
+/* ── Lenti di analisi (tab + pannello) ────────────────────────────────────
+   Spina dorsale della pagina: segmented "thumb" come gli altri toggle del
+   sistema, ma più sostanziale (icone + label) per leggersi come navigazione. */
+.lens-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lens-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  padding: 0.3rem;
+}
+
+.lens-tab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #78716c;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lens-tab:hover { color: #1c1917; }
+
+.lens-tab.is-active {
+  background: #ffffff;
+  color: #0d9488;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.10);
+}
+
+.lens-tab:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 1px;
+}
+
+.lens-subtitle {
+  margin: 0;
+  padding-left: 0.15rem;
+  font-size: 0.82rem;
+  color: #a8a29e;
+}
+
+/* Su mobile le tab scorrono in orizzontale invece di stringersi. */
+@media (max-width: 640px) {
+  .lens-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .lens-tabs::-webkit-scrollbar { display: none; }
+  .lens-tab { flex: 0 0 auto; }
+}
+
+/* Pannello della lente: ritmo verticale uniforme + fade discreto al cambio. */
+.lens-panel { animation: lens-fade 0.18s ease; }
+.lens-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@keyframes lens-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lens-panel { animation: none; }
+  .lens-tab { transition: none; }
+}
+
+/* Header widget che ospita più controlli (pills vista + orizzonte): va a capo. */
+.widget-head--wrap { flex-wrap: wrap; }
+
+.lens-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Variante compatta del valore statistica (etichette testuali, non numeri). */
+.patrimonio-stat-value--sm { font-size: 1rem; }
+
+/* Dettaglio esposizione carte (lente "Dove sono i soldi") */
+.cc-exposure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cc-exposure-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cc-exposure-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cc-exposure-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1c1917;
+}
+
+.cc-exposure-value {
+  margin-left: auto;
+  font-weight: 700;
+  color: #dc2626;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trend spese per categoria (lente "Spese") */
+.category-trend-chart { padding: 0; }
+
+.category-trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  padding: 0.75rem 1.25rem 1.25rem;
+}
+
+.category-trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #78716c;
+}
+
 /* ── Dark mode (override espliciti) ─────────────────────────────────────── */
 .dark .patrimonio-hero,
 .dark .patrimonio-stat {
@@ -210,19 +421,24 @@
 .dark .patrimonio-hero-change-period,
 .dark .patrimonio-stat-meta,
 .dark .widget-subtitle,
+.dark .savings-stats-note,
 .dark .composition-amount { color: #78716c; }
 
 .dark .patrimonio-hero-cc {
-  background: #2a201c;
-  border-color: #5c2f28;
+  background: #1c1917;
+  border-color: #44403c;
 }
 
 .dark .patrimonio-hero-cc-icon {
-  background: #450a0a;
-  color: #fca5a5;
+  background: #292524;
+  color: #78716c;
 }
 
-.dark .patrimonio-hero-cc-value { color: #fca5a5; }
+.dark .patrimonio-hero-cc-value { color: #f5f5f4; }
+
+.dark .patrimonio-hero-cc.is-debt { background: #2a201c; border-color: #5c2f28; }
+.dark .patrimonio-hero-cc.is-debt .patrimonio-hero-cc-icon { background: #450a0a; color: #fca5a5; }
+.dark .patrimonio-hero-cc.is-debt .patrimonio-hero-cc-value { color: #fca5a5; }
 
 .dark .savings-stat-value { color: #f5f5f4; }
 .dark .savings-stat-value.savings-stat-muted { color: #a8a29e; }
@@ -232,3 +448,23 @@
 .dark .patrimonio-stat-value.is-negative,
 .dark .savings-stat-value.is-negative,
 .dark .patrimonio-hero-change.is-negative { color: #f87171; }
+.dark .patrimonio-stat-value.is-neutral,
+.dark .patrimonio-hero-change.is-neutral { color: #a8a29e; }
+
+/* Lenti */
+.dark .lens-tabs {
+  background: #1c1917;
+  border-color: #44403c;
+}
+.dark .lens-tab { color: #a8a29e; }
+.dark .lens-tab:hover { color: #f5f5f4; }
+.dark .lens-tab.is-active {
+  background: #292524;
+  color: #2dd4bf;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.dark .lens-subtitle { color: #78716c; }
+
+.dark .cc-exposure-name { color: #f5f5f4; }
+.dark .cc-exposure-value { color: #f87171; }
+.dark .category-trend-legend-item { color: #a8a29e; }
