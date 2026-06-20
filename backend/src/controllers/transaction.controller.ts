@@ -1,9 +1,70 @@
 import { Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import prisma from '../utils/prisma';
-import { AuthRequest, CreateTransactionDTO } from '../types';
+import { AuthRequest, CreateTransactionDTO, TransactionItemDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+
+// Include standard per restituire una transazione completa di righe split.
+const txInclude = {
+  category: true,
+  account: { select: { id: true, name: true, color: true, type: true } },
+  items: { include: { category: true } },
+} as const;
+
+type PreparedItem = { amount: number; categoryId: string; description: string | null };
+type ItemValidation =
+  | { ok: true; items: PreparedItem[] }
+  | { ok: false; status: number; error: string };
+
+// Valida le righe di una transazione divisa (split). Regole: solo EXPENSE,
+// almeno due righe, ogni riga con importo > 0 e categoria EXPENSE dell'utente,
+// somma delle righe == importo totale (tolleranza arrotondamento ±0.01).
+const validateSplitItems = async (
+  userId: string,
+  rawItems: TransactionItemDTO[],
+  type: 'INCOME' | 'EXPENSE',
+  totalAmount: number,
+): Promise<ItemValidation> => {
+  if (type !== 'EXPENSE') {
+    return { ok: false, status: 400, error: 'Solo le uscite possono essere divise in più categorie' };
+  }
+  if (rawItems.length < 2) {
+    return { ok: false, status: 400, error: 'Una transazione divisa richiede almeno due righe' };
+  }
+
+  const items: PreparedItem[] = [];
+  for (const it of rawItems) {
+    const amt = Number(it.amount);
+    if (!amt || amt <= 0) {
+      return { ok: false, status: 400, error: 'Importo riga non valido' };
+    }
+    if (!it.categoryId) {
+      return { ok: false, status: 400, error: 'Ogni riga deve avere una categoria' };
+    }
+    items.push({ amount: amt, categoryId: it.categoryId, description: it.description ?? null });
+  }
+
+  const ids = [...new Set(items.map((i) => i.categoryId))];
+  const cats = await prisma.category.findMany({ where: { id: { in: ids }, userId } });
+  const byId = new Map(cats.map((c) => [c.id, c]));
+  for (const id of ids) {
+    const c = byId.get(id);
+    if (!c) {
+      return { ok: false, status: 404, error: 'Categoria non trovata' };
+    }
+    if (c.type !== 'EXPENSE') {
+      return { ok: false, status: 400, error: 'Le categorie delle righe devono essere di tipo uscita' };
+    }
+  }
+
+  const sum = items.reduce((s, i) => s + i.amount, 0);
+  if (Math.abs(sum - totalAmount) > 0.01) {
+    return { ok: false, status: 400, error: 'La somma delle righe deve corrispondere all\'importo totale' };
+  }
+
+  return { ok: true, items };
+};
 
 // Ottieni tutte le transazioni dell'utente
 export const getTransactions = async (req: AuthRequest, res: Response) => {
@@ -48,10 +109,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
 
     const transactions = await prisma.transaction.findMany({
       where,
-      include: {
-        category: true,
-        account: { select: { id: true, name: true, color: true, type: true } },
-      },
+      include: txInclude,
       orderBy: {
         date: 'desc',
       },
@@ -107,10 +165,7 @@ export const getTransaction = async (req: AuthRequest, res: Response) => {
         id,
         userId,
       },
-      include: {
-        category: true,
-        account: { select: { id: true, name: true, color: true, type: true } },
-      },
+      include: txInclude,
     });
 
     if (!transaction) {
@@ -184,7 +239,7 @@ export const suggestCategory = async (req: AuthRequest, res: Response) => {
 export const createTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { amount, type, description, date, categoryId, accountId }: CreateTransactionDTO & { accountId?: string } = req.body;
+    const { amount, type, description, date, categoryId, accountId, items }: CreateTransactionDTO & { accountId?: string } = req.body;
 
     // Validazione
     if (!amount || amount <= 0) {
@@ -195,8 +250,17 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Tipo non valido (INCOME o EXPENSE)' });
     }
 
-    // Verifica che la categoria appartenga all'utente (se specificata)
-    if (categoryId) {
+    const isSplit = Array.isArray(items) && items.length > 0;
+    let preparedItems: PreparedItem[] = [];
+
+    if (isSplit) {
+      const v = await validateSplitItems(userId, items!, type, Number(amount));
+      if (!v.ok) {
+        return res.status(v.status).json({ error: v.error });
+      }
+      preparedItems = v.items;
+    } else if (categoryId) {
+      // Verifica che la categoria appartenga all'utente e che il tipo corrisponda
       const category = await prisma.category.findFirst({
         where: {
           id: categoryId,
@@ -208,7 +272,6 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ error: 'Categoria non trovata' });
       }
 
-      // Verifica che il tipo della categoria corrisponda al tipo della transazione
       if (category.type !== type) {
         return res.status(400).json({ error: 'Il tipo della categoria non corrisponde al tipo della transazione' });
       }
@@ -220,14 +283,21 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
         type,
         description,
         date: date ? new Date(date) : new Date(),
-        categoryId,
+        // Transazione divisa: la categoria vive sulle righe, non sul padre.
+        categoryId: isSplit ? null : categoryId,
         userId,
         ...(accountId && { accountId }),
+        ...(isSplit && {
+          items: {
+            create: preparedItems.map((i) => ({
+              amount: i.amount,
+              categoryId: i.categoryId,
+              description: i.description,
+            })),
+          },
+        }),
       },
-      include: {
-        category: true,
-        account: { select: { id: true, name: true, color: true, type: true } },
-      },
+      include: txInclude,
     });
 
     // Riconcilia eventuali cicli CC chiusi toccati da questa transazione retroattiva
@@ -253,7 +323,7 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { amount, type, description, date, categoryId, accountId } = req.body;
+    const { amount, type, description, date, categoryId, accountId, items } = req.body;
 
     // Verifica che la transazione esista e appartenga all'utente
     const existingTransaction = await prisma.transaction.findFirst({
@@ -277,8 +347,25 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Tipo non valido (INCOME o EXPENSE)' });
     }
 
-    // Verifica categoria se fornita
-    if (categoryId) {
+    const finalType = type || existingTransaction.type;
+    const finalAmount = amount !== undefined ? Number(amount) : Number(existingTransaction.amount);
+
+    // Gestione righe split: `items` presente (anche []) esprime l'intenzione.
+    // - items con >= 1 elemento → transazione divisa (validata);
+    // - items vuoto → conversione a transazione semplice (righe rimosse);
+    // - items assente → la struttura delle righe non viene toccata.
+    const hasItemsKey = items !== undefined;
+    const isSplit = Array.isArray(items) && items.length > 0;
+    let preparedItems: PreparedItem[] = [];
+
+    if (isSplit) {
+      const v = await validateSplitItems(userId, items, finalType, finalAmount);
+      if (!v.ok) {
+        return res.status(v.status).json({ error: v.error });
+      }
+      preparedItems = v.items;
+    } else if (categoryId) {
+      // Verifica categoria del padre (solo se non split)
       const category = await prisma.category.findFirst({
         where: {
           id: categoryId,
@@ -290,11 +377,36 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ error: 'Categoria non trovata' });
       }
 
-      const finalType = type || existingTransaction.type;
       if (category.type !== finalType) {
         return res.status(400).json({ error: 'Il tipo della categoria non corrisponde al tipo della transazione' });
       }
     }
+
+    // Categoria padre + righe in base all'intenzione espressa da `items`.
+    // Invariante: solo le EXPENSE possono essere divise. Se il tipo finale non è
+    // EXPENSE, eventuali righe vanno comunque rimosse anche quando il payload non
+    // include la chiave `items` (evita righe orfane su un padre INCOME).
+    const mustClearItems = finalType !== 'EXPENSE';
+
+    const categoryAndItems = isSplit
+      ? {
+          categoryId: null,
+          items: {
+            deleteMany: {},
+            create: preparedItems.map((i) => ({
+              amount: i.amount,
+              categoryId: i.categoryId,
+              description: i.description,
+            })),
+          },
+        }
+      : hasItemsKey
+        ? { categoryId: categoryId ?? null, items: { deleteMany: {} } }
+        : mustClearItems
+          ? { ...(categoryId !== undefined && { categoryId }), items: { deleteMany: {} } }
+          : categoryId !== undefined
+            ? { categoryId }
+            : {};
 
     const transaction = await prisma.transaction.update({
       where: { id },
@@ -303,13 +415,10 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
         ...(type && { type }),
         ...(description !== undefined && { description }),
         ...(date && { date: new Date(date) }),
-        ...(categoryId !== undefined && { categoryId }),
         ...(accountId !== undefined && { accountId: accountId ?? null }),
+        ...categoryAndItems,
       },
-      include: {
-        category: true,
-        account: { select: { id: true, name: true, color: true, type: true } },
-      },
+      include: txInclude,
     });
 
     // Riconcilia i cicli CC interessati: vecchio stato (rimosso) e nuovo (aggiunto).
