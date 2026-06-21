@@ -129,6 +129,11 @@ export const updateCategory = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Categoria non trovata' });
     }
 
+    // La categoria di sistema (es. "Pagamento Carta") non è modificabile dall'utente.
+    if (existingCategory.isSystem) {
+      return res.status(403).json({ error: 'Questa categoria è gestita dal sistema e non può essere modificata' });
+    }
+
     // Se viene cambiato il nome, verifica che non esista già
     if (name && name.trim() !== existingCategory.name) {
       const duplicateCategory = await prisma.category.findFirst({
@@ -179,6 +184,11 @@ export const deleteCategory = async (req: AuthRequest, res: Response) => {
 
     if (!category) {
       return res.status(404).json({ error: 'Categoria non trovata' });
+    }
+
+    // La categoria di sistema (es. "Pagamento Carta") non è eliminabile dall'utente.
+    if (category.isSystem) {
+      return res.status(403).json({ error: 'Questa categoria è gestita dal sistema e non può essere eliminata' });
     }
 
     // Le transazioni collegate verranno automaticamente impostate a NULL (onDelete: SetNull)
