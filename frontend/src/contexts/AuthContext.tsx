@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authAPI } from '../api/client';
 import { getToken, setToken as persistToken, clearToken } from '../utils/tokenStorage';
 import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
@@ -29,6 +30,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(getToken());
   // true solo se esiste un token da verificare — evita lo spinner su /login senza sessione attiva
@@ -92,6 +94,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (credentials: LoginCredentials) => {
     const response = await authAPI.login(credentials);
+    // Difesa-in-profondità: azzera la cache di React Query prima di popolare il nuovo
+    // utente, così non resta nulla di una sessione precedente non ripulita.
+    queryClient.clear();
     persistToken(response.token, !!credentials.rememberMe);
     setToken(response.token);
     setUser(response.user);
@@ -106,6 +111,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     clearToken();
     setToken(null);
     setUser(null);
+    // Svuota la cache di React Query: senza questo i dati dell'account precedente
+    // (staleTime 5min, refetchOnMount false) restano e vengono mostrati al login
+    // di un altro utente finché non si ricarica la pagina manualmente.
+    queryClient.clear();
   };
 
   const updateUser = useCallback((updatedData: Partial<User>) => {

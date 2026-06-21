@@ -9,7 +9,7 @@ import {
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
 import { countOccurrences } from './dashboard.controller';
-import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
+import { getAccountsWithBalances, getLiquidBalance } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
 import { analyticsCache } from '../utils/analyticsCache';
 
@@ -337,9 +337,15 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Modalità di riporto non valida' });
     }
 
-    if (categoryId) {
+    // Il form invia categoryId: '' per il budget complessivo. Normalizziamo a null:
+    // passare '' come foreign key a Prisma viola il vincolo (nessuna categoria con id
+    // '') → P2003 → 500. Con null il budget è correttamente "senza categoria".
+    const normalizedCategoryId =
+      typeof categoryId === 'string' && categoryId.trim() !== '' ? categoryId : null;
+
+    if (normalizedCategoryId) {
       const category = await prisma.category.findFirst({
-        where: { id: categoryId, userId },
+        where: { id: normalizedCategoryId, userId },
       });
       if (!category) {
         return res.status(404).json({ error: 'Categoria non trovata' });
@@ -350,7 +356,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
       data: {
         name,
         amount,
-        categoryId,
+        categoryId: normalizedCategoryId,
         period,
         rollover: rollover ?? 'NONE',
         startDate: new Date(startDate),
@@ -391,9 +397,18 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Modalità di riporto non valida' });
     }
 
-    if (categoryId) {
+    // categoryId: undefined → non toccare; '' → budget complessivo (null); id → valida.
+    // Senza la normalizzazione '' finirebbe come foreign key vuota → P2003 → 500.
+    const normalizedCategoryId =
+      categoryId === undefined
+        ? undefined
+        : typeof categoryId === 'string' && categoryId.trim() !== ''
+          ? categoryId
+          : null;
+
+    if (normalizedCategoryId) {
       const category = await prisma.category.findFirst({
-        where: { id: categoryId, userId },
+        where: { id: normalizedCategoryId, userId },
       });
       if (!category) {
         return res.status(404).json({ error: 'Categoria non trovata' });
@@ -405,7 +420,7 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
       data: {
         ...(name && { name }),
         ...(amount !== undefined && { amount }),
-        ...(categoryId !== undefined && { categoryId }),
+        ...(normalizedCategoryId !== undefined && { categoryId: normalizedCategoryId }),
         ...(period && { period }),
         ...(rollover !== undefined && { rollover }),
         ...(startDate && { startDate: new Date(startDate) }),
@@ -450,8 +465,8 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
 //
 // Riusa gli stessi building-block della previsione (getForecast):
 //   • entrate/impegni del mese via countOccurrences (ricorrenti) + pianificate;
-//   • cuscinetto = liquidità reale BANK (getLiquidBalance);
-//   • addebiti CC del ciclo aperto attesi nel mese (openCCObligations);
+//   • cuscinetto = liquidità reale BANK al netto del debito dei cicli CC aperti
+//     (getLiquidBalance − debito CC aperto: quella liquidità è già impegnata);
 //   • medie storiche per categoria (split-aware via expandToCategoryLines).
 //
 //   spendibile = entratePreviste + cuscinetto − impegniFissi − (entratePreviste × savingRate)
@@ -526,7 +541,17 @@ const computeBudgetSuggestionsBase = async (
     }),
   ]);
 
-  const cushion = await getLiquidBalance(userId, accounts);
+  // Cuscinetto = liquidità BANK reale, AL NETTO del debito dei cicli CC ancora aperti.
+  // Quel debito è liquidità già impegnata: va tolto qui a prescindere dalla data di
+  // addebito. Diversamente dalla projection (che guarda N mesi avanti e quindi include
+  // sempre il prossimo billing day), la proposta lavora sul SOLO mese corrente: se
+  // l'addebito è già "passato" questo mese cadrebbe fuori finestra e lo spendibile
+  // risulterebbe sovrastimato. I cicli CC chiusi sono invece già pianificate (contate
+  // negli impegni del mese), quindi non c'è doppio conteggio.
+  const openCcDebt = accounts
+    .filter((a) => a.type === 'CREDIT_CARD' && a.balance < 0)
+    .reduce((sum, a) => sum + Math.abs(a.balance), 0);
+  const cushion = (await getLiquidBalance(userId, accounts)) - openCcDebt;
 
   // Entrate previste e impegni fissi del MESE INTERO (piano, non prorata da oggi)
   let expectedIncome = 0;
@@ -555,10 +580,8 @@ const computeBudgetSuggestionsBase = async (
     else fixedCommitments += Number(p.amount);
   }
 
-  // Addebiti CC del ciclo aperto in scadenza entro fine mese (i cicli chiusi sono
-  // già pianificate → contate sopra: nessun doppio conteggio).
-  const ccDue = openCCObligations(accounts, monthStart, monthEnd, now);
-  fixedCommitments += ccDue.total;
+  // Il debito dei cicli CC aperti NON va aggiunto qui: è già scontato dal cuscinetto
+  // (vedi sopra). I cicli chiusi sono pianificate, già incluse in fixedCommitments.
 
   // ── Medie storiche per categoria (split-aware), escluse le "senza categoria" ──
   type CatInfo = { name: string; icon: string | null; color: string | null };
