@@ -15,6 +15,7 @@ model User {
   isPro              Boolean   @default(false)
   tourCompleted      Boolean   @default(false)
   currency           String    @default("EUR")
+  savingRate         Float     @default(0)
   isEmailVerified    Boolean   @default(false)
   emailVerifyToken   String?
   emailVerifyExpires DateTime?

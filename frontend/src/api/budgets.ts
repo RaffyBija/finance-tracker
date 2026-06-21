@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Budget, BudgetHistory, CreateBudgetDTO } from '../types';
+import type { Budget, BudgetHistory, BudgetSuggestions, CreateBudgetDTO } from '../types';
 
 export const budgetApi = {
   getAll: async (params?: { active?: boolean }): Promise<Budget[]> => {
@@ -31,5 +31,21 @@ export const budgetApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/budgets/${id}`);
+  },
+
+  getSuggestions: async (savingRate?: number): Promise<BudgetSuggestions> => {
+    const response = await apiClient.get<BudgetSuggestions>('/budgets/suggestions', {
+      params: savingRate !== undefined ? { savingRate } : undefined,
+    });
+    return response.data;
+  },
+
+  applySuggestions: async (
+    items: Array<{ categoryId: string; amount: number }>,
+  ): Promise<{ applied: number }> => {
+    const response = await apiClient.post<{ applied: number }>('/budgets/apply-suggestions', {
+      items,
+    });
+    return response.data;
   },
 };

@@ -44,6 +44,7 @@ const SECTIONS: Section[] = [
         <p>Il budget si <strong>azzera automaticamente</strong> a ogni periodo: non devi spostare nessuna data. Tocca una card per aprire il <strong>dettaglio con lo storico</strong> — budget contro spesa reale dei periodi passati, media, aderenza e sforamenti.</p>
         <p>Puoi attivare il <strong>riporto a fine periodo</strong>: con <strong>«Solo avanzo»</strong> ciò che non spendi si somma al periodo successivo; con <strong>«Avanzo e sforamento»</strong> si riporta anche il debito, riducendo il budget se hai speso troppo. La card mostra <em>«+€X dal periodo scorso»</em> e la barra tiene conto del budget effettivo.</p>
         <p>I budget monitorano la spesa <strong>discrezionale</strong> (non gli impegni fissi come rate e abbonamenti) e non bloccano le spese: ti informano in tempo reale quando ti avvicini al limite.</p>
+        <p>Con <strong>«Proponi budget»</strong> l'app calcola lo <strong>spendibile del mese</strong> (entrate previste + liquidità − impegni fissi − la tua <strong>% di risparmio</strong>) e suggerisce un tetto per ogni categoria dalle tue medie. Scegli quali budget creare o aggiornare e ritocca gli importi prima di applicarli. La percentuale di risparmio si imposta in <strong>Impostazioni → Preferenze</strong>.</p>
       </>
     ),
   },

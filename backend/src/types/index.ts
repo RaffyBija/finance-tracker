@@ -62,6 +62,7 @@ export interface AuthResponse {
     isPro: boolean;
     tourCompleted: boolean;
     currency: string;
+    savingRate: number;
   };
 }
 

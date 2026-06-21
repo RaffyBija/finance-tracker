@@ -321,6 +321,124 @@
   }
 
   /* ============================
+     BUDGET AUTOMATICO (suggerimenti)
+     ============================ */
+  .budget-sugg-trigger {
+    @apply mb-4 gap-2;
+  }
+
+  .budget-sugg-empty {
+    @apply text-sm text-neutral-500 py-6 text-center;
+  }
+
+  .budget-sugg-slider {
+    @apply w-full;
+    accent-color: #0d9488;
+  }
+
+  .budget-sugg-check input[type='checkbox'],
+  .budget-sugg-savepref input[type='checkbox'] {
+    @apply flex-shrink-0;
+    accent-color: #0d9488;
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  .budget-sugg-breakdown {
+    @apply rounded-lg border border-neutral-200 bg-neutral-50 p-4 flex flex-col gap-2;
+  }
+
+  .budget-sugg-line {
+    @apply flex justify-between items-baseline text-sm text-neutral-700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-sugg-line-neg {
+    @apply text-neutral-500;
+  }
+
+  .budget-sugg-spendable {
+    @apply flex justify-between items-baseline pt-2 mt-1 border-t border-neutral-200;
+  }
+
+  .budget-sugg-spendable > span:first-child {
+    @apply text-sm font-medium text-neutral-700;
+  }
+
+  .budget-sugg-spendable-amount {
+    @apply text-2xl font-bold text-primary-600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-sugg-cats-head {
+    @apply flex justify-between items-baseline gap-2 mt-2 text-sm font-medium text-neutral-700;
+  }
+
+  .budget-sugg-total {
+    @apply text-xs text-neutral-500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-sugg-total.over {
+    @apply text-danger-600 font-semibold;
+  }
+
+  .budget-sugg-warning {
+    @apply flex items-start gap-2 text-xs text-danger-600 -mt-1;
+  }
+
+  .budget-sugg-list {
+    @apply flex flex-col;
+  }
+
+  .budget-sugg-row {
+    @apply grid items-center gap-3 py-2 border-b border-neutral-200;
+    grid-template-columns: minmax(0, 1fr) auto 6.5rem;
+  }
+
+  .budget-sugg-check {
+    @apply flex flex-row items-center gap-2 min-w-0 cursor-pointer;
+  }
+
+  .budget-sugg-cat {
+    @apply flex items-center gap-2 min-w-0;
+  }
+
+  .budget-sugg-icon {
+    @apply flex-shrink-0;
+  }
+
+  .budget-sugg-name {
+    @apply text-sm text-neutral-800 truncate;
+  }
+
+  .budget-sugg-meta {
+    @apply flex items-center justify-end gap-2;
+  }
+
+  .budget-sugg-avg {
+    @apply text-xs text-neutral-500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-sugg-badge {
+    @apply text-[0.65rem] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded;
+    @apply bg-neutral-200 text-neutral-600;
+  }
+
+  .budget-sugg-badge.is-new {
+    @apply bg-primary-50 text-primary-700;
+  }
+
+  .budget-sugg-cap .form-group {
+    @apply mb-0;
+  }
+
+  .budget-sugg-savepref {
+    @apply flex items-center gap-2 text-sm text-neutral-600 cursor-pointer;
+  }
+
+  /* ============================
      TRANSACTION CARD
      ============================ */
   .transaction-card {
@@ -2074,6 +2192,35 @@
 .dark .budget-card-carry.is-positive { color: #34d399; }
 .dark .budget-card-carry.is-negative { color: #f87171; }
 .dark .budget-detail-sub { color: #a8a29e; }
+
+/* Le label dentro .modal-form sono flex-column (Modal.css, regola NON-layered):
+   batterebbero qualsiasi regola dentro @layer components. Per le righe dei
+   suggerimenti forziamo la riga con un selettore non-layered e specificità ≥. */
+.modal-form label.budget-sugg-check,
+.modal-form label.budget-sugg-savepref {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Budget automatico (suggerimenti) */
+.dark .budget-sugg-empty { color: #a8a29e; }
+.dark .budget-sugg-breakdown { background-color: #1c1917; border-color: #44403c; }
+.dark .budget-sugg-line { color: #d6d3d1; }
+.dark .budget-sugg-line-neg { color: #a8a29e; }
+.dark .budget-sugg-spendable { border-top-color: #44403c; }
+.dark .budget-sugg-spendable > span:first-child { color: #d6d3d1; }
+.dark .budget-sugg-spendable-amount { color: #2dd4bf; }
+.dark .budget-sugg-cats-head { color: #d6d3d1; }
+.dark .budget-sugg-total { color: #a8a29e; }
+.dark .budget-sugg-total.over { color: #f87171; }
+.dark .budget-sugg-warning { color: #f87171; }
+.dark .budget-sugg-row { border-bottom-color: #44403c; }
+.dark .budget-sugg-name { color: #e7e5e4; }
+.dark .budget-sugg-avg { color: #a8a29e; }
+.dark .budget-sugg-badge { background-color: #44403c; color: #d6d3d1; }
+.dark .budget-sugg-badge.is-new { background-color: #0d2d2a; color: #5eead4; }
+.dark .budget-sugg-savepref { color: #a8a29e; }
 
 /* Category card */
 .dark .list-card-item:hover { background-color: #44403c; }
