@@ -267,6 +267,15 @@
   .budget-card-pct.is-warn { @apply text-warning-600; }
   .budget-card-pct.is-over { @apply text-danger-600; }
 
+  /* Nota riporto avanzo/sforamento dal periodo precedente */
+  .budget-card-carry {
+    @apply -mt-1 text-xs font-medium;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-card-carry.is-positive { @apply text-success-600; }
+  .budget-card-carry.is-negative { @apply text-danger-600; }
+
   .budget-card-progress-bar {
     @apply w-full bg-neutral-200 rounded-full h-2;
   }
@@ -2062,6 +2071,8 @@
 .dark .budget-card-pct.is-over { color: #f87171; }
 .dark .budget-card-pct.is-ok { color: #34d399; }
 .dark .budget-card-pct.is-warn { color: #fbbf24; }
+.dark .budget-card-carry.is-positive { color: #34d399; }
+.dark .budget-card-carry.is-negative { color: #f87171; }
 .dark .budget-detail-sub { color: #a8a29e; }
 
 /* Category card */

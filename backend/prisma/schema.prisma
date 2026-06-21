@@ -149,6 +149,7 @@ model Budget {
   amount     Decimal  @db.Decimal(10, 2)
   categoryId String?
   period     BudgetPeriod @default(MONTHLY)
+  rollover   BudgetRollover @default(NONE)
   startDate  DateTime
   endDate    DateTime?
   userId     String
@@ -258,6 +259,16 @@ enum BudgetPeriod {
   WEEKLY
   MONTHLY
   YEARLY
+}
+
+// Riporto dell'avanzo/sforamento di un budget al periodo successivo.
+//   NONE    → nessun riporto (comportamento FASE 1).
+//   SURPLUS → riporta solo l'avanzo; uno sforamento NON penalizza il periodo dopo.
+//   FULL    → riporta avanzo E sforamento (il debito riduce il budget successivo).
+enum BudgetRollover {
+  NONE
+  SURPLUS
+  FULL
 }
 
 enum Frequency {
