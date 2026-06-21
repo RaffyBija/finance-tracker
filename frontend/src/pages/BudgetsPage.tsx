@@ -5,6 +5,7 @@ import { useFormModal } from '../hooks/useFormModal';
 import PageHeader from '../components/shared/PageHeader';
 import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
 import BudgetList from '../components/budgets/BudgetList';
+import BudgetSummary from '../components/budgets/BudgetSummary';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
 import BudgetDetailModal from '../components/budgets/BudgetDetailModal';
 import BudgetSuggestionsModal from '../components/budgets/BudgetSuggestionsModal';
@@ -64,6 +65,7 @@ export const Budgets = () => {
             <Sparkles className="icon-md" />
             <span>Proponi budget</span>
           </button>
+          <BudgetSummary budgets={budgets} />
           <BudgetList
             budgets={budgets}
             onOpenModal={openModal}

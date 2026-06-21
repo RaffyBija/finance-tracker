@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useBudgetSuggestions, useApplySuggestions } from '../../hooks/useBudgets';
+import { useAccounts } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../api/client';
@@ -15,6 +16,23 @@ interface BudgetSuggestionsModalProps {
 
 type RowState = { selected: boolean; cap: number };
 
+// Soglia "fine mese": se i giorni residui nel mese corrente sono ≤ di questo valore,
+// proporre di default il mese prossimo (un budget mensile per pochi giorni è inutile).
+const NEXT_MONTH_THRESHOLD_DAYS = 7;
+
+function daysRemainingInMonth(): number {
+  const now = new Date();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return lastDay - now.getDate();
+}
+
+// Nome del mese target (offset 0 = corrente, 1 = prossimo), es. "luglio 2026".
+function monthLabel(offset: number): string {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  return d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+}
+
 // Cruscotto del budget automatico: calcola lo spendibile del mese (entrate previste
 // + cuscinetto di liquidità − impegni fissi − risparmio target) e propone un tetto
 // per categoria dalle medie storiche. L'utente sceglie quali budget creare/aggiornare
@@ -23,8 +41,38 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   const { user, updateUser } = useAuth();
   const { formatCurrency } = useFormatCurrency();
   const toast = useToast();
-  const { data, isLoading, isError } = useBudgetSuggestions(undefined, isOpen);
+  const { data: accounts = [] } = useAccounts();
   const applyMutation = useApplySuggestions();
+
+  // Conti BANK selezionabili (item c). Default: tutti inclusi.
+  const bankAccounts = useMemo(() => accounts.filter((a) => a.type === 'BANK'), [accounts]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[] | null>(null);
+  useEffect(() => {
+    // Inizializza la selezione a "tutti i conti" appena arrivano (una sola volta).
+    if (selectedAccountIds === null && bankAccounts.length > 0) {
+      setSelectedAccountIds(bankAccounts.map((a) => a.id));
+    }
+  }, [bankAccounts, selectedAccountIds]);
+
+  // Mese target: di default il prossimo se siamo a fine mese, altrimenti il corrente.
+  const [monthOffset, setMonthOffset] = useState<number>(
+    daysRemainingInMonth() <= NEXT_MONTH_THRESHOLD_DAYS ? 1 : 0,
+  );
+
+  // Tutti i BANK selezionati ⇒ nessun filtro (cache stabile, identico all'overview).
+  // Un sottoinsieme stretto ⇒ passa la lista al backend.
+  const accountIdsParam = useMemo(() => {
+    if (!selectedAccountIds) return undefined;
+    if (selectedAccountIds.length === bankAccounts.length) return undefined;
+    return selectedAccountIds;
+  }, [selectedAccountIds, bankAccounts.length]);
+
+  const { data, isLoading, isError } = useBudgetSuggestions(
+    undefined,
+    isOpen,
+    monthOffset,
+    accountIdsParam,
+  );
 
   // % risparmio come intero 0..90 (slider). La base dei suggerimenti NON dipende da
   // savingRate → lo spendibile si ricalcola lato client senza rifare la query.
@@ -34,11 +82,24 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
 
   useEffect(() => {
     if (!data) return;
-    setSavingPct(Math.round((data.savingRate ?? 0) * 100));
+    // Reinizializza solo le righe per-categoria (lo slider resta dove l'utente l'ha
+    // messo, anche cambiando mese o conti).
     const init: Record<string, RowState> = {};
     for (const c of data.perCategory) init[c.categoryId] = { selected: true, cap: c.suggestedCap };
     setRows(init);
   }, [data]);
+
+  const toggleAccount = (id: string) =>
+    setSelectedAccountIds((prev) => {
+      const cur = prev ?? bankAccounts.map((a) => a.id);
+      if (cur.includes(id)) {
+        // Almeno un conto dev'essere incluso: non deselezionare l'ultimo (eviterebbe
+        // anche l'ambiguità [] ⇄ "nessun filtro" a valle).
+        if (cur.length <= 1) return cur;
+        return cur.filter((x) => x !== id);
+      }
+      return [...cur, id];
+    });
 
   const rate = savingPct / 100;
   const savingTarget = data ? data.expectedIncome * rate : 0;
@@ -97,6 +158,63 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   return (
     <BaseModal isOpen={isOpen} title="Proponi budget" onClose={onClose}>
       <div className="modal-form budget-sugg">
+        {/* Mese target: corrente / prossimo (sempre interattivo) */}
+        <div className="form-group">
+          <span className="form-label">Mese da pianificare</span>
+          <div className="budget-sugg-month-seg" role="group" aria-label="Mese da pianificare">
+            <button
+              type="button"
+              className={`budget-sugg-month-option ${monthOffset === 0 ? 'is-selected' : ''}`}
+              aria-pressed={monthOffset === 0}
+              onClick={() => setMonthOffset(0)}
+            >
+              {monthLabel(0)}
+            </button>
+            <button
+              type="button"
+              className={`budget-sugg-month-option ${monthOffset === 1 ? 'is-selected' : ''}`}
+              aria-pressed={monthOffset === 1}
+              onClick={() => setMonthOffset(1)}
+            >
+              {monthLabel(1)}
+            </button>
+          </div>
+        </div>
+
+        {/* Selettore conti BANK inclusi nel cuscinetto e nei flussi (item c) */}
+        {bankAccounts.length > 1 && (
+          <div className="form-group">
+            <span className="form-label">Conti da includere</span>
+            <div className="budget-sugg-accounts">
+              {bankAccounts.map((a) => {
+                const checked = !selectedAccountIds || selectedAccountIds.includes(a.id);
+                return (
+                  <label
+                    key={a.id}
+                    className={`budget-sugg-account ${checked ? 'is-selected' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAccount(a.id)}
+                    />
+                    {a.icon && (
+                      <span className="budget-sugg-account-icon" aria-hidden="true">
+                        {a.icon}
+                      </span>
+                    )}
+                    <span className="budget-sugg-account-name">{a.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="form-help">
+              Escludi un conto (es. risparmi): spariscono dal calcolo il suo saldo e i suoi
+              flussi.
+            </p>
+          </div>
+        )}
+
         {isLoading ? (
           <p className="budget-sugg-empty">Calcolo dello spendibile…</p>
         ) : isError || !data ? (
@@ -140,7 +258,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                 <span>−{formatCurrency(savingTarget)}</span>
               </div>
               <div className="budget-sugg-spendable">
-                <span>Spendibile questo mese</span>
+                <span>Spendibile per {monthLabel(monthOffset)}</span>
                 <span className="budget-sugg-spendable-amount">{formatCurrency(spendable)}</span>
               </div>
             </div>

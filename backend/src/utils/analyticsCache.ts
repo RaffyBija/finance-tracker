@@ -36,6 +36,14 @@ const delMonthlyTrend = (uid: string): void => {
     .forEach(k => cache.del(k));
 };
 
+// I suggerimenti budget sono cacheati per-suffisso (mese + insieme di conti
+// selezionati) → invalida tutte le varianti dell'utente con un delete per prefisso.
+const delBudgetSuggestions = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`budget-suggestions:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
 export const analyticsCache = {
   get: <T>(key: string): T | undefined => cache.get<T>(key),
   set: <T>(key: string, value: T): void => { cache.set(key, value); },
@@ -45,7 +53,7 @@ export const analyticsCache = {
 
   keys: {
     forecast:         (uid: string) => `forecast:${uid}`,
-    budgetSuggestions:(uid: string) => `budget-suggestions:${uid}`,
+    budgetSuggestions:(uid: string, suffix = '') => `budget-suggestions:${uid}:${suffix}`,
     monthlyTrend:     (uid: string, suffix: string) => `monthly-trend:${uid}:${suffix}`,
     projectedBalance: (uid: string, suffix: string) => `projected-balance:${uid}:${suffix}`,
     projectionSeries: (uid: string, suffix: string) => `projection-series:${uid}:${suffix}`,
@@ -61,7 +69,7 @@ export const analyticsCache = {
   // Una transazione è cambiata (create/update/delete)
   onTransactionMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
     delCategoryTrend(uid);
     delProjections(uid);
@@ -71,14 +79,14 @@ export const analyticsCache = {
   // Una ricorrente è cambiata (create/update/delete/toggle)
   onRecurringMutated: (uid: string) => {
     cache.del(`recurring-due:${uid}`);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
     delProjections(uid);
   },
 
   // Una ricorrente è stata eseguita (crea anche una transazione reale)
   onRecurringExecuted: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
     delCategoryTrend(uid);
     cache.del(`recurring-due:${uid}`);
@@ -89,7 +97,7 @@ export const analyticsCache = {
   // Una pianificata è cambiata (create/update/delete)
   onPlannedMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
     cache.del(`planned-due:${uid}`);
     delProjections(uid);
   },
@@ -97,7 +105,7 @@ export const analyticsCache = {
   // Una pianificata è stata pagata (crea anche una transazione reale)
   onPlannedPaid: (uid: string) => {
     cache.del(`forecast:${uid}`);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
     delCategoryTrend(uid);
     cache.del(`planned-due:${uid}`);
@@ -110,7 +118,7 @@ export const analyticsCache = {
   // è anche il cuscinetto dei suggerimenti budget → invalidali.
   onAccountMutated: (uid: string) => {
     delNetWorth(uid);
-    cache.del(`budget-suggestions:${uid}`);
+    delBudgetSuggestions(uid);
   },
 
   // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati

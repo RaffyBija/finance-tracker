@@ -502,20 +502,34 @@ type BudgetSuggestionsBase = {
 
 const computeBudgetSuggestionsBase = async (
   userId: string,
+  monthOffset = 0,
+  accountIds?: string[],
 ): Promise<BudgetSuggestionsBase> => {
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  // Mese target: corrente (offset 0) o futuro (offset 1 = prossimo). Le proposte
+  // lavorano sul PIANO dell'intero mese (non prorata da oggi).
+  const monthStart = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1, 0, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0, 23, 59, 59, 999);
 
-  // Storico: ultimi SUGG_HIST_MONTHS mesi, escluso il corrente
+  // Storico medie: SEMPRE ultimi SUGG_HIST_MONTHS mesi prima di adesso (non shiftato
+  // dall'offset: le medie storiche non dipendono dal mese che stiamo proponendo).
   const histEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
   const histStart = new Date(now.getFullYear(), now.getMonth() - SUGG_HIST_MONTHS, 1, 0, 0, 0, 0);
 
+  // Filtro conti (item c): se presente, cuscinetto + ricorrenti/pianificate sono
+  // ristretti ai conti selezionati. I flussi SENZA conto (accountId null) sono
+  // inclusi sempre (non attribuibili a un conto, quindi non escludibili).
+  const filtering = Array.isArray(accountIds) && accountIds.length > 0;
+  const selectedSet = new Set(accountIds ?? []);
+  const acctWhere = filtering
+    ? { OR: [{ accountId: { in: accountIds } }, { accountId: null }] }
+    : {};
+
   const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets] = await Promise.all([
     getAccountsWithBalances(userId),
-    prisma.recurringTransaction.findMany({ where: { userId, isActive: true } }),
+    prisma.recurringTransaction.findMany({ where: { userId, isActive: true, ...acctWhere } }),
     prisma.plannedTransaction.findMany({
-      where: { userId, isPaid: false, plannedDate: { gte: monthStart, lte: monthEnd } },
+      where: { userId, isPaid: false, plannedDate: { gte: monthStart, lte: monthEnd }, ...acctWhere },
     }),
     prisma.transaction.findMany({
       where: {
@@ -543,15 +557,61 @@ const computeBudgetSuggestionsBase = async (
 
   // Cuscinetto = liquidità BANK reale, AL NETTO del debito dei cicli CC ancora aperti.
   // Quel debito è liquidità già impegnata: va tolto qui a prescindere dalla data di
-  // addebito. Diversamente dalla projection (che guarda N mesi avanti e quindi include
-  // sempre il prossimo billing day), la proposta lavora sul SOLO mese corrente: se
-  // l'addebito è già "passato" questo mese cadrebbe fuori finestra e lo spendibile
-  // risulterebbe sovrastimato. I cicli CC chiusi sono invece già pianificate (contate
-  // negli impegni del mese), quindi non c'è doppio conteggio.
+  // addebito. I cicli CC chiusi sono invece già pianificate (contate negli impegni del
+  // mese), quindi non c'è doppio conteggio.
   const openCcDebt = accounts
     .filter((a) => a.type === 'CREDIT_CARD' && a.balance < 0)
     .reduce((sum, a) => sum + Math.abs(a.balance), 0);
-  const cushion = (await getLiquidBalance(userId, accounts)) - openCcDebt;
+
+  // Liquidità di partenza: con filtro conti sommiamo direttamente i BANK selezionati
+  // (NON via getLiquidBalance, che su set vuoto ricadrebbe sul saldo all-time). Senza
+  // filtro riusiamo getLiquidBalance (che mantiene il fallback per utenti senza conti).
+  const liquid = filtering
+    ? accounts
+        .filter((a) => a.type !== 'CREDIT_CARD' && selectedSet.has(a.id))
+        .reduce((sum, a) => sum + a.balance, 0)
+    : await getLiquidBalance(userId, accounts);
+
+  let cushion = liquid - openCcDebt;
+
+  // Cuscinetto PROIETTATO (item b, offset > 0): la liquidità di oggi non contiene
+  // ancora i flussi residui del mese corrente (es. lo stipendio del 23). Per proporre
+  // il mese prossimo proiettiamo il cuscinetto a inizio di quel mese sommando entrate
+  // residue − impegni residui nell'intervallo [oggi, fine del mese precedente al target].
+  if (monthOffset > 0) {
+    // Inizio giornata locale (come ogni altro range-start del codebase): un'occorrenza
+    // di OGGI (es. stipendio del giorno stesso non ancora incassato) cade a mezzanotte
+    // e dev'essere inclusa nel cuscinetto residuo, non scartata dal confronto con l'ora.
+    const projStart = new Date(now);
+    projStart.setHours(0, 0, 0, 0);
+    const projEnd = new Date(monthStart.getFullYear(), monthStart.getMonth(), 0, 23, 59, 59, 999);
+
+    const plannedResidual = await prisma.plannedTransaction.findMany({
+      where: { userId, isPaid: false, plannedDate: { gte: projStart, lte: projEnd }, ...acctWhere },
+    });
+
+    let resDelta = 0;
+    for (const rec of recurringActive) {
+      const occ = countOccurrences(
+        {
+          frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+          dayOfMonth: rec.dayOfMonth,
+          startDate: rec.startDate,
+          endDate: rec.endDate,
+          amount: rec.amount,
+        },
+        projStart,
+        projEnd,
+      );
+      if (occ === 0) continue;
+      const total = occ * Number(rec.amount);
+      resDelta += rec.type === 'INCOME' ? total : -total;
+    }
+    for (const p of plannedResidual) {
+      resDelta += p.type === 'INCOME' ? Number(p.amount) : -Number(p.amount);
+    }
+    cushion += resDelta;
+  }
 
   // Entrate previste e impegni fissi del MESE INTERO (piano, non prorata da oggi)
   let expectedIncome = 0;
@@ -635,7 +695,7 @@ const computeBudgetSuggestionsBase = async (
   };
 };
 
-// GET /budgets/suggestions?savingRate=<override?>
+// GET /budgets/suggestions?savingRate=<override?>&monthOffset=<0|1>&accountIds=<csv?>
 export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
@@ -648,16 +708,42 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
       if (Number.isFinite(v) && v >= 0 && v <= 0.9) overrideRate = v;
     }
 
+    // Mese target: 0 = corrente (default), 1 = prossimo (item b).
+    const monthOffset = req.query.monthOffset === '1' ? 1 : 0;
+
+    // Conti BANK selezionati (item c): CSV o array ripetuto. Validati come conti BANK
+    // dell'utente; gli id ignoti vengono scartati. Se nessuno valido → nessun filtro.
+    const rawAccts = req.query.accountIds;
+    const requested = Array.isArray(rawAccts)
+      ? (rawAccts as string[])
+      : typeof rawAccts === 'string' && rawAccts !== ''
+        ? rawAccts.split(',')
+        : [];
+    let accountIds: string[] | undefined;
+    if (requested.length > 0) {
+      const bankAccounts = await prisma.account.findMany({
+        where: { userId, type: 'BANK', id: { in: requested } },
+        select: { id: true },
+      });
+      const valid = bankAccounts.map((a) => a.id);
+      if (valid.length > 0) accountIds = valid;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { savingRate: true },
     });
     const savingRate = overrideRate ?? Number(user?.savingRate ?? 0);
 
-    const cacheKey = analyticsCache.keys.budgetSuggestions(userId);
+    // Cache key per-suffisso: mese + insieme di conti (ordinati per stabilità). La base
+    // NON dipende da savingRate (derivato a runtime), quindi non entra nella chiave.
+    const suffix = `o${monthOffset}${
+      accountIds ? `_a${[...accountIds].sort().join('-')}` : ''
+    }`;
+    const cacheKey = analyticsCache.keys.budgetSuggestions(userId, suffix);
     let base = analyticsCache.get<BudgetSuggestionsBase>(cacheKey);
     if (!base) {
-      base = await computeBudgetSuggestionsBase(userId);
+      base = await computeBudgetSuggestionsBase(userId, monthOffset, accountIds);
       analyticsCache.set(cacheKey, base);
     }
 
@@ -666,7 +752,7 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
       base.expectedIncome + base.cushion - base.fixedCommitments - savingTarget,
     );
 
-    res.json({ ...base, savingRate, savingTarget, spendable });
+    res.json({ ...base, savingRate, savingTarget, spendable, monthOffset });
   } catch (error) {
     console.error('Get budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });

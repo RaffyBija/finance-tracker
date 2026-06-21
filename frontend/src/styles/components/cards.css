@@ -321,6 +321,40 @@
   }
 
   /* ============================
+     BUDGET OVERVIEW (fascia riepilogo pagina Budget)
+     ============================ */
+  .budget-summary {
+    @apply grid grid-cols-2 gap-px mb-6 rounded-xl border border-neutral-200 bg-neutral-200 overflow-hidden;
+  }
+
+  .budget-summary-stat {
+    @apply flex flex-col gap-1 p-4 bg-white;
+  }
+
+  .budget-summary-label {
+    @apply text-xs font-medium text-neutral-500;
+  }
+
+  .budget-summary-value {
+    @apply text-xl font-bold text-neutral-900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-summary-value.is-positive { @apply text-neutral-900; }
+  .budget-summary-value.is-negative { @apply text-danger-600; }
+
+  /* Lo spendibile è il numero d'orientamento: accento teal, coerente col modal proposte */
+  .budget-summary-spendable .budget-summary-value {
+    @apply text-primary-600;
+  }
+
+  @media (min-width: 640px) {
+    .budget-summary {
+      @apply grid-cols-4;
+    }
+  }
+
+  /* ============================
      BUDGET AUTOMATICO (suggerimenti)
      ============================ */
   .budget-sugg-trigger {
@@ -330,6 +364,51 @@
   .budget-sugg-empty {
     @apply text-sm text-neutral-500 py-6 text-center;
   }
+
+  /* Segmented mese corrente / prossimo (item b) */
+  .budget-sugg-month-seg {
+    @apply inline-flex gap-0.5 p-0.5 rounded-lg bg-neutral-100 self-start;
+  }
+
+  .budget-sugg-month-option {
+    @apply inline-flex items-center px-3 py-1.5 rounded-md bg-transparent text-sm font-medium text-neutral-500 capitalize;
+    transition: background-color 0.15s var(--ease-out-quart), color 0.15s var(--ease-out-quart);
+  }
+
+  .budget-sugg-month-option:hover { @apply text-neutral-700; }
+
+  .budget-sugg-month-option.is-selected {
+    @apply bg-white text-primary-700 font-semibold shadow-sm;
+  }
+
+  .budget-sugg-month-option:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-1;
+  }
+
+  /* Selettore conti BANK (item c) */
+  .budget-sugg-accounts {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .budget-sugg-account {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 bg-white text-sm text-neutral-600 cursor-pointer select-none;
+    transition: border-color 0.15s var(--ease-out-quart), background-color 0.15s var(--ease-out-quart), color 0.15s var(--ease-out-quart);
+  }
+
+  .budget-sugg-account input[type='checkbox'] {
+    @apply sr-only;
+  }
+
+  .budget-sugg-account.is-selected {
+    @apply border-primary-500 bg-primary-50 text-primary-700 font-medium;
+  }
+
+  /* Il checkbox è sr-only: porta il focus ring sul chip per i tastieristi */
+  .budget-sugg-account:focus-within {
+    @apply ring-2 ring-primary-500 ring-offset-1;
+  }
+
+  .budget-sugg-account-name { @apply truncate; }
 
   .budget-sugg-slider {
     @apply w-full;
@@ -2203,8 +2282,23 @@
   gap: 0.5rem;
 }
 
+/* Budget overview (fascia riepilogo) */
+.dark .budget-summary { background-color: #44403c; border-color: #44403c; }
+.dark .budget-summary-stat { background-color: #292524; }
+.dark .budget-summary-label { color: #a8a29e; }
+.dark .budget-summary-value { color: #f5f5f4; }
+.dark .budget-summary-value.is-positive { color: #f5f5f4; }
+.dark .budget-summary-value.is-negative { color: #f87171; }
+.dark .budget-summary-spendable .budget-summary-value { color: #2dd4bf; }
+
 /* Budget automatico (suggerimenti) */
 .dark .budget-sugg-empty { color: #a8a29e; }
+.dark .budget-sugg-month-seg { background-color: #1c1917; }
+.dark .budget-sugg-month-option { color: #a8a29e; }
+.dark .budget-sugg-month-option:hover { color: #e7e5e4; }
+.dark .budget-sugg-month-option.is-selected { background-color: #292524; color: #2dd4bf; }
+.dark .budget-sugg-account { background-color: #292524; border-color: #44403c; color: #d6d3d1; }
+.dark .budget-sugg-account.is-selected { background-color: #0d2d2a; border-color: #14b8a6; color: #5eead4; }
 .dark .budget-sugg-breakdown { background-color: #1c1917; border-color: #44403c; }
 .dark .budget-sugg-line { color: #d6d3d1; }
 .dark .budget-sugg-line-neg { color: #a8a29e; }
