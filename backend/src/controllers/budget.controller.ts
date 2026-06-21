@@ -1,8 +1,19 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateBudgetDTO } from '../types';
+import {
+  BudgetWindow,
+  currentBudgetWindow,
+  recentBudgetWindows,
+  budgetWindowLabel,
+} from '../utils/budgetPeriod';
 
-// Spesa di un budget nel suo periodo. Tiene conto delle transazioni divise (split):
+// Spesa di un budget DENTRO una finestra-periodo esplicita. La finestra effettiva è
+// l'intersezione della finestra-periodo con l'intervallo di attività del budget
+// [startDate, endDate]: così lo "speso" si azzera a ogni periodo e i periodi
+// precedenti all'attivazione (o successivi alla scadenza) restano vuoti.
+//
+// Tiene conto delle transazioni divise (split):
 // - budget globale (senza categoria) → somma di tutte le uscite (l'importo del padre
 //   coincide con la somma delle righe, quindi il totale è corretto);
 // - budget di categoria → uscite semplici con quella categoria + righe split con quella
@@ -11,8 +22,17 @@ import { AuthRequest, CreateBudgetDTO } from '../types';
 const computeBudgetSpent = async (
   userId: string,
   budget: { categoryId: string | null; startDate: Date; endDate: Date | null },
+  window: BudgetWindow,
 ): Promise<number> => {
-  const dateFilter = { gte: budget.startDate, ...(budget.endDate && { lte: budget.endDate }) };
+  // Intersezione [finestra-periodo] ∩ [startDate, endDate]
+  const gte = window.periodStart > budget.startDate ? window.periodStart : budget.startDate;
+  const lte =
+    budget.endDate && budget.endDate < window.periodEnd ? budget.endDate : window.periodEnd;
+
+  // Finestra vuota (es. periodo interamente prima dell'attivazione o dopo la scadenza)
+  if (gte > lte) return 0;
+
+  const dateFilter = { gte, lte };
   const baseWhere = { userId, type: 'EXPENSE' as const, transferId: null, date: dateFilter };
 
   if (!budget.categoryId) {
@@ -65,16 +85,20 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Calcola spesa corrente per ogni budget
+    // Calcola spesa del periodo CORRENTE per ogni budget (la finestra dipende da `period`).
     const budgetsWithSpent = await Promise.all(
       budgets.map(async (budget) => {
-        const spent = await computeBudgetSpent(userId, budget);
+        const window = currentBudgetWindow(budget.period);
+        const spent = await computeBudgetSpent(userId, budget, window);
 
         return {
           ...budget,
           spent,
           remaining: Number(budget.amount) - spent,
           percentage: (spent / Number(budget.amount)) * 100,
+          periodStart: window.periodStart,
+          periodEnd: window.periodEnd,
+          periodLabel: budgetWindowLabel(window, budget.period),
         };
       })
     );
@@ -101,19 +125,102 @@ export const getBudget = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Budget non trovato' });
     }
 
-    // Calcola spesa corrente
-    const spent = await computeBudgetSpent(userId, budget);
+    // Calcola spesa del periodo corrente
+    const window = currentBudgetWindow(budget.period);
+    const spent = await computeBudgetSpent(userId, budget, window);
 
     const budgetWithSpent = {
       ...budget,
       spent,
       remaining: Number(budget.amount) - spent,
       percentage: (spent / Number(budget.amount)) * 100,
+      periodStart: window.periodStart,
+      periodEnd: window.periodEnd,
+      periodLabel: budgetWindowLabel(window, budget.period),
     };
 
     res.json(budgetWithSpent);
   } catch (error) {
     console.error('Get budget error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Storico per-periodo di un budget: budget vs reale su N periodi recenti.
+// Le finestre interamente precedenti a startDate o successive a endDate vengono
+// scartate (il budget non era attivo). Restituisce anche statistiche aggregate.
+export const getBudgetHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const requested = Number(req.query.periods);
+    const periods = Math.min(Math.max(Number.isFinite(requested) ? requested : 6, 1), 24);
+
+    const budget = await prisma.budget.findFirst({
+      where: { id, userId },
+    });
+
+    if (!budget) {
+      return res.status(404).json({ error: 'Budget non trovato' });
+    }
+
+    const amount = Number(budget.amount);
+    const windows = recentBudgetWindows(budget.period, periods);
+
+    // Tieni solo le finestre che intersecano l'intervallo di attività del budget.
+    const validWindows = windows.filter(
+      (w) =>
+        w.periodEnd >= budget.startDate &&
+        (!budget.endDate || w.periodStart <= budget.endDate),
+    );
+
+    const history = await Promise.all(
+      validWindows.map(async (w) => {
+        const spent = await computeBudgetSpent(userId, budget, w);
+        const percentage = amount > 0 ? (spent / amount) * 100 : 0;
+        return {
+          periodStart: w.periodStart,
+          periodEnd: w.periodEnd,
+          label: budgetWindowLabel(w, budget.period),
+          budgeted: amount,
+          spent,
+          remaining: amount - spent,
+          percentage,
+          exceeded: spent > amount,
+        };
+      }),
+    );
+
+    // Statistiche aggregate
+    const totalPeriods = history.length;
+    const exceededCount = history.filter((h) => h.exceeded).length;
+    const avgSpent =
+      totalPeriods > 0 ? history.reduce((s, h) => s + h.spent, 0) / totalPeriods : 0;
+    const adherenceRate =
+      totalPeriods > 0 ? ((totalPeriods - exceededCount) / totalPeriods) * 100 : 0;
+
+    let bestPeriod: (typeof history)[number] | null = null;
+    let worstPeriod: (typeof history)[number] | null = null;
+    for (const h of history) {
+      if (!bestPeriod || h.spent < bestPeriod.spent) bestPeriod = h;
+      if (!worstPeriod || h.spent > worstPeriod.spent) worstPeriod = h;
+    }
+
+    res.json({
+      period: budget.period,
+      history,
+      stats: {
+        avgSpent,
+        adherenceRate,
+        exceededCount,
+        totalPeriods,
+        bestPeriod,
+        worstPeriod,
+      },
+    });
+  } catch (error) {
+    console.error('Get budget history error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

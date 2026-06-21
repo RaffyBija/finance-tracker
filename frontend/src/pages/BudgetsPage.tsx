@@ -6,6 +6,7 @@ import PageHeader from '../components/shared/PageHeader';
 import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
 import BudgetList from '../components/budgets/BudgetList';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
+import BudgetDetailModal from '../components/budgets/BudgetDetailModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import type { Budget } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -15,8 +16,19 @@ export const Budgets = () => {
   const deleteMutation = useDeleteBudget();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } = useFormModal<Budget>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<Budget | null>(null);
 
   const toast = useToast();
+
+  const handleEditFromDetail = (budget: Budget) => {
+    setDetailItem(null);
+    openEditModal(budget);
+  };
+
+  const handleDeleteFromDetail = (id: string) => {
+    setDetailItem(null);
+    setDeletingId(id);
+  };
 
   const handleConfirmDelete = async () => {
     if (!deletingId) return;
@@ -38,12 +50,14 @@ export const Budgets = () => {
         </>
       ) : (
         <>
-          <PageHeader title="Budget" />
+          <PageHeader
+            title="Budget"
+            info="I budget seguono la spesa discrezionale e si azzerano a ogni periodo. Gli impegni fissi (rate, abbonamenti) non rientrano qui."
+          />
           <BudgetList
             budgets={budgets}
-            onEdit={openEditModal}
-            onDelete={setDeletingId}
             onOpenModal={openModal}
+            onCardClick={setDetailItem}
           />
         </>
       )}
@@ -55,6 +69,14 @@ export const Budgets = () => {
           <span className="fab-label">Nuovo</span>
         </button>
       )}
+
+      <BudgetDetailModal
+        isOpen={!!detailItem}
+        budget={detailItem}
+        onClose={() => setDetailItem(null)}
+        onEdit={handleEditFromDetail}
+        onDelete={handleDeleteFromDetail}
+      />
 
       <BudgetFormModal
         isOpen={isOpen}

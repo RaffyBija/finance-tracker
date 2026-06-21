@@ -3,7 +3,7 @@ import { transactionAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateTransactionDTO, CreateTransferDTO, TransactionType } from '../types';
 
-const TRANSACTION_KEYS = ['transactions', 'dashboard', 'budgets', 'calendar', 'accounts', 'planned', 'billing-cycles'];
+const TRANSACTION_KEYS = ['transactions', 'dashboard', 'budgets', 'budget-history', 'calendar', 'accounts', 'planned', 'billing-cycles'];
 
 const PAGE_SIZE = 20;
 

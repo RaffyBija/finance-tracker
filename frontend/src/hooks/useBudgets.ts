@@ -4,7 +4,7 @@ import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateBudgetDTO } from '../types';
 
-const BUDGET_KEYS = ['budgets', 'dashboard'];
+const BUDGET_KEYS = ['budgets', 'budget-history', 'dashboard'];
 
 export function useBudgets() {
   const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
@@ -25,6 +25,15 @@ export function useBudgets() {
     isLoading: budgetsLoading,
     categoriesLoading,
   };
+}
+
+export function useBudgetHistory(id: string | null, periods?: number) {
+  return useQuery({
+    queryKey: ['budget-history', id, periods],
+    queryFn: () => budgetApi.getHistory(id as string, periods),
+    enabled: !!id,
+    staleTime: 3 * 60 * 1000,
+  });
 }
 
 const invalidateBudgets = (queryClient: ReturnType<typeof useQueryClient>) => {

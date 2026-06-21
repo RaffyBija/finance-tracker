@@ -40,8 +40,9 @@ const SECTIONS: Section[] = [
     emoji: '🎯',
     content: (
       <>
-        <p>Crea budget per categoria con un importo massimo e un periodo (settimanale, mensile, annuale). La barra di avanzamento mostra quanto hai già speso rispetto al limite.</p>
-        <p>I budget non bloccano le spese: ti informano in tempo reale quando ti avvicini al limite.</p>
+        <p>Crea budget per categoria con un importo massimo e un periodo (settimanale, mensile, annuale). La barra di avanzamento mostra quanto hai già speso nel <strong>periodo corrente</strong> rispetto al limite.</p>
+        <p>Il budget si <strong>azzera automaticamente</strong> a ogni periodo: non devi spostare nessuna data. Tocca una card per aprire il <strong>dettaglio con lo storico</strong> — budget contro spesa reale dei periodi passati, media, aderenza e sforamenti.</p>
+        <p>I budget monitorano la spesa <strong>discrezionale</strong> (non gli impegni fissi come rate e abbonamenti) e non bloccano le spese: ti informano in tempo reale quando ti avvicini al limite.</p>
       </>
     ),
   },

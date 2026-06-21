@@ -1,10 +1,12 @@
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
   actionLabel?: string;
   onAction?: () => void;
   subtitle?: string;
+  /** Testo informativo a bassa priorità, mostrato come tooltip su un'icona accanto al titolo. */
+  info?: string;
 }
 
 /**
@@ -16,11 +18,19 @@ export default function PageHeader({
   actionLabel = 'Nuovo',
   onAction,
   subtitle,
+  info,
 }: PageHeaderProps) {
   return (
     <div className="page-header">
       <div className="page-header-text">
-        <h1 className="page-header-title">{title}</h1>
+        <div className="page-header-titlerow">
+          <h1 className="page-header-title">{title}</h1>
+          {info && (
+            <button type="button" className="page-header-info" title={info} aria-label={info}>
+              <Info className="icon-sm" />
+            </button>
+          )}
+        </div>
         {subtitle && <p className="page-header-subtitle">{subtitle}</p>}
       </div>
       {onAction && (

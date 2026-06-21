@@ -244,6 +244,34 @@ export interface Budget {
   spent?: number;
   remaining?: number;
   percentage?: number;
+  // Finestra del periodo corrente (valorizzata da getBudgets/getBudget)
+  periodStart?: string;
+  periodEnd?: string;
+  periodLabel?: string;
+}
+
+export interface BudgetHistoryPeriod {
+  periodStart: string;
+  periodEnd: string;
+  label: string;
+  budgeted: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+  exceeded: boolean;
+}
+
+export interface BudgetHistory {
+  period: BudgetPeriod;
+  history: BudgetHistoryPeriod[];
+  stats: {
+    avgSpent: number;
+    adherenceRate: number;
+    exceededCount: number;
+    totalPeriods: number;
+    bestPeriod: BudgetHistoryPeriod | null;
+    worstPeriod: BudgetHistoryPeriod | null;
+  };
 }
 
 export interface CreateBudgetDTO {
