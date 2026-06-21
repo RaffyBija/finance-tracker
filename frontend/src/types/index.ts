@@ -227,6 +227,7 @@ export interface CategoryTrendSeries {
 }
 
 export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+export type BudgetRollover = 'NONE' | 'SURPLUS' | 'FULL';
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
 export interface Budget {
@@ -235,6 +236,7 @@ export interface Budget {
   amount: number;
   categoryId?: string;
   period: BudgetPeriod;
+  rollover: BudgetRollover;
   startDate: string;
   endDate?: string;
   userId: string;
@@ -244,6 +246,10 @@ export interface Budget {
   spent?: number;
   remaining?: number;
   percentage?: number;
+  // Riporto dal/dai periodo/i precedente/i (può essere ±) e budget effettivo del
+  // periodo corrente = amount + carryIn (valorizzati da getBudgets/getBudget)
+  carryIn?: number;
+  effectiveAmount?: number;
   // Finestra del periodo corrente (valorizzata da getBudgets/getBudget)
   periodStart?: string;
   periodEnd?: string;
@@ -279,6 +285,7 @@ export interface CreateBudgetDTO {
   amount: number;
   categoryId?: string;
   period: BudgetPeriod;
+  rollover: BudgetRollover;
   startDate: string;
   endDate?: string;
 }

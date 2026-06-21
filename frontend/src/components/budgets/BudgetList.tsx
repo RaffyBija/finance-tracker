@@ -58,6 +58,10 @@ export default function BudgetList({
           const tone = statusTone(pct);
           const remaining = budget.remaining ?? 0;
           const hint = resetHint(budget.periodEnd);
+          // Budget effettivo del periodo corrente (= base + riporto). Fallback alla base.
+          const effective = budget.effectiveAmount ?? Number(budget.amount);
+          const carry = budget.carryIn ?? 0;
+          const showCarry = budget.rollover !== 'NONE' && Math.abs(carry) >= 0.005;
 
           return (
             <div
@@ -95,10 +99,22 @@ export default function BudgetList({
               <div className="budget-card-figure">
                 <span className="budget-card-spent">{formatCurrency(budget.spent ?? 0)}</span>
                 <span className="budget-card-of">
-                  di {formatCurrency(Number(budget.amount))}
+                  di {formatCurrency(effective)}
                 </span>
                 <span className={`budget-card-pct is-${tone}`}>{pct.toFixed(0)}%</span>
               </div>
+
+              {showCarry && (
+                <p
+                  className={`budget-card-carry ${
+                    carry >= 0 ? 'is-positive' : 'is-negative'
+                  }`}
+                >
+                  {carry >= 0
+                    ? `+${formatCurrency(carry)} dal periodo scorso`
+                    : `−${formatCurrency(Math.abs(carry))} dal periodo scorso`}
+                </p>
+              )}
 
               <div className="budget-card-progress-bar">
                 <div

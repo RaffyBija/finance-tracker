@@ -29,14 +29,21 @@ function barFill(percentage: number, isDark: boolean): string {
   return isDark ? '#34d399' : '#10b981'; // success
 }
 
-function HistoryTooltip({ active, payload, formatCurrency }: any) {
+function HistoryTooltip({ active, payload, formatCurrency, baseAmount, showRollover }: any) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
+  const carry = row.budgeted - baseAmount;
   return (
     <div className="card card-md dashboard-tooltip">
       <p className="dashboard-tooltip-label">{row.label}</p>
       <p className="dashboard-tooltip-value">Speso: {formatCurrency(row.spent)}</p>
       <p className="dashboard-tooltip-value">Budget: {formatCurrency(row.budgeted)}</p>
+      {showRollover && Math.abs(carry) >= 0.005 && (
+        <p className="dashboard-tooltip-value">
+          Riporto: {carry >= 0 ? '+' : '−'}
+          {formatCurrency(Math.abs(carry))}
+        </p>
+      )}
       <p className="dashboard-tooltip-amount">
         {row.exceeded
           ? `Sforato di ${formatCurrency(row.spent - row.budgeted)}`
@@ -70,6 +77,7 @@ export default function BudgetDetailModal({
   // resta visibile anche quando la spesa è sotto il budget.
   const yMax = Math.max(
     Number(budget.amount),
+    ...history.map((h) => h.budgeted),
     ...history.map((h) => h.spent),
   );
 
@@ -113,7 +121,13 @@ export default function BudgetDetailModal({
                     width={56}
                   />
                   <Tooltip
-                    content={<HistoryTooltip formatCurrency={formatCurrency} />}
+                    content={
+                      <HistoryTooltip
+                        formatCurrency={formatCurrency}
+                        baseAmount={Number(budget.amount)}
+                        showRollover={budget.rollover !== 'NONE'}
+                      />
+                    }
                     cursor={{ fill: 'rgba(0,0,0,0.03)' }}
                   />
                   <ReferenceLine

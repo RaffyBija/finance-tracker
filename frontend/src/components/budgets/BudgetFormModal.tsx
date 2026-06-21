@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import BaseModal from '../layout/ModalBase';
-import type { Budget, Category, CreateBudgetDTO, BudgetPeriod } from '../../types';
+import type { Budget, Category, CreateBudgetDTO, BudgetPeriod, BudgetRollover } from '../../types';
 import { useCreateBudget, useUpdateBudget } from '../../hooks/useBudgets';
 import { useToast } from '../../contexts/ToastContext';
 import { InputDecimal } from '../layout/InputNumberDecimal';
@@ -32,6 +32,7 @@ export default function BudgetFormModal({
     amount: 0,
     categoryId: '',
     period: 'MONTHLY',
+    rollover: 'NONE',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
   });
@@ -45,6 +46,7 @@ export default function BudgetFormModal({
         amount: Number(editingItem.amount),
         categoryId: editingItem.categoryId || '',
         period: editingItem.period,
+        rollover: editingItem.rollover ?? 'NONE',
         startDate: editingItem.startDate.split('T')[0],
         endDate: editingItem.endDate ? editingItem.endDate.split('T')[0] : '',
       });
@@ -54,6 +56,7 @@ export default function BudgetFormModal({
         amount: 0,
         categoryId: '',
         period: 'MONTHLY',
+        rollover: 'NONE',
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
       });
@@ -177,6 +180,27 @@ export default function BudgetFormModal({
           <p className="form-help">
             Il budget si azzera automaticamente a ogni periodo. Lo storico di ogni
             periodo resta consultabile dal dettaglio.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Riporto a fine periodo</label>
+          <select
+            value={formData.rollover}
+            onChange={(e) =>
+              setFormData({ ...formData, rollover: e.target.value as BudgetRollover })
+            }
+            className="form-select"
+          >
+            <option value="NONE">Nessuno</option>
+            <option value="SURPLUS">Solo avanzo</option>
+            <option value="FULL">Avanzo e sforamento</option>
+          </select>
+          <p className="form-help">
+            <strong>Nessuno</strong>: ogni periodo riparte dall'importo pieno.{' '}
+            <strong>Solo avanzo</strong>: ciò che non spendi si aggiunge al periodo
+            successivo (uno sforamento non penalizza). <strong>Avanzo e sforamento</strong>:
+            si riportano sia l'avanzo sia il debito, riducendo il budget se hai speso troppo.
           </p>
         </div>
 

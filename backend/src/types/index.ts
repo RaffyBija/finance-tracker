@@ -71,6 +71,7 @@ export interface CreateBudgetDTO {
   amount: number;
   categoryId?: string;
   period: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  rollover?: 'NONE' | 'SURPLUS' | 'FULL';
   startDate: Date;
   endDate?: Date;
 }
