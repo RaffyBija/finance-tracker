@@ -136,7 +136,10 @@ export default function BudgetDetailModal({
                     strokeDasharray="5 4"
                     strokeWidth={1.5}
                     label={{
-                      value: 'Budget',
+                      // Con rollover la soglia varia per periodo (barre colorate
+                      // sull'effettivo): questa linea è solo l'importo BASE, non il
+                      // target del periodo. La rinominiamo per non contraddire le barre.
+                      value: budget.rollover === 'NONE' ? 'Budget' : 'Base',
                       position: 'right',
                       fill: COLOR_TARGET,
                       fontSize: 11,

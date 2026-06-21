@@ -99,7 +99,7 @@ export default function BudgetList({
               <div className="budget-card-figure">
                 <span className="budget-card-spent">{formatCurrency(budget.spent ?? 0)}</span>
                 <span className="budget-card-of">
-                  di {formatCurrency(effective)}
+                  {effective > 0 ? `di ${formatCurrency(effective)}` : 'budget esaurito'}
                 </span>
                 <span className={`budget-card-pct is-${tone}`}>{pct.toFixed(0)}%</span>
               </div>

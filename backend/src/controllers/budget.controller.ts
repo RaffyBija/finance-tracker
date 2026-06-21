@@ -58,6 +58,21 @@ const computeBudgetSpent = async (
   return Number(simple._sum.amount || 0) + Number(splitItems._sum.amount || 0);
 };
 
+// Inizio/fine giornata locali. startDate/endDate sono salvati a mezzanotte dal date
+// picker; le finestre-periodo usano l'ora locale. Normalizziamo a risoluzione-giorno
+// per confronti robusti (un budget "attivo dal 1° giugno" copre l'intera finestra di
+// giugno anche se l'istante salvato è leggermente sfasato).
+const startOfLocalDay = (d: Date): Date => {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+};
+const endOfLocalDay = (d: Date): Date => {
+  const r = new Date(d);
+  r.setHours(23, 59, 59, 999);
+  return r;
+};
+
 // Percentuale di utilizzo rispetto al budget EFFETTIVO (base + riporto). Quando
 // l'envelope è esaurito o negativo (debito riportato in modalità FULL), qualunque
 // spesa — o il debito stesso — è uno sforamento: ritorniamo 100 così lo stato resta
@@ -92,11 +107,23 @@ const computeCarryIn = async (
 ): Promise<number> => {
   if (budget.rollover === 'NONE') return 0;
   const amount = Number(budget.amount);
-  const windows = recentBudgetWindows(budget.period, MAX_ROLLOVER_PERIODS).filter(
+  // Ancoriamo le finestre a `current` (non a "ora"): così il carry è corretto anche
+  // quando getBudgetHistory chiede il fold per una finestra storica. `+1` perché la
+  // finestra corrente fa parte del set e viene poi scartata dal filtro.
+  // Consideriamo solo finestre PRECEDENTI in cui il budget era attivo per l'INTERO
+  // periodo: una finestra di attivazione/scadenza parziale accrediterebbe un envelope
+  // intero per un budget esistito pochi giorni (avanzo/debito fantasma).
+  const activeStart = startOfLocalDay(budget.startDate).getTime();
+  const activeEnd = budget.endDate ? endOfLocalDay(budget.endDate).getTime() : Infinity;
+  const windows = recentBudgetWindows(
+    budget.period,
+    MAX_ROLLOVER_PERIODS + 1,
+    current.periodEnd,
+  ).filter(
     (w) =>
       w.periodEnd < current.periodStart && // solo periodi precedenti a quello corrente
-      w.periodEnd >= budget.startDate && // budget già attivo
-      (!budget.endDate || w.periodStart <= budget.endDate),
+      w.periodStart.getTime() >= activeStart && // budget attivo dall'inizio della finestra
+      w.periodEnd.getTime() <= activeEnd, // … e fino alla fine della finestra
   );
 
   let carry = 0;
