@@ -207,35 +207,108 @@
      BUDGET CARD
      ============================ */
   .budget-card {
-    @apply card p-6;
+    @apply card p-6 flex flex-col gap-3;
   }
 
   .budget-card-header {
-    @apply flex justify-between items-start mb-4;
+    @apply flex justify-between items-start gap-3;
+  }
+
+  .budget-card-heading {
+    @apply min-w-0;
   }
 
   .budget-card-title {
-    @apply text-xl font-semibold text-neutral-900;
+    @apply text-base font-semibold text-neutral-900 truncate;
   }
 
   .budget-card-subtitle {
-    @apply text-sm text-neutral-500;
+    @apply text-sm text-neutral-500 truncate;
   }
 
-  .budget-card-progress {
-    @apply mb-4;
+  .budget-card-actions {
+    @apply flex items-center gap-1.5 flex-shrink-0;
   }
+
+  .budget-card-clickable {
+    @apply cursor-pointer transition-shadow duration-200;
+  }
+
+  .budget-card-clickable:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .budget-card-clickable:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* La cifra spesa: l'elemento più forte della card (data is the hero) */
+  .budget-card-figure {
+    @apply flex items-baseline gap-2;
+  }
+
+  .budget-card-spent {
+    @apply text-2xl font-bold text-neutral-900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .budget-card-of {
+    @apply text-sm text-neutral-500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-card-pct {
+    @apply ml-auto text-sm font-semibold;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-card-pct.is-ok { @apply text-success-600; }
+  .budget-card-pct.is-warn { @apply text-warning-600; }
+  .budget-card-pct.is-over { @apply text-danger-600; }
 
   .budget-card-progress-bar {
-    @apply w-full bg-neutral-200 rounded-full h-3;
+    @apply w-full bg-neutral-200 rounded-full h-2;
   }
 
   .budget-card-progress-fill {
-    @apply h-3 rounded-full transition-all duration-300;
+    @apply h-2 rounded-full transition-all duration-300;
   }
 
-  .budget-card-stats {
-    @apply flex justify-between items-center pt-4 border-t border-neutral-200;
+  .budget-card-progress-fill.is-ok { @apply bg-success-500; }
+  .budget-card-progress-fill.is-warn { @apply bg-warning-500; }
+  .budget-card-progress-fill.is-over { @apply bg-danger-500; }
+
+  .budget-card-meta {
+    @apply flex justify-between items-baseline gap-2 text-sm;
+  }
+
+  .budget-card-remaining {
+    @apply font-medium;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-card-remaining.is-positive { @apply text-neutral-600; }
+  .budget-card-remaining.is-negative { @apply text-danger-600; }
+
+  .budget-card-period {
+    @apply text-xs text-neutral-400 truncate;
+  }
+
+  .budget-detail {
+    @apply flex flex-col gap-4;
+  }
+
+  .budget-detail-sub {
+    @apply text-sm text-neutral-500 -mt-1;
+  }
+
+  .budget-detail-chart {
+    @apply -mx-1;
+  }
+
+  .budget-detail-stats {
+    @apply mt-1;
   }
 
   /* ============================
@@ -1979,7 +2052,17 @@
 
 /* Budget card */
 .dark .budget-card-progress-bar { background-color: #44403c; }
-.dark .budget-card-stats { border-top-color: #44403c; }
+.dark .budget-card-title,
+.dark .budget-card-spent { color: #f5f5f4; }
+.dark .budget-card-subtitle,
+.dark .budget-card-of,
+.dark .budget-card-period { color: #78716c; }
+.dark .budget-card-remaining.is-positive { color: #a8a29e; }
+.dark .budget-card-remaining.is-negative,
+.dark .budget-card-pct.is-over { color: #f87171; }
+.dark .budget-card-pct.is-ok { color: #34d399; }
+.dark .budget-card-pct.is-warn { color: #fbbf24; }
+.dark .budget-detail-sub { color: #a8a29e; }
 
 /* Category card */
 .dark .list-card-item:hover { background-color: #44403c; }

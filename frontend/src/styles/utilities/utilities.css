@@ -412,12 +412,38 @@
   min-width: 0;             /* permette truncate se il titolo è molto lungo */
 }
  
+.page-header-titlerow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .page-header-title {
   font-size: 1.875rem;      /* text-3xl */
   font-weight: 700;
   color: #1c1917;
   line-height: 1.2;
   white-space: nowrap;
+}
+
+/* Icona informativa accanto al titolo: bassa priorità, mostra un tooltip. */
+.page-header-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #a8a29e;
+  cursor: help;
+  transition: color 150ms ease-out;
+}
+
+.page-header-info:hover {
+  color: #0d9488;
+}
+
+.page-header-info:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
  
 .page-header-subtitle {
@@ -478,6 +504,8 @@
    ============================================================ */
 .dark .page-header-title { color: #f5f5f4; }
 .dark .page-header-subtitle { color: #78716c; }
+.dark .page-header-info { color: #78716c; }
+.dark .page-header-info:hover { color: #34d399; }
 .dark .list-result-count { color: #57534e; }
 
 .dark .skeleton { background-color: #44403c; }

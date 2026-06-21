@@ -163,21 +163,26 @@ export default function BudgetFormModal({
           </div>
         </div>
 
+        <div className="form-group">
+          <label className="form-label form-label-required">Periodo</label>
+          <select
+            value={formData.period}
+            onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
+            className="form-select"
+          >
+            <option value="WEEKLY">Settimanale</option>
+            <option value="MONTHLY">Mensile</option>
+            <option value="YEARLY">Annuale</option>
+          </select>
+          <p className="form-help">
+            Il budget si azzera automaticamente a ogni periodo. Lo storico di ogni
+            periodo resta consultabile dal dettaglio.
+          </p>
+        </div>
+
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">Periodo</label>
-            <select
-              value={formData.period}
-              onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
-              className="form-select"
-            >
-              <option value="WEEKLY">Settimanale</option>
-              <option value="MONTHLY">Mensile</option>
-              <option value="YEARLY">Annuale</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label form-label-required">Data Inizio</label>
+            <label className="form-label form-label-required">Attivo da</label>
             <input
               type="date"
               value={formData.startDate}
@@ -189,20 +194,19 @@ export default function BudgetFormModal({
             />
             <FieldError message={errors.startDate} />
           </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Data Fine (opzionale)</label>
-          <input
-            type="date"
-            value={formData.endDate}
-            onChange={(e) => {
-              setFormData({ ...formData, endDate: e.target.value })
-              clearError('endDate');
-            }}
-            className="form-input"
-          />
-          <FieldError message={errors.endDate} />
+          <div className="form-group">
+            <label className="form-label">Attivo fino a (opzionale)</label>
+            <input
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => {
+                setFormData({ ...formData, endDate: e.target.value })
+                clearError('endDate');
+              }}
+              className="form-input"
+            />
+            <FieldError message={errors.endDate} />
+          </div>
         </div>
 
         <div className="form-actions">

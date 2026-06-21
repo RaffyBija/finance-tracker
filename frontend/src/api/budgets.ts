@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Budget, CreateBudgetDTO } from '../types';
+import type { Budget, BudgetHistory, CreateBudgetDTO } from '../types';
 
 export const budgetApi = {
   getAll: async (params?: { active?: boolean }): Promise<Budget[]> => {
@@ -9,6 +9,13 @@ export const budgetApi = {
 
   getById: async (id: string): Promise<Budget> => {
     const response = await apiClient.get<Budget>(`/budgets/${id}`);
+    return response.data;
+  },
+
+  getHistory: async (id: string, periods?: number): Promise<BudgetHistory> => {
+    const response = await apiClient.get<BudgetHistory>(`/budgets/${id}/history`, {
+      params: periods ? { periods } : undefined,
+    });
     return response.data;
   },
 
