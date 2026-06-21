@@ -8,6 +8,10 @@ import {
   recentBudgetWindows,
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
+import { countOccurrences } from './dashboard.controller';
+import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
+import { expandToCategoryLines } from '../utils/categoryContributions';
+import { analyticsCache } from '../utils/analyticsCache';
 
 // Spesa di un budget DENTRO una finestra-periodo esplicita. La finestra effettiva è
 // l'intersezione della finestra-periodo con l'intervallo di attività del budget
@@ -356,6 +360,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
       include: { category: true },
     });
 
+    analyticsCache.delPattern(`budget-suggestions:${userId}`);
     res.status(201).json(budget);
   } catch (error) {
     console.error('Create budget error:', error);
@@ -409,6 +414,7 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
       include: { category: true },
     });
 
+    analyticsCache.delPattern(`budget-suggestions:${userId}`);
     res.json(budget);
   } catch (error) {
     console.error('Update budget error:', error);
@@ -431,10 +437,290 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
     }
 
     await prisma.budget.delete({ where: { id } });
+    analyticsCache.delPattern(`budget-suggestions:${userId}`);
 
     res.json({ message: 'Budget eliminato con successo' });
   } catch (error) {
     console.error('Delete budget error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// ── Budget automatico (Feature B): spendibile mensile + tetti proposti ──────────
+//
+// Riusa gli stessi building-block della previsione (getForecast):
+//   • entrate/impegni del mese via countOccurrences (ricorrenti) + pianificate;
+//   • cuscinetto = liquidità reale BANK (getLiquidBalance);
+//   • addebiti CC del ciclo aperto attesi nel mese (openCCObligations);
+//   • medie storiche per categoria (split-aware via expandToCategoryLines).
+//
+//   spendibile = entratePreviste + cuscinetto − impegniFissi − (entratePreviste × savingRate)
+//
+// Includere il cuscinetto di liquidità è cruciale: un mese a reddito quasi zero non
+// risulta "spendibile negativo" finché c'è liquidità a coprire gli impegni fissi.
+
+const SUGG_HIST_MONTHS = 3;
+const STANDARD_CUT = 0.15; // taglio "standard" sulla media storica per il tetto proposto
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+type BudgetSuggestionItem = {
+  categoryId: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  avgMonthly: number;
+  suggestedCap: number;
+  currentBudgetId: string | null;
+  currentAmount: number | null;
+};
+
+// Parte costosa e indipendente da savingRate → cacheabile. savingTarget e spendable
+// si derivano da questa base con savingRate a runtime (così l'override dello slider
+// non richiede invalidazione cache).
+type BudgetSuggestionsBase = {
+  expectedIncome: number;
+  fixedCommitments: number;
+  cushion: number;
+  perCategory: BudgetSuggestionItem[];
+};
+
+const computeBudgetSuggestionsBase = async (
+  userId: string,
+): Promise<BudgetSuggestionsBase> => {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Storico: ultimi SUGG_HIST_MONTHS mesi, escluso il corrente
+  const histEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  const histStart = new Date(now.getFullYear(), now.getMonth() - SUGG_HIST_MONTHS, 1, 0, 0, 0, 0);
+
+  const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets] = await Promise.all([
+    getAccountsWithBalances(userId),
+    prisma.recurringTransaction.findMany({ where: { userId, isActive: true } }),
+    prisma.plannedTransaction.findMany({
+      where: { userId, isPaid: false, plannedDate: { gte: monthStart, lte: monthEnd } },
+    }),
+    prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'EXPENSE',
+        date: { gte: histStart, lte: histEnd },
+        fromRecurringId: null,
+        transferId: null,
+      },
+      include: {
+        category: { select: { id: true, name: true, icon: true, color: true } },
+        items: { include: { category: { select: { id: true, name: true, icon: true, color: true } } } },
+      },
+    }),
+    prisma.budget.findMany({
+      where: {
+        userId,
+        categoryId: { not: null },
+        startDate: { lte: now },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
+      },
+      select: { id: true, categoryId: true, amount: true },
+    }),
+  ]);
+
+  const cushion = await getLiquidBalance(userId, accounts);
+
+  // Entrate previste e impegni fissi del MESE INTERO (piano, non prorata da oggi)
+  let expectedIncome = 0;
+  let fixedCommitments = 0;
+
+  for (const rec of recurringActive) {
+    const occ = countOccurrences(
+      {
+        frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+        dayOfMonth: rec.dayOfMonth,
+        startDate: rec.startDate,
+        endDate: rec.endDate,
+        amount: rec.amount,
+      },
+      monthStart,
+      monthEnd,
+    );
+    if (occ === 0) continue;
+    const total = occ * Number(rec.amount);
+    if (rec.type === 'INCOME') expectedIncome += total;
+    else fixedCommitments += total;
+  }
+
+  for (const p of plannedMonth) {
+    if (p.type === 'INCOME') expectedIncome += Number(p.amount);
+    else fixedCommitments += Number(p.amount);
+  }
+
+  // Addebiti CC del ciclo aperto in scadenza entro fine mese (i cicli chiusi sono
+  // già pianificate → contate sopra: nessun doppio conteggio).
+  const ccDue = openCCObligations(accounts, monthStart, monthEnd, now);
+  fixedCommitments += ccDue.total;
+
+  // ── Medie storiche per categoria (split-aware), escluse le "senza categoria" ──
+  type CatInfo = { name: string; icon: string | null; color: string | null };
+  const catInfo = new Map<string, CatInfo>();
+  const catTotals = new Map<string, number>();
+
+  for (const t of historicalTx) {
+    for (const line of expandToCategoryLines(t)) {
+      if (!line.categoryId) continue;
+      const key = line.categoryId;
+      if (!catInfo.has(key)) {
+        catInfo.set(key, {
+          name: line.category?.name || 'Categoria',
+          icon: line.category?.icon ?? null,
+          color: line.category?.color ?? null,
+        });
+      }
+      catTotals.set(key, (catTotals.get(key) || 0) + line.amount);
+    }
+  }
+
+  const budgetByCat = new Map<string, { id: string; amount: number }>();
+  for (const b of activeBudgets) {
+    if (b.categoryId) budgetByCat.set(b.categoryId, { id: b.id, amount: Number(b.amount) });
+  }
+
+  const perCategory: BudgetSuggestionItem[] = [];
+  catTotals.forEach((total, key) => {
+    const avgMonthly = total / SUGG_HIST_MONTHS;
+    if (avgMonthly < 0.01) return;
+    const info = catInfo.get(key)!;
+    const existing = budgetByCat.get(key) ?? null;
+    perCategory.push({
+      categoryId: key,
+      name: info.name,
+      icon: info.icon,
+      color: info.color,
+      avgMonthly: round2(avgMonthly),
+      suggestedCap: round2(avgMonthly * (1 - STANDARD_CUT)),
+      currentBudgetId: existing ? existing.id : null,
+      currentAmount: existing ? existing.amount : null,
+    });
+  });
+  perCategory.sort((a, b) => b.avgMonthly - a.avgMonthly);
+
+  return {
+    expectedIncome: round2(expectedIncome),
+    fixedCommitments: round2(fixedCommitments),
+    cushion: round2(cushion),
+    perCategory,
+  };
+};
+
+// GET /budgets/suggestions?savingRate=<override?>
+export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    // Override effimero dello slider (anteprima); altrimenti la preferenza salvata.
+    let overrideRate: number | undefined;
+    const raw = req.query.savingRate;
+    if (typeof raw === 'string' && raw !== '') {
+      const v = Number(raw);
+      if (Number.isFinite(v) && v >= 0 && v <= 0.9) overrideRate = v;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { savingRate: true },
+    });
+    const savingRate = overrideRate ?? Number(user?.savingRate ?? 0);
+
+    const cacheKey = analyticsCache.keys.budgetSuggestions(userId);
+    let base = analyticsCache.get<BudgetSuggestionsBase>(cacheKey);
+    if (!base) {
+      base = await computeBudgetSuggestionsBase(userId);
+      analyticsCache.set(cacheKey, base);
+    }
+
+    const savingTarget = round2(base.expectedIncome * savingRate);
+    const spendable = round2(
+      base.expectedIncome + base.cushion - base.fixedCommitments - savingTarget,
+    );
+
+    res.json({ ...base, savingRate, savingTarget, spendable });
+  } catch (error) {
+    console.error('Get budget suggestions error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// POST /budgets/apply-suggestions  body: { items: [{ categoryId, amount }] }
+// Upsert per-categoria: aggiorna il budget attivo della categoria se esiste,
+// altrimenti ne crea uno nuovo (MONTHLY, rollover NONE, attivo da oggi).
+export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { items } = req.body as { items?: Array<{ categoryId?: unknown; amount?: unknown }> };
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Nessun budget da applicare' });
+    }
+
+    // Dedup per categoria (ultimo vince) + validazione
+    const byCat = new Map<string, number>();
+    for (const it of items) {
+      if (!it || typeof it.categoryId !== 'string' || typeof it.amount !== 'number' || it.amount <= 0) {
+        return res.status(400).json({ error: 'Dati non validi' });
+      }
+      byCat.set(it.categoryId, it.amount);
+    }
+
+    const categoryIds = Array.from(byCat.keys());
+    const categories = await prisma.category.findMany({
+      where: { id: { in: categoryIds }, userId },
+      select: { id: true, name: true },
+    });
+    if (categories.length !== categoryIds.length) {
+      return res.status(404).json({ error: 'Categoria non trovata' });
+    }
+    const catName = new Map(categories.map((c) => [c.id, c.name]));
+
+    const now = new Date();
+    const existing = await prisma.budget.findMany({
+      where: {
+        userId,
+        categoryId: { in: categoryIds },
+        startDate: { lte: now },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
+      },
+      select: { id: true, categoryId: true },
+    });
+    const existingByCat = new Map<string, string>();
+    for (const b of existing) {
+      if (b.categoryId) existingByCat.set(b.categoryId, b.id);
+    }
+
+    const ops = categoryIds.map((categoryId) => {
+      const amount = byCat.get(categoryId)!;
+      const existingId = existingByCat.get(categoryId);
+      if (existingId) {
+        return prisma.budget.update({ where: { id: existingId }, data: { amount } });
+      }
+      return prisma.budget.create({
+        data: {
+          name: catName.get(categoryId)!,
+          amount,
+          categoryId,
+          period: 'MONTHLY',
+          rollover: 'NONE',
+          startDate: now,
+          userId,
+        },
+      });
+    });
+
+    const result = await prisma.$transaction(ops);
+    analyticsCache.delPattern(`budget-suggestions:${userId}`);
+
+    res.status(200).json({ applied: result.length });
+  } catch (error) {
+    console.error('Apply budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

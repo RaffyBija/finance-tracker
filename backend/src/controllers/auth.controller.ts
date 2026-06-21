@@ -241,6 +241,7 @@ export const login = async (req: Request, res: Response) => {
         isPro: user.isPro,
         tourCompleted: user.tourCompleted,
         currency: user.currency,
+        savingRate: user.savingRate,
       },
     };
 
@@ -265,6 +266,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         isPro: true,
         tourCompleted: true,
         currency: true,
+        savingRate: true,
         createdAt: true,
       },
     });
@@ -284,14 +286,18 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, email, currency } = req.body;
+    const { name, email, currency, savingRate } = req.body;
 
-    if (!name?.trim() && !email?.trim() && !currency) {
+    if (!name?.trim() && !email?.trim() && !currency && savingRate === undefined) {
       return res.status(400).json({ error: 'Fornisci almeno un campo da aggiornare' });
     }
 
     if (currency && !SUPPORTED_CURRENCIES.includes(currency)) {
       return res.status(400).json({ error: 'Valuta non supportata' });
+    }
+
+    if (savingRate !== undefined && (typeof savingRate !== 'number' || savingRate < 0 || savingRate > 0.9)) {
+      return res.status(400).json({ error: 'Percentuale di risparmio non valida (0–90%)' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -352,17 +358,20 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Aggiornamento valuta (indipendente da nome/email)
-    if (currency) {
+    // Aggiornamento valuta e % risparmio (indipendenti da nome/email)
+    if (currency || savingRate !== undefined) {
       await prisma.user.update({
         where: { id: userId },
-        data: { currency },
+        data: {
+          ...(currency && { currency }),
+          ...(savingRate !== undefined && { savingRate }),
+        },
       });
     }
 
     const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, currency: true, createdAt: true },
+      select: { id: true, name: true, email: true, currency: true, savingRate: true, createdAt: true },
     });
 
     res.json({

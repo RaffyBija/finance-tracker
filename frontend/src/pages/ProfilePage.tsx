@@ -193,6 +193,20 @@ function PreferencesSection() {
     }
   };
 
+  const handleSavingRateChange = async (rate: number) => {
+    if (rate === (user?.savingRate ?? 0)) return;
+    setIsPending(true);
+    try {
+      const res = await authAPI.updateProfile({ savingRate: rate });
+      updateUser(res.user ?? res);
+      toast.success('Percentuale di risparmio aggiornata');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   return (
     <>
       <div className="settings-section-head">
@@ -247,6 +261,31 @@ function PreferencesSection() {
               Salvataggio…
             </span>
           )}
+        </div>
+      </div>
+
+      <div className="settings-divider" />
+
+      <div className="settings-pref">
+        <div className="settings-pref-text">
+          <span className="settings-pref-title">Risparmio target</span>
+          <span className="settings-pref-desc">
+            Quota delle entrate da mettere da parte, usata dal budget automatico.
+          </span>
+        </div>
+        <div className="settings-pref-control">
+          <select
+            className="form-select"
+            value={Math.round((user?.savingRate ?? 0) * 100)}
+            onChange={(e) => handleSavingRateChange(Number(e.target.value) / 100)}
+            disabled={isPending}
+            aria-label="Percentuale di risparmio target"
+            aria-busy={isPending}
+          >
+            {[0, 5, 10, 15, 20, 25, 30, 40, 50].map((pct) => (
+              <option key={pct} value={pct}>{pct}%</option>
+            ))}
+          </select>
         </div>
       </div>
     </>

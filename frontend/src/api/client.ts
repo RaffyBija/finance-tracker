@@ -76,7 +76,7 @@ export const authAPI = {
     return data;
   },
   
-  updateProfile: async (data: { name?: string; email?: string; currency?: string }): Promise<{
+  updateProfile: async (data: { name?: string; email?: string; currency?: string; savingRate?: number }): Promise<{
   user: User;
   emailChangeRequested: boolean;
   message: string;

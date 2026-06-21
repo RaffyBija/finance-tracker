@@ -3,6 +3,8 @@ import {
   getBudgets,
   getBudget,
   getBudgetHistory,
+  getBudgetSuggestions,
+  applyBudgetSuggestions,
   createBudget,
   updateBudget,
   deleteBudget,
@@ -14,6 +16,8 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', getBudgets);
+router.get('/suggestions', getBudgetSuggestions);
+router.post('/apply-suggestions', applyBudgetSuggestions);
 router.get('/:id/history', getBudgetHistory);
 router.get('/:id', getBudget);
 router.post('/', createBudget);

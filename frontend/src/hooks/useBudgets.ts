@@ -4,7 +4,7 @@ import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateBudgetDTO } from '../types';
 
-const BUDGET_KEYS = ['budgets', 'budget-history', 'dashboard'];
+const BUDGET_KEYS = ['budgets', 'budget-history', 'budget-suggestions', 'dashboard'];
 
 export function useBudgets() {
   const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
@@ -36,6 +36,17 @@ export function useBudgetHistory(id: string | null, periods?: number) {
   });
 }
 
+// Suggerimenti budget automatico. `savingRate` (override slider) entra nella queryKey
+// così cambiare lo slider rifà la query; `enabled` per caricare solo quando serve.
+export function useBudgetSuggestions(savingRate: number | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['budget-suggestions', savingRate ?? 'profile'],
+    queryFn: () => budgetApi.getSuggestions(savingRate),
+    enabled,
+    staleTime: 60 * 1000,
+  });
+}
+
 const invalidateBudgets = (queryClient: ReturnType<typeof useQueryClient>) => {
   BUDGET_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
   broadcastInvalidation(BUDGET_KEYS);
@@ -62,6 +73,15 @@ export function useUpdateBudget() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateBudgetDTO> }) =>
       budgetApi.update(id, data),
+    onSuccess: () => invalidateBudgets(queryClient),
+  });
+}
+
+export function useApplySuggestions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items: Array<{ categoryId: string; amount: number }>) =>
+      budgetApi.applySuggestions(items),
     onSuccess: () => invalidateBudgets(queryClient),
   });
 }

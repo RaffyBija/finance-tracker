@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { useBudgets, useDeleteBudget } from '../hooks/useBudgets';
 import { useFormModal } from '../hooks/useFormModal';
 import PageHeader from '../components/shared/PageHeader';
@@ -7,6 +7,7 @@ import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skele
 import BudgetList from '../components/budgets/BudgetList';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
 import BudgetDetailModal from '../components/budgets/BudgetDetailModal';
+import BudgetSuggestionsModal from '../components/budgets/BudgetSuggestionsModal';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import type { Budget } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -17,6 +18,7 @@ export const Budgets = () => {
   const { isOpen, editingItem, openModal, openEditModal, closeModal } = useFormModal<Budget>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<Budget | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   const toast = useToast();
 
@@ -54,6 +56,14 @@ export const Budgets = () => {
             title="Budget"
             info="I budget seguono la spesa discrezionale e si azzerano a ogni periodo. Gli impegni fissi (rate, abbonamenti) non rientrano qui."
           />
+          <button
+            type="button"
+            className="btn btn-ghost btn-md budget-sugg-trigger"
+            onClick={() => setSuggestOpen(true)}
+          >
+            <Sparkles className="icon-md" />
+            <span>Proponi budget</span>
+          </button>
           <BudgetList
             budgets={budgets}
             onOpenModal={openModal}
@@ -76,6 +86,11 @@ export const Budgets = () => {
         onClose={() => setDetailItem(null)}
         onEdit={handleEditFromDetail}
         onDelete={handleDeleteFromDetail}
+      />
+
+      <BudgetSuggestionsModal
+        isOpen={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
       />
 
       <BudgetFormModal

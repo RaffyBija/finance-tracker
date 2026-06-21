@@ -6,6 +6,8 @@ export interface User {
   isPro: boolean;
   tourCompleted: boolean;
   currency: string;
+  // Percentuale di risparmio target (0–0.9) usata dal budget automatico
+  savingRate: number;
   createdAt: string;
 }
 
@@ -288,6 +290,28 @@ export interface CreateBudgetDTO {
   rollover: BudgetRollover;
   startDate: string;
   endDate?: string;
+}
+
+// ── Budget automatico (suggerimenti) ──
+export interface BudgetSuggestionItem {
+  categoryId: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  avgMonthly: number;
+  suggestedCap: number;
+  currentBudgetId: string | null;
+  currentAmount: number | null;
+}
+
+export interface BudgetSuggestions {
+  expectedIncome: number;
+  fixedCommitments: number;
+  cushion: number;
+  savingRate: number;
+  savingTarget: number;
+  spendable: number;
+  perCategory: BudgetSuggestionItem[];
 }
 
 export interface RecurringTransaction {
