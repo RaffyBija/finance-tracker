@@ -199,6 +199,10 @@
     @apply flex gap-2;
   }
 
+  .category-card-system {
+    @apply gap-1;
+  }
+
   .category-card-footer {
     @apply text-sm text-neutral-500;
   }

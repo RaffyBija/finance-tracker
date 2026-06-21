@@ -12,6 +12,7 @@ import {
   nextBillingDate,
 } from '../utils/billingCycle';
 import { getAccountsWithBalances } from '../utils/balance';
+import { ensureSettlementCategory } from '../utils/settlementCategory';
 
 const MAX_FREE_ACCOUNTS = 3;
 const MAX_PRO_ACCOUNTS  = 10;
@@ -308,12 +309,16 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
 
     const monthYear = now.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 
+    // L'addebito reale usa di DEFAULT la categoria di sistema "Pagamento Carta"
+    // (così è sempre categorizzato e tracciabile); il categoryId del body resta un
+    // override esplicito facoltativo, validato come categoria EXPENSE dell'utente.
     const { categoryId } = req.body;
     if (categoryId) {
       const category = await prisma.category.findFirst({ where: { id: categoryId, userId } });
       if (!category) return res.status(404).json({ error: 'Categoria non trovata' });
       if (category.type !== 'EXPENSE') return res.status(400).json({ error: 'La categoria deve essere di tipo Uscita' });
     }
+    const settlementCategoryId = categoryId || (await ensureSettlementCategory(userId));
 
     // Crea l'addebito reale sul conto bancario e marca pagate le pianificate.
     const [bankTransaction] = await prisma.$transaction([
@@ -325,7 +330,7 @@ export const settleAccount = async (req: AuthRequest, res: Response) => {
           date: now,
           userId,
           accountId: linkedAccount.id,
-          ...(categoryId && { categoryId }),
+          categoryId: settlementCategoryId,
         },
       }),
       prisma.plannedTransaction.updateMany({

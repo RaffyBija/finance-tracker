@@ -82,6 +82,10 @@ model Category {
   color     String?
   icon      String?
   userId    String
+  // Categoria gestita dal sistema (es. "Pagamento Carta" per gli addebiti CC):
+  // assegnata automaticamente, non rinominabile/eliminabile dall'utente ed esclusa
+  // dalle medie/proposte di budget. Le categorie utente restano isSystem = false.
+  isSystem  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

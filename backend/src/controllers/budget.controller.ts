@@ -525,7 +525,7 @@ const computeBudgetSuggestionsBase = async (
     ? { OR: [{ accountId: { in: accountIds } }, { accountId: null }] }
     : {};
 
-  const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets] = await Promise.all([
+  const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets, systemCategories] = await Promise.all([
     getAccountsWithBalances(userId),
     prisma.recurringTransaction.findMany({ where: { userId, isActive: true, ...acctWhere } }),
     prisma.plannedTransaction.findMany({
@@ -553,7 +553,12 @@ const computeBudgetSuggestionsBase = async (
       },
       select: { id: true, categoryId: true, amount: true },
     }),
+    // Categorie di sistema (es. "Pagamento Carta"): da escludere dalle medie per non
+    // gonfiare una categoria con gli addebiti CC (chiude il doppio conteggio settlement).
+    prisma.category.findMany({ where: { userId, isSystem: true }, select: { id: true } }),
   ]);
+
+  const systemCatIds = new Set(systemCategories.map((c) => c.id));
 
   // Cuscinetto = liquidità BANK reale, AL NETTO del debito dei cicli CC ancora aperti.
   // Quel debito è liquidità già impegnata: va tolto qui a prescindere dalla data di
@@ -651,6 +656,7 @@ const computeBudgetSuggestionsBase = async (
   for (const t of historicalTx) {
     for (const line of expandToCategoryLines(t)) {
       if (!line.categoryId) continue;
+      if (systemCatIds.has(line.categoryId)) continue; // addebiti CC: non discrezionali
       const key = line.categoryId;
       if (!catInfo.has(key)) {
         catInfo.set(key, {

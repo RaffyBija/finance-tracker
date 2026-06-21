@@ -1,5 +1,5 @@
 import type {Category} from '../../types/index'
-import {Trash2, Pencil } from 'lucide-react';
+import {Trash2, Pencil, Lock } from 'lucide-react';
 
 interface CategoriesCardProps{
     category : Category,
@@ -31,22 +31,35 @@ export default function CategoriesCard({
           </div>
         </div>
         <div className="category-card-actions">
-          <button
-            onClick={() => handleEdit(category)}
-            className="btn-icon-primary"
-            title="Modifica categoria"
-            aria-label="Modifica categoria"
-          >
-            <Pencil className="icon-sm" />
-          </button>
-          <button
-            onClick={() => handleDelete(category.id)}
-            className="btn-icon-danger"
-            title="Elimina categoria"
-            aria-label="Elimina categoria"
-          >
-            <Trash2 className="icon-sm" />
-          </button>
+          {category.isSystem ? (
+            // Categoria gestita dal sistema (es. "Pagamento Carta"): non modificabile.
+            <span
+              className="badge badge-neutral badge-sm category-card-system"
+              title="Categoria gestita dal sistema"
+            >
+              <Lock className="icon-xs" />
+              Sistema
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={() => handleEdit(category)}
+                className="btn-icon-primary"
+                title="Modifica categoria"
+                aria-label="Modifica categoria"
+              >
+                <Pencil className="icon-sm" />
+              </button>
+              <button
+                onClick={() => handleDelete(category.id)}
+                className="btn-icon-danger"
+                title="Elimina categoria"
+                aria-label="Elimina categoria"
+              >
+                <Trash2 className="icon-sm" />
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="category-card-footer">

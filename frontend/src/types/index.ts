@@ -107,6 +107,8 @@ export interface Category {
   color?: string;
   icon?: string;
   userId: string;
+  // Categoria gestita dal sistema (es. "Pagamento Carta"): non modificabile/eliminabile.
+  isSystem?: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {

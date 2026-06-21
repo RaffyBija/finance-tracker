@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { ensureSettlementCategory } from './settlementCategory';
 
 // Prossima data di addebito (billingDay) a partire da `from`, con clamping per
 // i mesi corti (es. billingDay 31 → ultimo giorno del mese).
@@ -202,6 +203,10 @@ export async function syncCyclePlanned(
   const billingDate =
     cycle.billingDate ?? nextBillingDate(account.billingDay ?? 15, cycle.periodEnd);
 
+  // Categoria di sistema "Pagamento Carta": rende l'addebito sempre tracciabile e
+  // permette di escluderlo in modo affidabile dalle medie/proposte di budget.
+  const settlementCategoryId = await ensureSettlementCategory(cycle.userId);
+
   const planned = await prisma.plannedTransaction.create({
     data: {
       userId: cycle.userId,
@@ -211,6 +216,7 @@ export async function syncCyclePlanned(
       plannedDate: billingDate,
       accountId: account.linkedAccountId,
       ccAccountId: account.id,
+      categoryId: settlementCategoryId,
     },
   });
 
@@ -284,7 +290,8 @@ export async function reconcileCcChanges(
       : null;
 
     if (planned && planned.isPaid) {
-      // Ciclo già pagato → conguaglio nel ciclo OPEN corrente
+      // Ciclo già pagato → conguaglio nel ciclo OPEN corrente. Stessa categoria di
+      // sistema degli altri addebiti CC: sempre tracciabile e fuori dalle medie budget.
       if (Math.abs(delta) >= 0.005) {
         await prisma.transaction.create({
           data: {
@@ -294,6 +301,7 @@ export async function reconcileCcChanges(
             type: delta > 0 ? 'EXPENSE' : 'INCOME',
             description: `Conguaglio ${account.name} - ${cycleLabel(window.periodEnd)}`,
             date: now,
+            categoryId: await ensureSettlementCategory(userId),
           },
         });
       }
