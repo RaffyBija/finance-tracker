@@ -38,10 +38,18 @@ export function useBudgetHistory(id: string | null, periods?: number) {
 
 // Suggerimenti budget automatico. `savingRate` (override slider) entra nella queryKey
 // così cambiare lo slider rifà la query; `enabled` per caricare solo quando serve.
-export function useBudgetSuggestions(savingRate: number | undefined, enabled: boolean) {
+// `monthOffset` (0 corrente / 1 prossimo) e `accountIds` (conti BANK inclusi) entrano
+// anch'essi nella key: cambiarli rifà la query e colpisce una variante cache distinta.
+export function useBudgetSuggestions(
+  savingRate: number | undefined,
+  enabled: boolean,
+  monthOffset = 0,
+  accountIds?: string[],
+) {
+  const acctKey = accountIds && accountIds.length > 0 ? [...accountIds].sort().join('-') : 'all';
   return useQuery({
-    queryKey: ['budget-suggestions', savingRate ?? 'profile'],
-    queryFn: () => budgetApi.getSuggestions(savingRate),
+    queryKey: ['budget-suggestions', savingRate ?? 'profile', monthOffset, acctKey],
+    queryFn: () => budgetApi.getSuggestions(savingRate, monthOffset, accountIds),
     enabled,
     staleTime: 60 * 1000,
   });

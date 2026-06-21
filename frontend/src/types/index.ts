@@ -311,6 +311,7 @@ export interface BudgetSuggestions {
   savingRate: number;
   savingTarget: number;
   spendable: number;
+  monthOffset: number;
   perCategory: BudgetSuggestionItem[];
 }
 

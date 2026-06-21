@@ -33,9 +33,17 @@ export const budgetApi = {
     await apiClient.delete(`/budgets/${id}`);
   },
 
-  getSuggestions: async (savingRate?: number): Promise<BudgetSuggestions> => {
+  getSuggestions: async (
+    savingRate?: number,
+    monthOffset?: number,
+    accountIds?: string[],
+  ): Promise<BudgetSuggestions> => {
+    const params: Record<string, string | number> = {};
+    if (savingRate !== undefined) params.savingRate = savingRate;
+    if (monthOffset) params.monthOffset = monthOffset;
+    if (accountIds && accountIds.length > 0) params.accountIds = accountIds.join(',');
     const response = await apiClient.get<BudgetSuggestions>('/budgets/suggestions', {
-      params: savingRate !== undefined ? { savingRate } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     });
     return response.data;
   },
