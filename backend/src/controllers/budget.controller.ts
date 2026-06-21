@@ -9,7 +9,7 @@ import {
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
 import { countOccurrences } from './dashboard.controller';
-import { getAccountsWithBalances, getLiquidBalance } from '../utils/balance';
+import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
 import { analyticsCache } from '../utils/analyticsCache';
 
@@ -560,29 +560,29 @@ const computeBudgetSuggestionsBase = async (
 
   const systemCatIds = new Set(systemCategories.map((c) => c.id));
 
-  // Cuscinetto = liquidità BANK reale, AL NETTO del debito dei cicli CC ancora aperti.
-  // Quel debito è liquidità già impegnata: va tolto qui a prescindere dalla data di
-  // addebito. I cicli CC chiusi sono invece già pianificate (contate negli impegni del
-  // mese), quindi non c'è doppio conteggio.
-  const openCcDebt = accounts
-    .filter((a) => a.type === 'CREDIT_CARD' && a.balance < 0)
-    .reduce((sum, a) => sum + Math.abs(a.balance), 0);
-
-  // Liquidità di partenza: con filtro conti sommiamo direttamente i BANK selezionati
-  // (NON via getLiquidBalance, che su set vuoto ricadrebbe sul saldo all-time). Senza
-  // filtro riusiamo getLiquidBalance (che mantiene il fallback per utenti senza conti).
+  // Cuscinetto = liquidità BANK reale (NIENTE sottrazione del debito CC qui). Il debito
+  // dei cicli CC aperti è un'uscita FUTURA che cade al prossimo billing day: va contato
+  // come impegno nel mese in cui ricade l'addebito (vedi sotto), esattamente come fa la
+  // proiezione (getProjectedBalance via openCCObligations). Scontarlo sempre dal
+  // cuscinetto caricherebbe il mese corrente di un addebito che invece pesa su quello
+  // successivo. I cicli CC chiusi sono già pianificate (contate negli impegni del mese).
+  //
+  // Con filtro conti sommiamo direttamente i BANK selezionati (NON via getLiquidBalance,
+  // che su set vuoto ricadrebbe sul saldo all-time). Senza filtro riusiamo getLiquidBalance
+  // (che mantiene il fallback per utenti senza conti).
   const liquid = filtering
     ? accounts
         .filter((a) => a.type !== 'CREDIT_CARD' && selectedSet.has(a.id))
         .reduce((sum, a) => sum + a.balance, 0)
     : await getLiquidBalance(userId, accounts);
 
-  let cushion = liquid - openCcDebt;
+  let cushion = liquid;
 
-  // Cuscinetto PROIETTATO (item b, offset > 0): la liquidità di oggi non contiene
-  // ancora i flussi residui del mese corrente (es. lo stipendio del 23). Per proporre
-  // il mese prossimo proiettiamo il cuscinetto a inizio di quel mese sommando entrate
-  // residue − impegni residui nell'intervallo [oggi, fine del mese precedente al target].
+  // Cuscinetto PROIETTATO (item b, offset > 0): la liquidità di oggi non contiene ancora
+  // i flussi residui del mese corrente (es. lo stipendio del 23, o un addebito CC dovuto
+  // entro fine mese). Per proporre il mese prossimo proiettiamo il cuscinetto a inizio di
+  // quel mese: entrate residue − impegni residui (ricorrenti + pianificate + addebiti CC
+  // dovuti) nell'intervallo [oggi, fine del mese precedente al target].
   if (monthOffset > 0) {
     // Inizio giornata locale (come ogni altro range-start del codebase): un'occorrenza
     // di OGGI (es. stipendio del giorno stesso non ancora incassato) cade a mezzanotte
@@ -615,6 +615,9 @@ const computeBudgetSuggestionsBase = async (
     for (const p of plannedResidual) {
       resDelta += p.type === 'INCOME' ? Number(p.amount) : -Number(p.amount);
     }
+    // Addebiti CC dovuti entro fine mese corrente (stessa logica della proiezione). Le CC
+    // non sono tra i conti BANK filtrabili: il loro debito grava comunque sulla liquidità.
+    resDelta -= openCCObligations(accounts, projStart, projEnd, now).total;
     cushion += resDelta;
   }
 
@@ -645,8 +648,11 @@ const computeBudgetSuggestionsBase = async (
     else fixedCommitments += Number(p.amount);
   }
 
-  // Il debito dei cicli CC aperti NON va aggiunto qui: è già scontato dal cuscinetto
-  // (vedi sopra). I cicli chiusi sono pianificate, già incluse in fixedCommitments.
+  // Addebiti dei cicli CC aperti dovuti NEL MESE TARGET (prossimo billing day dentro
+  // [monthStart, monthEnd]): impegno fisso del mese, come nella proiezione. Il cuscinetto
+  // non li sconta più, quindi non c'è doppio conteggio. I cicli chiusi sono pianificate,
+  // già incluse sopra in fixedCommitments.
+  fixedCommitments += openCCObligations(accounts, monthStart, monthEnd, now).total;
 
   // ── Medie storiche per categoria (split-aware), escluse le "senza categoria" ──
   type CatInfo = { name: string; icon: string | null; color: string | null };
