@@ -107,10 +107,12 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     });
 
   const rate = savingPct / 100;
-  const savingTarget = data ? data.expectedIncome * rate : 0;
-  const spendable = data
-    ? data.expectedIncome + data.cushion - data.fixedCommitments - savingTarget
-    : 0;
+  // Risparmio = quota del disponibile (entrate + cuscinetto − impegni), non delle sole
+  // entrate: lo slider funziona anche a reddito zero. Clamp a 0 se in rosso. Allineato
+  // al backend (budget.controller getBudgetSuggestions).
+  const disposable = data ? data.expectedIncome + data.cushion - data.fixedCommitments : 0;
+  const savingTarget = Math.max(0, disposable) * rate;
+  const spendable = disposable - savingTarget;
 
   const selectedItems = useMemo(
     () => (data ? data.perCategory.filter((c) => rows[c.categoryId]?.selected) : []),

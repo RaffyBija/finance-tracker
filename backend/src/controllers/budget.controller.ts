@@ -469,7 +469,8 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
 //     (getLiquidBalance − debito CC aperto: quella liquidità è già impegnata);
 //   • medie storiche per categoria (split-aware via expandToCategoryLines).
 //
-//   spendibile = entratePreviste + cuscinetto − impegniFissi − (entratePreviste × savingRate)
+//   disponibile = entratePreviste + cuscinetto − impegniFissi
+//   spendibile  = disponibile − (max(0, disponibile) × savingRate)
 //
 // Includere il cuscinetto di liquidità è cruciale: un mese a reddito quasi zero non
 // risulta "spendibile negativo" finché c'è liquidità a coprire gli impegni fissi.
@@ -769,10 +770,13 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
       analyticsCache.set(cacheKey, base);
     }
 
-    const savingTarget = round2(base.expectedIncome * savingRate);
-    const spendable = round2(
-      base.expectedIncome + base.cushion - base.fixedCommitments - savingTarget,
-    );
+    // Il risparmio è una quota del disponibile del mese (entrate + cuscinetto −
+    // impegni), non delle sole entrate: così lo slider funziona anche nei mesi a
+    // reddito zero finché c'è liquidità. Clamp a 0 se il disponibile è negativo
+    // (in rosso non si "mette da parte").
+    const disposable = base.expectedIncome + base.cushion - base.fixedCommitments;
+    const savingTarget = round2(Math.max(0, disposable) * savingRate);
+    const spendable = round2(disposable - savingTarget);
 
     res.json({ ...base, savingRate, savingTarget, spendable, monthOffset });
   } catch (error) {
