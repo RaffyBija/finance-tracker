@@ -497,6 +497,13 @@ type BudgetSuggestionsBase = {
   expectedIncome: number;
   fixedCommitments: number;
   cushion: number;
+  // Dettaglio per il breakdown UI:
+  //   liquidity      = liquidità pura dei conti (selezionati) — saldo, niente proiezione;
+  //   ccDueThisMonth = quota di fixedCommitments dovuta agli addebiti CC del mese target.
+  // Per il mese prossimo (offset 1) cushion ≠ liquidity: la differenza è la proiezione
+  // dei flussi residui del mese corrente (es. stipendio in arrivo).
+  liquidity: number;
+  ccDueThisMonth: number;
   perCategory: BudgetSuggestionItem[];
 };
 
@@ -652,7 +659,8 @@ const computeBudgetSuggestionsBase = async (
   // [monthStart, monthEnd]): impegno fisso del mese, come nella proiezione. Il cuscinetto
   // non li sconta più, quindi non c'è doppio conteggio. I cicli chiusi sono pianificate,
   // già incluse sopra in fixedCommitments.
-  fixedCommitments += openCCObligations(accounts, monthStart, monthEnd, now).total;
+  const ccDueThisMonth = openCCObligations(accounts, monthStart, monthEnd, now).total;
+  fixedCommitments += ccDueThisMonth;
 
   // ── Medie storiche per categoria (split-aware), escluse le "senza categoria" ──
   type CatInfo = { name: string; icon: string | null; color: string | null };
@@ -703,6 +711,8 @@ const computeBudgetSuggestionsBase = async (
     expectedIncome: round2(expectedIncome),
     fixedCommitments: round2(fixedCommitments),
     cushion: round2(cushion),
+    liquidity: round2(liquid),
+    ccDueThisMonth: round2(ccDueThisMonth),
     perCategory,
   };
 };

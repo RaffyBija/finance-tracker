@@ -44,15 +44,20 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   const { data: accounts = [] } = useAccounts();
   const applyMutation = useApplySuggestions();
 
-  // Conti BANK selezionabili (item c). Default: tutti inclusi.
+  // Conti BANK selezionabili (item c). Default: SOLO il conto principale (isDefault),
+  // così con molti conti non si deve deselezionare tutto; gli altri si aggiungono a mano.
   const bankAccounts = useMemo(() => accounts.filter((a) => a.type === 'BANK'), [accounts]);
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[] | null>(null);
   useEffect(() => {
-    // Inizializza la selezione a "tutti i conti" appena arrivano (una sola volta).
     if (selectedAccountIds === null && bankAccounts.length > 0) {
-      setSelectedAccountIds(bankAccounts.map((a) => a.id));
+      const primary = bankAccounts.find((a) => a.isDefault) ?? bankAccounts[0];
+      setSelectedAccountIds([primary.id]);
     }
   }, [bankAccounts, selectedAccountIds]);
+
+  const allSelected =
+    !!selectedAccountIds && selectedAccountIds.length === bankAccounts.length;
+  const selectAll = () => setSelectedAccountIds(bankAccounts.map((a) => a.id));
 
   // Mese target: di default il prossimo se siamo a fine mese, altrimenti il corrente.
   const [monthOffset, setMonthOffset] = useState<number>(
@@ -184,7 +189,14 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
         {/* Selettore conti BANK inclusi nel cuscinetto e nei flussi (item c) */}
         {bankAccounts.length > 1 && (
           <div className="form-group">
-            <span className="form-label">Conti da includere</span>
+            <div className="budget-sugg-accounts-head">
+              <span className="form-label">Conti da includere</span>
+              {!allSelected && (
+                <button type="button" className="budget-sugg-selectall" onClick={selectAll}>
+                  Seleziona tutti
+                </button>
+              )}
+            </div>
             <div className="budget-sugg-accounts">
               {bankAccounts.map((a) => {
                 const checked = !selectedAccountIds || selectedAccountIds.includes(a.id);
@@ -242,15 +254,31 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
 
             <div className="budget-sugg-breakdown">
               <div className="budget-sugg-line">
-                <span>Entrate previste</span>
-                <span>{formatCurrency(data.expectedIncome)}</span>
+                <span>{allSelected ? 'Liquidità conti' : 'Liquidità conti selezionati'}</span>
+                <span>{formatCurrency(data.liquidity)}</span>
               </div>
+              {monthOffset === 1 && (
+                <div className="budget-sugg-line">
+                  <span>In arrivo entro fine {monthLabel(0)}</span>
+                  <span>
+                    {data.cushion - data.liquidity >= 0 ? '+' : '−'}
+                    {formatCurrency(Math.abs(data.cushion - data.liquidity))}
+                  </span>
+                </div>
+              )}
               <div className="budget-sugg-line">
-                <span>Liquidità disponibile</span>
-                <span>{formatCurrency(data.cushion)}</span>
+                <span>Entrate previste ({monthLabel(monthOffset)})</span>
+                <span>+{formatCurrency(data.expectedIncome)}</span>
               </div>
               <div className="budget-sugg-line budget-sugg-line-neg">
-                <span>Impegni fissi</span>
+                <span>
+                  Impegni fissi
+                  {data.ccDueThisMonth > 0 && (
+                    <span className="budget-sugg-subnote">
+                      incl. carta {formatCurrency(data.ccDueThisMonth)}
+                    </span>
+                  )}
+                </span>
                 <span>−{formatCurrency(data.fixedCommitments)}</span>
               </div>
               <div className="budget-sugg-line budget-sugg-line-neg">

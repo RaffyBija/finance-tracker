@@ -310,6 +310,11 @@ export interface BudgetSuggestions {
   expectedIncome: number;
   fixedCommitments: number;
   cushion: number;
+  // liquidity = saldo dei conti selezionati (niente proiezione); ccDueThisMonth = quota
+  // di fixedCommitments dovuta all'addebito CC del mese. Per il mese prossimo
+  // cushion − liquidity = proiezione dei flussi residui del mese corrente.
+  liquidity: number;
+  ccDueThisMonth: number;
   savingRate: number;
   savingTarget: number;
   spendable: number;
