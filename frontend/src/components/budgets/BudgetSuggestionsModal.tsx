@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useBudgetSuggestions, useApplySuggestions } from '../../hooks/useBudgets';
@@ -123,6 +123,43 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     0,
   );
   const overspend = selectedTotal > spendable + 0.001;
+
+  // Avvisi contestuali: rendono lo "spendibile" onesto invece di una luce verde. Calcolati
+  // lato client così reagiscono allo slider del risparmio senza rifare la query.
+  type Warn = { level: 'danger' | 'warning' | 'info'; text: string };
+  const warnings: Warn[] = [];
+  if (data) {
+    const mese = monthLabel(monthOffset);
+    if (data.expectedIncome <= 0.001) {
+      warnings.push({
+        level: 'danger',
+        text: `Nessuna entrata prevista per ${mese}: lo spendibile arriva tutto dalla liquidità. Spendendolo per intero resti senza riserva.`,
+      });
+    } else if (data.expectedIncome < data.fixedCommitments) {
+      warnings.push({
+        level: 'warning',
+        text: `Le entrate previste (${formatCurrency(data.expectedIncome)}) non coprono gli impegni fissi (${formatCurrency(data.fixedCommitments)}): stai attingendo alla liquidità per ${formatCurrency(data.fixedCommitments - data.expectedIncome)}.`,
+      });
+    }
+    if (savingTarget < 0.01 && spendable > 0) {
+      warnings.push({
+        level: 'warning',
+        text: 'Con il risparmio a 0% lo spendibile azzera il margine di fine mese. Alza la percentuale per trattenere una riserva.',
+      });
+    }
+    if (data.deferredCcMonthly > 0.01) {
+      warnings.push({
+        level: 'info',
+        text: `Ricorrenti su carta per ${formatCurrency(data.deferredCcMonthly)}/mese: non pesano su questo spendibile, le paghi nell'addebito di un mese successivo.`,
+      });
+    }
+    if (data.liquidity < 0) {
+      warnings.push({
+        level: 'info',
+        text: `La liquidità dei conti selezionati è negativa (${formatCurrency(data.liquidity)}): il margine reale è più stretto di quanto sembri.`,
+      });
+    }
+  }
 
   const toggle = (id: string) =>
     setRows((r) => ({ ...r, [id]: { ...r[id], selected: !r[id]?.selected } }));
@@ -292,6 +329,21 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                 <span className="budget-sugg-spendable-amount">{formatCurrency(spendable)}</span>
               </div>
             </div>
+
+            {warnings.length > 0 && (
+              <ul className="budget-sugg-warnings">
+                {warnings.map((w, i) => (
+                  <li key={i} className={`budget-sugg-warning is-${w.level}`}>
+                    {w.level === 'info' ? (
+                      <Info size={15} aria-hidden="true" />
+                    ) : (
+                      <AlertTriangle size={15} aria-hidden="true" />
+                    )}
+                    <span>{w.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {data.perCategory.length === 0 ? (
               <p className="form-help">

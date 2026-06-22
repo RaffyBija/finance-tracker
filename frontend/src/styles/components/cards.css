@@ -478,8 +478,35 @@
     @apply text-danger-600 font-semibold;
   }
 
+  .budget-sugg-warnings {
+    @apply flex flex-col gap-2 -mt-1;
+  }
+
   .budget-sugg-warning {
     @apply flex items-start gap-2 text-xs text-danger-600 -mt-1;
+  }
+
+  /* Nella lista avvisi ogni voce porta il proprio margine dalla lista, non da sé. */
+  .budget-sugg-warnings .budget-sugg-warning {
+    @apply mt-0;
+  }
+
+  .budget-sugg-warning svg {
+    @apply flex-shrink-0 mt-0.5;
+  }
+
+  /* Varianti per livello: danger (rosso), warning (ambra), info (neutro). Esplicite
+     tutte e tre per simmetria, così non dipendono dal colore di default. */
+  .budget-sugg-warning.is-danger {
+    @apply text-danger-600;
+  }
+
+  .budget-sugg-warning.is-warning {
+    @apply text-warning-600;
+  }
+
+  .budget-sugg-warning.is-info {
+    @apply text-neutral-500;
   }
 
   .budget-sugg-list {
@@ -2327,6 +2354,9 @@
 .dark .budget-sugg-total { color: #a8a29e; }
 .dark .budget-sugg-total.over { color: #f87171; }
 .dark .budget-sugg-warning { color: #f87171; }
+.dark .budget-sugg-warning.is-danger { color: #f87171; }
+.dark .budget-sugg-warning.is-warning { color: #fbbf24; }
+.dark .budget-sugg-warning.is-info { color: #a8a29e; }
 .dark .budget-sugg-row { border-bottom-color: #44403c; }
 .dark .budget-sugg-name { color: #e7e5e4; }
 .dark .budget-sugg-avg { color: #a8a29e; }

@@ -505,6 +505,9 @@ type BudgetSuggestionsBase = {
   // dei flussi residui del mese corrente (es. stipendio in arrivo).
   liquidity: number;
   ccDueThisMonth: number;
+  // Spese ricorrenti su carta del mese: NON contate nel fisso diretto (vanno nell'addebito
+  // di un ciclo futuro), esposte per avvisare l'utente che torneranno nell'estratto conto.
+  deferredCcMonthly: number;
   perCategory: BudgetSuggestionItem[];
 };
 
@@ -535,7 +538,10 @@ const computeBudgetSuggestionsBase = async (
 
   const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets, systemCategories] = await Promise.all([
     getAccountsWithBalances(userId),
-    prisma.recurringTransaction.findMany({ where: { userId, isActive: true, ...acctWhere } }),
+    // Tutte le ricorrenti attive: il filtro conti (BANK) e l'esclusione delle ricorrenti
+    // su CARTA sono applicati nei loop sotto, non nella query, perché ci serve comunque
+    // sommare le ricorrenti su carta (deferredCcMonthly) per avvisare l'utente.
+    prisma.recurringTransaction.findMany({ where: { userId, isActive: true } }),
     prisma.plannedTransaction.findMany({
       where: { userId, isPaid: false, plannedDate: { gte: monthStart, lte: monthEnd }, ...acctWhere },
     }),
@@ -567,6 +573,12 @@ const computeBudgetSuggestionsBase = async (
   ]);
 
   const systemCatIds = new Set(systemCategories.map((c) => c.id));
+  // Conti CARTA: le loro ricorrenti/spese non escono dal conto nel mese in cui cadono,
+  // ma rientrano nell'addebito del ciclo (contato a parte come ccDueThisMonth). Vanno
+  // quindi SEMPRE escluse dal fisso diretto del mese, a prescindere dal filtro conti.
+  const ccAccountIds = new Set(
+    accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id),
+  );
 
   // Cuscinetto = liquidità BANK reale (NIENTE sottrazione del debito CC qui). Il debito
   // dei cicli CC aperti è un'uscita FUTURA che cade al prossimo billing day: va contato
@@ -605,6 +617,8 @@ const computeBudgetSuggestionsBase = async (
 
     let resDelta = 0;
     for (const rec of recurringActive) {
+      if (rec.accountId && ccAccountIds.has(rec.accountId)) continue; // su carta → addebito
+      if (filtering && rec.accountId && !selectedSet.has(rec.accountId)) continue; // BANK non selezionato
       const occ = countOccurrences(
         {
           frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
@@ -632,6 +646,9 @@ const computeBudgetSuggestionsBase = async (
   // Entrate previste e impegni fissi del MESE INTERO (piano, non prorata da oggi)
   let expectedIncome = 0;
   let fixedCommitments = 0;
+  // Spese ricorrenti su CARTA che cadono nel mese: non sono fisso diretto (rientrano
+  // nell'addebito di un ciclo futuro), ma le esponiamo per avvisare l'utente.
+  let deferredCcMonthly = 0;
 
   for (const rec of recurringActive) {
     const occ = countOccurrences(
@@ -647,6 +664,14 @@ const computeBudgetSuggestionsBase = async (
     );
     if (occ === 0) continue;
     const total = occ * Number(rec.amount);
+    if (rec.accountId && ccAccountIds.has(rec.accountId)) {
+      // Su carta: pagata col prossimo estratto conto, non da questo mese. Le INCOME su
+      // carta (rare, es. cashback) riducono il debito del ciclo, non sono entrate del
+      // conto BANK: volutamente non contate qui né in expectedIncome.
+      if (rec.type === 'EXPENSE') deferredCcMonthly += total;
+      continue;
+    }
+    if (filtering && rec.accountId && !selectedSet.has(rec.accountId)) continue; // BANK non selezionato
     if (rec.type === 'INCOME') expectedIncome += total;
     else fixedCommitments += total;
   }
@@ -714,6 +739,7 @@ const computeBudgetSuggestionsBase = async (
     cushion: round2(cushion),
     liquidity: round2(liquid),
     ccDueThisMonth: round2(ccDueThisMonth),
+    deferredCcMonthly: round2(deferredCcMonthly),
     perCategory,
   };
 };
