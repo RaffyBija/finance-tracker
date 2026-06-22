@@ -390,6 +390,18 @@
   }
 
   /* Selettore conti BANK (item c) */
+  .budget-sugg-accounts-head {
+    @apply flex items-center justify-between gap-2 mb-1;
+  }
+
+  .budget-sugg-selectall {
+    @apply text-xs font-medium text-primary-600 underline-offset-2 hover:underline;
+  }
+
+  .budget-sugg-subnote {
+    @apply block text-xs text-neutral-400;
+  }
+
   .budget-sugg-accounts {
     @apply flex flex-wrap gap-2;
   }
@@ -2303,6 +2315,8 @@
 .dark .budget-sugg-month-option.is-selected { background-color: #292524; color: #2dd4bf; }
 .dark .budget-sugg-account { background-color: #292524; border-color: #44403c; color: #d6d3d1; }
 .dark .budget-sugg-account.is-selected { background-color: #0d2d2a; border-color: #14b8a6; color: #5eead4; }
+.dark .budget-sugg-selectall { color: #2dd4bf; }
+.dark .budget-sugg-subnote { color: #78716c; }
 .dark .budget-sugg-breakdown { background-color: #1c1917; border-color: #44403c; }
 .dark .budget-sugg-line { color: #d6d3d1; }
 .dark .budget-sugg-line-neg { color: #a8a29e; }
