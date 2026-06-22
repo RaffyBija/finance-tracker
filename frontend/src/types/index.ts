@@ -315,6 +315,9 @@ export interface BudgetSuggestions {
   // cushion − liquidity = proiezione dei flussi residui del mese corrente.
   liquidity: number;
   ccDueThisMonth: number;
+  // Spese ricorrenti su carta del mese: non pesano sullo spendibile (vanno nell'addebito
+  // di un ciclo futuro), esposte per avvisare l'utente.
+  deferredCcMonthly: number;
   savingRate: number;
   savingTarget: number;
   spendable: number;
