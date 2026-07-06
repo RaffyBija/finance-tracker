@@ -10,6 +10,7 @@ import {
   syncCyclePlanned,
   cycleLabel,
   nextBillingDate,
+  closeConcludedCycles,
 } from '../utils/billingCycle';
 import { getAccountsWithBalances } from '../utils/balance';
 import { ensureSettlementCategory } from '../utils/settlementCategory';
@@ -20,6 +21,20 @@ const MAX_PRO_ACCOUNTS  = 10;
 export const getAccounts = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
+
+    // Auto-riparazione: chiude qui i cicli CC già conclusi ma ancora OPEN (es. un
+    // ciclo "Fine mese" in un mese da 30 giorni, o l'app non aperta nel giorno di
+    // chiusura). Così la lista conti riflette sempre lo stato corretto e il debito
+    // di un ciclo concluso diventa subito una pianificata, invece di restare orfano.
+    const closedCount = await closeConcludedCycles(userId);
+    if (closedCount > 0) {
+      // Chiudere un ciclo crea solo PlannedTransaction (nessuna Transaction reale):
+      // basta invalidare la cache delle pianificate.
+      analyticsCache.onPlannedMutated(userId);
+      // Segnala al client che deve rinfrescare le query dipendenti (pianificate,
+      // calendario, dashboard): questa GET ha avuto un effetto di scrittura.
+      res.setHeader('X-Cycles-Closed', String(closedCount));
+    }
 
     const accounts = await prisma.account.findMany({
       where: { userId },

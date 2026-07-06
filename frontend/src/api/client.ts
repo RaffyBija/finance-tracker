@@ -22,6 +22,7 @@ import type {
   TransactionType,
 } from "../types";
 import { getToken, clearToken } from "../utils/tokenStorage";
+import { invalidateKeysEverywhere } from "../utils/syncChannel";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
@@ -45,9 +46,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor per gestire errori di autenticazione
+// Interceptor per gestire errori di autenticazione + effetti server-side
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // La GET /accounts può chiudere cicli CC conclusi lato server (auto-riparazione):
+    // in tal caso rinfresca le query dipendenti, che altrimenti resterebbero stale
+    // (refetchOnMount/refetchOnWindowFocus sono disattivati globalmente).
+    if (Number(response.headers["x-cycles-closed"] ?? 0) > 0) {
+      invalidateKeysEverywhere(["planned", "pending-planned", "calendar", "dashboard"]);
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       clearToken();
