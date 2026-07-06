@@ -393,6 +393,10 @@ export interface PlannedTransaction {
   updatedAt: string;
   category?: Category;
   account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
+  // Rata di un piano a rate (InstallmentPlan): valorizzati quando la pianificata
+  // è una scadenza di un debito/credito dilazionato.
+  planId?: string | null;
+  counterparty?: string | null;
 }
 
 export interface CreatePlannedTransactionDTO {
@@ -403,6 +407,74 @@ export interface CreatePlannedTransactionDTO {
   plannedDate: string;
   notes?: string;
   accountId?: string;
+}
+
+// ── Scadenzario: piani a rate (debiti/crediti dilazionati) ────────────────────
+
+export type PlanDirection = 'DEBT' | 'CREDIT';
+export type InstallmentPlanStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+// La singola rata è una PlannedTransaction (con planId/counterparty valorizzati).
+export type InstallmentRata = PlannedTransaction;
+
+export interface InstallmentPlanProgress {
+  totalCount: number;
+  paidCount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  nextDueDate: string | null;
+}
+
+export interface InstallmentPlan {
+  id: string;
+  userId: string;
+  direction: PlanDirection;
+  title: string;
+  totalAmount: number;
+  notes?: string | null;
+  categoryId?: string | null;
+  accountId?: string | null;
+  ccAccountId?: string | null;
+  status: InstallmentPlanStatus;
+  createdAt: string;
+  updatedAt: string;
+  installments: InstallmentRata[];
+  category?: Category | null;
+  account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
+  ccAccount?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
+  progress: InstallmentPlanProgress;
+}
+
+export interface InstallmentInput {
+  amount: number;
+  plannedDate: string;
+  counterparty?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateInstallmentPlanDTO {
+  direction: PlanDirection;
+  title: string;
+  notes?: string;
+  categoryId?: string;
+  accountId?: string;
+  ccAccountId?: string;
+  installments: InstallmentInput[];
+}
+
+export interface UpdateInstallmentPlanDTO {
+  title?: string;
+  notes?: string;
+  categoryId?: string;
+  accountId?: string;
+  ccAccountId?: string;
+  installments?: InstallmentInput[];
+}
+
+export interface PayInstallmentsDTO {
+  plannedIds: string[];
+  accountId?: string;
+  date?: string;
 }
 
 //Alert Interface

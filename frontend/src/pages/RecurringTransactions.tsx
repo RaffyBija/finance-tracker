@@ -22,7 +22,7 @@ import ConfirmModal from "../components/shared/ConfirmModal";
 import type { RecurringTransaction, RecurringDueItem } from "../types";
 import { useToast } from "../contexts/ToastContext";
 
-export const RecurringTransactions = () => {
+export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { recurring, categories, isLoading } = useRecurringTransactions();
   const { recurringDueData } = usePending();
   const deleteMutation = useDeleteRecurring();
@@ -75,16 +75,16 @@ export const RecurringTransactions = () => {
     }
   };
 
-  return (
-    <div className="container-custom">
+  const body = (
+    <>
       {isLoading ? (
         <>
-          <SkeletonPageHeader />
+          {!embedded && <SkeletonPageHeader />}
           <SkeletonList rows={6} />
         </>
       ) : (
         <>
-          <PageHeader title="Ricorrenti" />
+          {!embedded && <PageHeader title="Ricorrenti" />}
           <RecurringDueSection />
           <RecurringList
             recurring={recurring}
@@ -130,6 +130,8 @@ export const RecurringTransactions = () => {
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingId(null)}
       />
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="container-custom">{body}</div>;
 };

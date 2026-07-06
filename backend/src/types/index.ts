@@ -99,6 +99,30 @@ export interface CreatePlannedTransactionDTO {
   notes?: string;
 }
 
+// Installment Plan DTOs — piano a rate (debito/credito dilazionato)
+export interface InstallmentInputDTO {
+  amount: number;
+  plannedDate: string | Date;
+  counterparty?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateInstallmentPlanDTO {
+  direction: 'DEBT' | 'CREDIT';
+  title: string;
+  notes?: string;
+  categoryId?: string;
+  accountId?: string;
+  ccAccountId?: string;
+  installments: InstallmentInputDTO[];
+}
+
+export interface PayInstallmentsDTO {
+  plannedIds: string[];
+  accountId?: string;
+  date?: string | Date;
+}
+
 // Account DTOs
 export interface CreateAccountDTO {
   name: string;
