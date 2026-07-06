@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { getAccountsWithBalances, getLiquidBalance, openCCObligations, nextBillingDate } from '../utils/balance';
+import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, type CcEvent } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
@@ -341,19 +341,32 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     let projectedExpense = 0;
     let recurringCount   = 0;  // conta le occorrenze reali, non le ricorrenti
 
-    for (const rec of recurringTransactions) {
-      const occurrences = countOccurrences(
-        {
-          frequency:  rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-          dayOfMonth: rec.dayOfMonth,
-          startDate:  rec.startDate,
-          endDate:    rec.endDate,
-          amount:     rec.amount,
-        },
-        rangeStart,
-        rangeEnd,
-      );
+    // Conti CC: nella proiezione globale le spese addebitate su carta NON escono dalla
+    // liquidità alla loro data → si raccolgono come ccEvents e confluiscono nell'addebito
+    // del ciclo (projectCcCharges). Nel ramo per-conto (scopeId) la logica resta invariata.
+    const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
+    const ccEvents: CcEvent[] = [];
 
+    for (const rec of recurringTransactions) {
+      const rule = {
+        frequency:  rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+        dayOfMonth: rec.dayOfMonth,
+        startDate:  rec.startDate,
+        endDate:    rec.endDate,
+        amount:     rec.amount,
+      };
+
+      // Ricorrente addebitata su CC (solo proiezione globale) → confluisce nel ciclo
+      if (!scopeId && rec.accountId && ccIds.has(rec.accountId)) {
+        const amount = Number(rec.amount);
+        for (const date of listOccurrenceDates(rule, rangeStart, rangeEnd)) {
+          recurringCount += 1;
+          ccEvents.push({ cardId: rec.accountId, date, signed: rec.type === 'INCOME' ? -amount : amount });
+        }
+        continue;
+      }
+
+      const occurrences = countOccurrences(rule, rangeStart, rangeEnd);
       if (occurrences === 0) continue;  // nessuna occorrenza nel range → ignora
 
       recurringCount += occurrences;
@@ -376,18 +389,25 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
     let plannedCount = plannedTransactions.length;
 
     for (const p of plannedTransactions) {
+      // Pianificata addebitata su CC (solo proiezione globale) → confluisce nel ciclo
+      if (!scopeId && p.accountId && ccIds.has(p.accountId)) {
+        const amount = Number(p.amount);
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        continue;
+      }
       if (p.type === 'INCOME') projectedIncome  += Number(p.amount);
       else                     projectedExpense += Number(p.amount);
     }
 
-    // ── Debito CC del ciclo ancora aperto → uscita futura al prossimo billing day ──
+    // ── Addebiti CC futuri → uscita di liquidità al billingDay del ciclo ──
     //   currentBalance esclude le CC (non è liquidità): qui re-introduciamo il debito
-    //   come obbligo futuro, così la proiezione non risulta ottimistica.
-    //   Solo nella proiezione globale: per-conto BANK il debito CC non è dovuto da
-    //   questo saldo, quindi lo escludiamo per non falsare la proiezione del conto.
+    //   del ciclo aperto + le spese future su CC come UNICO addebito per ciclo, così la
+    //   proiezione non è ottimistica né conta due volte. Solo nella proiezione globale:
+    //   per-conto BANK il debito CC non è dovuto da questo saldo.
     if (!scopeId) {
-      const ccObligations = openCCObligations(accounts, rangeStart, rangeEnd, now);
-      projectedExpense += ccObligations.total;
+      for (const charge of projectCcCharges(accounts, ccEvents, rangeStart, rangeEnd, now)) {
+        projectedExpense += charge.amount;
+      }
     }
 
     const result = {
@@ -482,6 +502,12 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Conti CC: le spese addebitate su carta (solo proiezione globale) non escono dalla
+    // liquidità alla loro data → raccolte come ccEvents e proiettate come addebito del
+    // ciclo (projectCcCharges). Nel ramo per-conto (scopeId) la logica resta invariata.
+    const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
+    const ccEvents: CcEvent[] = [];
+
     for (const rec of recurringTransactions) {
       const occurrences = listOccurrenceDates(
         {
@@ -495,8 +521,13 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
         rangeEnd,
       );
       const amount = Number(rec.amount);
+      const isCc = !scopeId && rec.accountId && ccIds.has(rec.accountId);
       for (const date of occurrences) {
         recurringCount += 1;
+        if (isCc) {
+          ccEvents.push({ cardId: rec.accountId!, date, signed: rec.type === 'INCOME' ? -amount : amount });
+          continue;
+        }
         if (rec.type === 'INCOME') projectedIncome  += amount;
         else                       projectedExpense += amount;
         events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring' });
@@ -515,22 +546,22 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     plannedCount = plannedTransactions.length;
     for (const p of plannedTransactions) {
       const amount = Number(p.amount);
+      if (!scopeId && p.accountId && ccIds.has(p.accountId)) {
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        continue;
+      }
       if (p.type === 'INCOME') projectedIncome  += amount;
       else                     projectedExpense += amount;
       events.push({ date: p.plannedDate, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned' });
     }
 
-    // Debito CC del ciclo aperto → uscita futura alla prossima data di addebito.
-    // Solo nella proiezione globale (per-conto BANK non è dovuto da questo saldo).
+    // Addebiti CC futuri → uscita di liquidità al billingDay del ciclo (debito del ciclo
+    // aperto + spese future su CC, aggregati per ciclo, una volta sola). Solo nella
+    // proiezione globale (per-conto BANK non è dovuto da questo saldo).
     if (!scopeId) {
-      for (const cc of accounts) {
-        if (cc.type !== 'CREDIT_CARD' || cc.balance >= 0) continue;
-        const debt = Math.abs(cc.balance);
-        const dueDate = nextBillingDate(cc.billingDay ?? 1, now);
-        if (dueDate >= rangeStart && dueDate <= rangeEnd) {
-          projectedExpense += debt;
-          events.push({ date: dueDate, label: 'Addebito carta di credito', amount: debt, type: 'EXPENSE', source: 'cc' });
-        }
+      for (const charge of projectCcCharges(accounts, ccEvents, rangeStart, rangeEnd, now)) {
+        projectedExpense += charge.amount;
+        events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc' });
       }
     }
 
