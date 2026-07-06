@@ -1,0 +1,339 @@
+/* ============================================================
+   Scadenzario — piani a rate (debiti/crediti dilazionati)
+   Classi semantiche. Dark mode: override espliciti in fondo
+   (i valori light non vengono bake-ati da @apply qui perché
+   sono regole CSS normali, ma teniamo la stessa convenzione).
+   ============================================================ */
+
+/* ── Tabs sezioni ── */
+.scadenzario-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f5f5f4;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.scadenzario-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78716c;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+.scadenzario-tab:hover { color: #292524; }
+.scadenzario-tab.is-active {
+  background: #ffffff;
+  color: #0d9488;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.scadenzario-tab-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #0d9488;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scadenzario-section { position: relative; }
+
+/* ── Griglia card piani ── */
+.plan-card-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .plan-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Card piano (estende .card) ── */
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.plan-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.plan-card-titlewrap { display: flex; gap: 10px; min-width: 0; }
+.plan-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.plan-card-icon--debt { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.plan-card-icon--credit { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.plan-card-titletext { min-width: 0; }
+.plan-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1c1917;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.plan-card-sub { font-size: 0.8rem; color: #78716c; }
+.plan-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Barra progresso ── */
+.plan-card-progressrow { display: flex; align-items: center; gap: 10px; }
+.plan-progress {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e7e5e4;
+  overflow: hidden;
+}
+.plan-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.plan-progress-fill--debt { background: #0d9488; }
+.plan-progress-fill--credit { background: #10b981; }
+.plan-card-progresslabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #78716c;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Statistiche ── */
+.plan-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.plan-card-stat { display: flex; flex-direction: column; gap: 1px; }
+.plan-card-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a8a29e;
+  font-weight: 600;
+}
+.plan-card-stat-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+}
+.plan-card-expand {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0d9488;
+}
+.plan-card-expand svg { transition: transform 0.2s; }
+.plan-card-expand.is-open svg { transform: rotate(180deg); }
+
+/* ── Lista rate ── */
+.plan-rate-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e7e5e4;
+}
+.plan-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid #f5f5f4;
+}
+.plan-rate-row.is-paid { opacity: 0.62; }
+.plan-rate-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: #0d9488;
+  cursor: pointer;
+}
+.plan-rate-check--done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+}
+.plan-rate-main { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.plan-rate-desc {
+  font-size: 0.875rem;
+  color: #292524;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-rate-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.plan-rate-badge--paid { background: rgba(16, 185, 129, 0.14); color: #0f9d6b; }
+.plan-rate-badge--today { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.plan-rate-badge--overdue { background: rgba(239, 68, 68, 0.14); color: #dc2626; }
+.plan-rate-badge--soon { background: rgba(14, 165, 233, 0.14); color: #0284c7; }
+.plan-rate-badge--upcoming { background: #f5f5f4; color: #78716c; }
+.plan-rate-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.plan-rate-pay { flex-shrink: 0; }
+
+/* ── Barra pagamento selezione ── */
+.plan-pay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0fdfa;
+  border: 1px solid rgba(13, 148, 136, 0.2);
+}
+.plan-pay-bar-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f766e;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Modale pagamento ── */
+.pay-modal-intro { font-size: 0.875rem; color: #57534e; }
+.pay-modal-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background: #fafaf9;
+  padding: 6px 10px;
+}
+.pay-modal-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0efee;
+}
+.pay-modal-item:last-child { border-bottom: none; }
+.pay-modal-item-label {
+  font-size: 0.85rem;
+  color: #292524;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pay-modal-item-date { font-size: 0.78rem; color: #a8a29e; white-space: nowrap; }
+.pay-modal-item-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pay-modal-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+  font-weight: 700;
+  color: #1c1917;
+}
+.pay-modal-total-value { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+/* ── Editor rate nel form ── */
+.rate-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rate-editor-total {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0d9488;
+  font-variant-numeric: tabular-nums;
+}
+.rate-editor-locked { margin-bottom: 8px; }
+.rate-editor-list { display: flex; flex-direction: column; gap: 8px; }
+.rate-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.rate-edit-row .form-group { margin: 0; flex: 1 1 120px; }
+.rate-edit-row > input[type="date"] { flex: 1 1 130px; }
+.rate-edit-row > input[type="text"] { flex: 1 1 120px; }
+.rate-edit-remove { flex: 0 0 auto; }
+.rate-editor-add { margin-top: 10px; }
+
+/* ============================================================
+   DARK MODE — override espliciti (palette stone calda)
+   ============================================================ */
+.dark .scadenzario-tabs { background: #1c1917; }
+.dark .scadenzario-tab { color: #a8a29e; }
+.dark .scadenzario-tab:hover { color: #f5f5f4; }
+.dark .scadenzario-tab.is-active { background: #292524; color: #2dd4bf; }
+
+.dark .plan-card-title { color: #f5f5f4; }
+.dark .plan-card-sub { color: #a8a29e; }
+
+.dark .plan-progress { background: #44403c; }
+.dark .plan-card-progresslabel { color: #a8a29e; }
+
+.dark .plan-card-stat-label { color: #78716c; }
+.dark .plan-card-stat-value { color: #f5f5f4; }
+.dark .plan-card-expand { color: #2dd4bf; }
+
+.dark .plan-rate-list { border-top-color: #44403c; }
+.dark .plan-rate-row { border-bottom-color: #3a3532; }
+.dark .plan-rate-desc { color: #e7e5e4; }
+.dark .plan-rate-amount { color: #f5f5f4; }
+.dark .plan-rate-badge--paid { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+.dark .plan-rate-badge--today { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+.dark .plan-rate-badge--overdue { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+.dark .plan-rate-badge--soon { background: rgba(14, 165, 233, 0.18); color: #38bdf8; }
+.dark .plan-rate-badge--upcoming { background: #44403c; color: #a8a29e; }
+
+.dark .plan-pay-bar { background: rgba(13, 148, 136, 0.12); border-color: rgba(13, 148, 136, 0.3); }
+.dark .plan-pay-bar-info { color: #5eead4; }
+
+.dark .pay-modal-intro { color: #a8a29e; }
+.dark .pay-modal-list { background: #1c1917; }
+.dark .pay-modal-item { border-bottom-color: #3a3532; }
+.dark .pay-modal-item-label { color: #e7e5e4; }
+.dark .pay-modal-item-amount,
+.dark .pay-modal-total { color: #f5f5f4; }

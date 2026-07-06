@@ -51,22 +51,15 @@ const SECTIONS: Section[] = [
     ),
   },
   {
-    title: 'Transazioni ricorrenti',
-    emoji: '🔁',
-    content: (
-      <>
-        <p>Imposta entrate/uscite che si ripetono (<strong>settimanale, mensile, annuale</strong>). L'app calcola la prossima scadenza e ti avvisa ogni giorno al primo accesso.</p>
-        <p>Dal modal di scadenza puoi selezionare quali eseguire e creare le transazioni reali in un click. Puoi anche eseguirle <strong>in anticipo</strong> dalla lista.</p>
-      </>
-    ),
-  },
-  {
-    title: 'Transazioni pianificate',
+    title: 'Scadenzario',
     emoji: '📅',
     content: (
       <>
-        <p>Pianifica uscite future (bollette, rate, spese previste). Appariranno nel Calendario e ti verranno ricordate quando la data si avvicina.</p>
-        <p>Quando effettui il pagamento, usa <strong>Segna come pagato</strong>: viene creata automaticamente la transazione reale sul conto corretto.</p>
+        <p>Lo <strong>Scadenzario</strong> (in <strong>Gestione</strong>, o <strong>Menu → Gestione</strong> su mobile) è il registro unico dei tuoi <strong>movimenti futuri</strong>, in entrata e in uscita. Ha tre schede: <strong>Piani a rate</strong>, <strong>Pianificate</strong> e <strong>Ricorrenti</strong>.</p>
+        <p><strong>Piani a rate</strong> — per un debito o un credito <strong>dilazionato</strong>, anche a importo diverso per scadenza. Un <strong>Debito</strong> (es. le rate del <strong>730/F24</strong>) è una serie di uscite future; un <strong>Credito</strong> sono soldi che ti devono <strong>tornare</strong> (es. una spesa divisa con gli amici: €25 da Mario, €40 da Pippo, con la <strong>controparte</strong> su ogni rata). La card mostra l'avanzamento <strong>«X su Y»</strong>, il residuo e la prossima scadenza. Puoi <strong>pagare più rate insieme</strong>: confluiscono in <strong>un'unica transazione</strong>.</p>
+        <p><strong>Pianificate</strong> — singole uscite o entrate future (bollette, spese previste). Con <strong>«Segna come pagato»</strong> viene creata automaticamente la transazione reale sul conto corretto.</p>
+        <p><strong>Ricorrenti</strong> — entrate/uscite che si ripetono (<strong>settimanale, mensile, annuale</strong>). L'app calcola la prossima scadenza e ti avvisa al primo accesso; puoi eseguirle in un click, anche <strong>in anticipo</strong>.</p>
+        <p>Tutto ciò che inserisci qui confluisce nella <strong>Proiezione del saldo</strong> e nel <strong>Calendario</strong>, così vedi in anticipo l'impatto sui tuoi conti.</p>
       </>
     ),
   },

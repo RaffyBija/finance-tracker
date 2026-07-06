@@ -15,7 +15,9 @@ export const getPlannedDue = async (req: AuthRequest, res: Response) => {
     endOfToday.setHours(23, 59, 59, 999);
 
     const planned = await prisma.plannedTransaction.findMany({
-      where: { userId, isPaid: false, plannedDate: { lte: endOfToday } },
+      // planId: null → le rate dei piani a rate hanno il loro flusso (card + pagamento
+      // del piano) e non devono comparire tra le pianificate "da registrare".
+      where: { userId, isPaid: false, planId: null, plannedDate: { lte: endOfToday } },
       include: {
         category: true,
         account: { select: { id: true, name: true, color: true, type: true } },
@@ -37,8 +39,10 @@ export const getPlannedTransactions = async (req: AuthRequest, res: Response) =>
     const userId = req.userId!;
     const { unpaidOnly, upcoming } = req.query;
 
-    const where: any = { userId };
-    
+    // Esclude le rate dei piani a rate (planId valorizzato): quelle vivono nel
+    // loro piano, non nella lista delle pianificate singole (niente doppioni).
+    const where: any = { userId, planId: null };
+
     if (unpaidOnly === 'true') {
       where.isPaid = false;
     }

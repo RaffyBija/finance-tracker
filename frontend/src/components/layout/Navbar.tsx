@@ -6,7 +6,7 @@ import { useTourContext } from '../../contexts/TourContext';
 import GuideModal from '../shared/GuideModal';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tags,
-  Repeat, Calendar, CalendarDays, Settings2, ChevronDown,
+  CalendarClock, CalendarDays, Settings2, ChevronDown,
   SlidersHorizontal, FileText, LogOut, Landmark,
   BookOpen, PlayCircle, PiggyBank, LineChart, Menu,
 } from 'lucide-react';
@@ -38,10 +38,9 @@ const ANALISI: NavItem[] = [
 
 // Sezione "Gestione": configurazione delle entità.
 const CONFIG: NavItem[] = [
-  { path: '/budgets',    label: 'Budget',      icon: Wallet  },
-  { path: '/categories', label: 'Categorie',   icon: Tags    },
-  { path: '/recurring',  label: 'Ricorrenti',  icon: Repeat  },
-  { path: '/planned',    label: 'Pianificati', icon: Calendar },
+  { path: '/budgets',     label: 'Budget',      icon: Wallet        },
+  { path: '/categories',  label: 'Categorie',   icon: Tags          },
+  { path: '/scadenzario', label: 'Scadenzario', icon: CalendarClock },
 ];
 
 const CONFIG_PATHS = CONFIG.map((g) => g.path);
@@ -231,7 +230,7 @@ export default function Navbar() {
 
                   <p className="navbar-dropdown-section navbar-dropdown-section--divided">Gestione</p>
                   {CONFIG.map(({ path, label, icon: Icon }) => {
-                    const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
+                    const count = path === '/scadenzario' ? recurringDueCount + plannedDueCount : 0;
                     return (
                       <Link
                         key={path}
@@ -321,7 +320,7 @@ export default function Navbar() {
 
             <p className="navbar-tray-title navbar-tray-section">Gestione</p>
             {CONFIG.map(({ path, label, icon: Icon }) => {
-              const count = path === '/recurring' ? recurringDueCount : path === '/planned' ? plannedDueCount : 0;
+              const count = path === '/scadenzario' ? recurringDueCount + plannedDueCount : 0;
               return (
                 <Link
                   key={path}

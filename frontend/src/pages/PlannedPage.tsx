@@ -19,7 +19,7 @@ import ConfirmModal from "../components/shared/ConfirmModal";
 import type { PlannedTransaction } from "../types";
 import { useToast } from "../contexts/ToastContext";
 
-export const PlannedTransactions = () => {
+export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { planned, categories, isLoading, filterStatus, setFilterStatus } =
     usePlannedTransactions();
   const deleteMutation = useDeletePlanned();
@@ -53,16 +53,16 @@ export const PlannedTransactions = () => {
     }
   };
 
-  return (
-    <div className="container-custom">
+  const body = (
+    <>
       {isLoading ? (
         <>
-          <SkeletonPageHeader />
+          {!embedded && <SkeletonPageHeader />}
           <SkeletonList rows={5} />
         </>
       ) : (
         <>
-          <PageHeader title="Pianificati" />
+          {!embedded && <PageHeader title="Pianificati" />}
           <PlannedFilters
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
@@ -109,6 +109,8 @@ export const PlannedTransactions = () => {
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingId(null)}
       />
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="container-custom">{body}</div>;
 };

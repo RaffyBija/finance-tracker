@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout/Layout";
@@ -21,8 +21,7 @@ const DashboardPage = lazyWithReload(() => import("./pages/DashboardPage"));
 const TransactionsPage = lazyWithReload(() => import("./pages/TransactionsPage"));
 const CategoriesPage = lazyWithReload(() => import("./pages/CategoriesPage"));
 const Budgets = lazyWithReload(() => import("./pages/BudgetsPage").then(m => ({ default: m.Budgets })));
-const RecurringTransactions = lazyWithReload(() => import("./pages/RecurringTransactions").then(m => ({ default: m.RecurringTransactions })));
-const PlannedTransactions = lazyWithReload(() => import("./pages/PlannedPage").then(m => ({ default: m.PlannedTransactions })));
+const ScadenzarioPage = lazyWithReload(() => import("./pages/ScadenzarioPage"));
 const Privacy = lazyWithReload(() => import("./pages/Privacy").then(m => ({ default: m.Privacy })));
 const ForgotPasswordPage = lazyWithReload(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazyWithReload(() => import("./pages/ResetPasswordPage"));
@@ -126,26 +125,19 @@ function App() {
             />
 
             <Route
-              path="/recurring"
+              path="/scadenzario"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <RecurringTransactions />
+                    <ScadenzarioPage />
                   </Layout>
                 </ProtectedRoute>
               }
             />
 
-            <Route
-              path="/planned"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PlannedTransactions />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Le vecchie pagine confluiscono nello Scadenzario unificato */}
+            <Route path="/recurring" element={<Navigate to="/scadenzario#ricorrenti" replace />} />
+            <Route path="/planned" element={<Navigate to="/scadenzario#pianificate" replace />} />
 
             <Route
               path="/calendar"
