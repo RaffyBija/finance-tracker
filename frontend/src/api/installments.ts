@@ -1,6 +1,7 @@
 import apiClient from './client';
 import type {
   InstallmentPlan,
+  InstallmentDueRata,
   CreateInstallmentPlanDTO,
   UpdateInstallmentPlanDTO,
   PayInstallmentsDTO,
@@ -14,6 +15,11 @@ export const installmentsApi = {
 
   getById: async (id: string): Promise<InstallmentPlan> => {
     const response = await apiClient.get<InstallmentPlan>(`/installments/${id}`);
+    return response.data;
+  },
+
+  getDue: async (): Promise<InstallmentDueRata[]> => {
+    const response = await apiClient.get<InstallmentDueRata[]>('/installments/due');
     return response.data;
   },
 

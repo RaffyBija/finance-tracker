@@ -142,7 +142,9 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
 
 export default function Navbar() {
   const { user } = useAuth();
-  const { recurringDueCount, plannedDueCount } = usePending();
+  const { recurringDueCount, plannedDueCount, installmentDueCount } = usePending();
+  // Tutto ciò che è "in scadenza" nello scadenzario: ricorrenti + pianificate + rate.
+  const scadenzarioDueCount = recurringDueCount + plannedDueCount + installmentDueCount;
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -230,7 +232,7 @@ export default function Navbar() {
 
                   <p className="navbar-dropdown-section navbar-dropdown-section--divided">Gestione</p>
                   {CONFIG.map(({ path, label, icon: Icon }) => {
-                    const count = path === '/scadenzario' ? recurringDueCount + plannedDueCount : 0;
+                    const count = path === '/scadenzario' ? scadenzarioDueCount : 0;
                     return (
                       <Link
                         key={path}
@@ -289,9 +291,9 @@ export default function Navbar() {
         >
           <span className="navbar-badge-wrap">
             <Menu size={20} />
-            {(recurringDueCount + plannedDueCount) > 0 && (
+            {scadenzarioDueCount > 0 && (
               <span className="navbar-badge">
-                {(recurringDueCount + plannedDueCount) > 99 ? '99+' : recurringDueCount + plannedDueCount}
+                {scadenzarioDueCount > 99 ? '99+' : scadenzarioDueCount}
               </span>
             )}
           </span>
@@ -320,7 +322,7 @@ export default function Navbar() {
 
             <p className="navbar-tray-title navbar-tray-section">Gestione</p>
             {CONFIG.map(({ path, label, icon: Icon }) => {
-              const count = path === '/scadenzario' ? recurringDueCount + plannedDueCount : 0;
+              const count = path === '/scadenzario' ? scadenzarioDueCount : 0;
               return (
                 <Link
                   key={path}

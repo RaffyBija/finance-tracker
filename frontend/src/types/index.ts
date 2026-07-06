@@ -445,6 +445,12 @@ export interface InstallmentPlan {
   progress: InstallmentPlanProgress;
 }
 
+// Rata in scadenza restituita da GET /installments/due: porta con sé il piano
+// di appartenenza (per titolo/direzione). Alimenta PendingContext e i badge.
+export interface InstallmentDueRata extends PlannedTransaction {
+  plan: Pick<InstallmentPlan, 'id' | 'title' | 'direction' | 'accountId'>;
+}
+
 export interface InstallmentInput {
   amount: number;
   plannedDate: string;

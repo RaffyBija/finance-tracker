@@ -62,6 +62,7 @@ export const analyticsCache = {
     categoryTrend:    (uid: string, suffix: string) => `category-trend:${uid}:${suffix}`,
     recurringDue:     (uid: string) => `recurring-due:${uid}`,
     plannedDue:       (uid: string) => `planned-due:${uid}`,
+    installmentsDue:  (uid: string) => `installments-due:${uid}`,
   },
 
   // Invalidazioni raggruppate per tipo di evento
@@ -94,11 +95,12 @@ export const analyticsCache = {
     delNetWorth(uid);
   },
 
-  // Una pianificata è cambiata (create/update/delete)
+  // Una pianificata è cambiata (create/update/delete) — include le rate dei piani
   onPlannedMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
     delBudgetSuggestions(uid);
     cache.del(`planned-due:${uid}`);
+    cache.del(`installments-due:${uid}`);
     delProjections(uid);
   },
 
@@ -109,6 +111,7 @@ export const analyticsCache = {
     delMonthlyTrend(uid);
     delCategoryTrend(uid);
     cache.del(`planned-due:${uid}`);
+    cache.del(`installments-due:${uid}`);
     delProjections(uid);
     delNetWorth(uid);
   },

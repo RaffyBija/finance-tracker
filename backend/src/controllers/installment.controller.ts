@@ -74,6 +74,36 @@ export const getInstallmentPlans = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Rate in scadenza (non pagate, data ≤ oggi) di tutti i piani dell'utente.
+// Escluse da GET /planned/due (planId: null): qui hanno il loro flusso dedicato,
+// che alimenta il badge navbar/tab dello scadenzario via PendingContext.
+export const getInstallmentsDue = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const cacheKey = analyticsCache.keys.installmentsDue(userId);
+    const cached = analyticsCache.get<object[]>(cacheKey);
+    if (cached) return res.json(cached);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const rate = await prisma.plannedTransaction.findMany({
+      where: { userId, isPaid: false, planId: { not: null }, plannedDate: { lte: endOfToday } },
+      include: {
+        category: true,
+        plan: { select: { id: true, title: true, direction: true, accountId: true } },
+      },
+      orderBy: { plannedDate: 'asc' },
+    });
+
+    analyticsCache.set(cacheKey, rate);
+    res.json(rate);
+  } catch (error) {
+    console.error('Get installments due error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
 // Ottieni un singolo piano a rate
 export const getInstallmentPlan = async (req: AuthRequest, res: Response) => {
   try {
