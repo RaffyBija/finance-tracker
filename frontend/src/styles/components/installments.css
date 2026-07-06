@@ -300,6 +300,40 @@
 .rate-edit-remove { flex: 0 0 auto; }
 .rate-editor-add { margin-top: 10px; }
 
+/* ── Generatore rate (solo in creazione) ── */
+.rate-generator {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fafaf9;
+  border: 1px dashed #d6d3d1;
+}
+.rate-generator-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #57534e;
+}
+.rate-generator-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: end;
+}
+.rate-generator-fields .form-group { margin: 0; }
+@media (min-width: 541px) {
+  .rate-generator-fields { grid-template-columns: 1.2fr 0.8fr 1fr auto; }
+}
+.rate-generator-hint {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #a8a29e;
+}
+
 /* ============================================================
    DARK MODE — override espliciti (palette stone calda)
    ============================================================ */
@@ -330,6 +364,10 @@
 
 .dark .plan-pay-bar { background: rgba(13, 148, 136, 0.12); border-color: rgba(13, 148, 136, 0.3); }
 .dark .plan-pay-bar-info { color: #5eead4; }
+
+.dark .rate-generator { background: #1c1917; border-color: #44403c; }
+.dark .rate-generator-title { color: #d6d3d1; }
+.dark .rate-generator-hint { color: #78716c; }
 
 .dark .pay-modal-intro { color: #a8a29e; }
 .dark .pay-modal-list { background: #1c1917; }

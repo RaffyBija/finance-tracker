@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Wand2 } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import AccountSelector from '../accounts/AccountSelector';
@@ -39,6 +39,22 @@ const today = () => new Date().toISOString().split('T')[0];
 let rowKeySeq = 1;
 const blankRow = (): RateRow => ({ key: rowKeySeq++, amount: 0, plannedDate: today(), counterparty: '' });
 
+// Somma `months` mesi a una data ISO (yyyy-mm-dd) clampando il giorno nei mesi
+// corti (31 gen → 28/29 feb), stessa convenzione delle ricorrenti mensili.
+const addMonthsClamped = (iso: string, months: number): string => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const shifted = m - 1 + months;
+  const year = y + Math.floor(shifted / 12);
+  const month = shifted % 12;
+  const day = Math.min(d, new Date(year, month + 1, 0).getDate());
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+// Limiti del generatore: un piano ha senso da 2 rate in su; 72 copre le
+// rateizzazioni lunghe (es. cartelle). Il backend non impone un tetto.
+const GEN_MIN_COUNT = 2;
+const GEN_MAX_COUNT = 72;
+
 export default function InstallmentPlanFormModal({ isOpen, editingItem, categories, onClose }: Props) {
   const createMutation = useCreateInstallmentPlan();
   const updateMutation = useUpdateInstallmentPlan();
@@ -53,6 +69,8 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
   const [accountId, setAccountId] = useState('');
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<RateRow[]>([blankRow()]);
+  // Generatore rate (solo creazione): totale da dividere, numero rate, prima scadenza.
+  const [gen, setGen] = useState({ total: 0, count: '', firstDate: today() });
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = !!editingItem;
@@ -63,6 +81,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
+    setGen({ total: 0, count: '', firstDate: today() });
     if (editingItem) {
       setDirection(editingItem.direction);
       setTitle(editingItem.title);
@@ -97,6 +116,30 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...next } : r)));
   const addRow = () => setRows((prev) => [...prev, blankRow()]);
   const removeRow = (i: number) => setRows((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+
+  const genCount = parseInt(gen.count, 10);
+  const genTotalCents = Math.round(Number(gen.total || 0) * 100);
+  const canGenerate =
+    Number.isInteger(genCount) &&
+    genCount >= GEN_MIN_COUNT &&
+    genCount <= GEN_MAX_COUNT &&
+    genTotalCents >= genCount && // almeno 1 centesimo a rata
+    !!gen.firstDate;
+
+  // Divide il totale in N rate mensili di pari importo lavorando in centesimi
+  // (niente residui float); l'ultima rata assorbe l'arrotondamento.
+  const generateRows = () => {
+    if (!canGenerate) return;
+    const base = Math.floor(genTotalCents / genCount);
+    setRows(
+      Array.from({ length: genCount }, (_, i) => ({
+        key: rowKeySeq++,
+        amount: (i === genCount - 1 ? genTotalCents - base * (genCount - 1) : base) / 100,
+        plannedDate: addMonthsClamped(gen.firstDate, i),
+        counterparty: '',
+      })),
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +278,60 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
             <p className="form-help rate-editor-locked">
               {paidCount} {paidCount === 1 ? 'rata già saldata' : 'rate già saldate'} restano invariate; qui modifichi solo quelle da saldare.
             </p>
+          )}
+
+          {!isEdit && (
+            <div className="rate-generator">
+              <span className="rate-generator-title">
+                <Wand2 size={14} /> Genera le rate da un totale
+              </span>
+              <div className="rate-generator-fields">
+                <InputDecimal
+                  formData={gen}
+                  field="total"
+                  setFormData={setGen}
+                  label="Importo totale"
+                  placeholder="0,00"
+                />
+                <div className="form-group">
+                  <label className="form-label" htmlFor="gen-count">Numero rate</label>
+                  <input
+                    id="gen-count"
+                    type="number"
+                    min={GEN_MIN_COUNT}
+                    max={GEN_MAX_COUNT}
+                    step={1}
+                    inputMode="numeric"
+                    value={gen.count}
+                    onChange={(e) => setGen((g) => ({ ...g, count: e.target.value }))}
+                    placeholder="Es. 5"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="gen-first">Prima scadenza</label>
+                  <input
+                    id="gen-first"
+                    type="date"
+                    value={gen.firstDate}
+                    onChange={(e) => setGen((g) => ({ ...g, firstDate: e.target.value }))}
+                    className="form-input"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-md"
+                  onClick={generateRows}
+                  disabled={!canGenerate}
+                >
+                  Genera
+                </button>
+              </div>
+              <p className="rate-generator-hint">
+                Rate mensili di pari importo, l'ultima assorbe l'arrotondamento. Dopo puoi
+                ritoccare importi e date; generare sostituisce le rate qui sotto.
+              </p>
+            </div>
           )}
 
           <div className="rate-editor-list">
