@@ -228,6 +228,53 @@ export async function syncCyclePlanned(
   return rounded;
 }
 
+// Chiude tutti i cicli CONCLUSI (periodEnd già passato) ancora OPEN per le CC
+// dell'utente: calcola il debito dalla finestra, marca CLOSED, crea/collega la
+// pianificata del pagamento e garantisce il ciclo aperto corrente.
+//
+//   È la fonte di verità (auto-riparante) della chiusura ciclo: va invocata sui
+//   percorsi di lettura dei conti così un ciclo non resta mai "in accumulo" oltre
+//   la sua chiusura, ANCHE se l'utente non apre l'app nel giorno esatto di chiusura
+//   o se il closingDay è "Fine mese" (31) in un mese più corto. Idempotente: se non
+//   c'è nulla di concluso da chiudere non scrive nulla. Ritorna il numero di cicli
+//   effettivamente chiusi.
+export async function closeConcludedCycles(userId: string, now: Date = new Date()): Promise<number> {
+  const openPast = await prisma.billingCycle.findMany({
+    where: { userId, status: 'OPEN', periodEnd: { lt: now } },
+    orderBy: { periodStart: 'asc' },
+  });
+  if (openPast.length === 0) return 0;
+
+  const accountIds = [...new Set(openPast.map((c) => c.accountId))];
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: accountIds }, userId, type: 'CREDIT_CARD' },
+    select: { id: true, name: true, closingDay: true, billingDay: true, linkedAccountId: true },
+  });
+  const accMap = new Map(accounts.map((a) => [a.id, a]));
+
+  let closed = 0;
+  for (const cycle of openPast) {
+    const account = accMap.get(cycle.accountId);
+    if (!account || !account.linkedAccountId) continue; // serve un conto collegato per la pianificata
+
+    // Lock ottimistico: rivendica il ciclo solo se è ANCORA OPEN. Se una richiesta
+    // concorrente (es. due tab) l'ha già chiuso, updateMany aggiorna 0 righe →
+    // saltiamo, evitando di creare una seconda pianificata orfana per lo stesso ciclo.
+    const claim = await prisma.billingCycle.updateMany({
+      where: { id: cycle.id, status: 'OPEN' },
+      data: { status: 'CLOSED', closedAt: now },
+    });
+    if (claim.count === 0) continue;
+
+    // syncCyclePlanned calcola e persiste billingDate/debtAmount e crea la pianificata.
+    const debt = await computeCycleDebt(account.id, cycle.periodStart, cycle.periodEnd);
+    await syncCyclePlanned(cycle, account, debt);
+    await ensureOpenCycle(userId, account, now);
+    closed += 1;
+  }
+  return closed;
+}
+
 // Contributo al debito: una spesa aumenta il debito, un'entrata (rimborso) lo riduce.
 export function debtContribution(type: 'INCOME' | 'EXPENSE', amount: number): number {
   return type === 'EXPENSE' ? amount : -amount;

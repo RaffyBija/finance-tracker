@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { accountsAPI } from '../api/accounts';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { Account, CreateAccountDTO, UpdateAccountDTO } from '../types';
@@ -105,60 +105,45 @@ export const useCloseBillingCycle = () => {
 };
 
 const CC_BILLING_KEY  = 'ccBillingCheck';
-const CC_CLOSING_KEY  = 'ccClosingCheck';
 
+// La chiusura ciclo è ora responsabilità del backend (closeConcludedCycles, invocata
+// da GET /accounts): si auto-ripara a ogni caricamento conti, a prescindere dal
+// giorno esatto di chiusura e dai mesi più corti del closingDay "Fine mese". Qui
+// resta solo il promemoria di pagamento al billingDay.
 export function useCCBillingDue() {
   const today    = new Date().toISOString().split('T')[0];
   const todayDay = new Date().getDate();
 
   // Gate per il billing day (modal di pagamento)
   const [billingEnabled] = useState(() => localStorage.getItem(CC_BILLING_KEY) !== today);
-  // Gate per il closing day (chiusura ciclo automatica)
-  const [closingEnabled] = useState(() => localStorage.getItem(CC_CLOSING_KEY) !== today);
 
   const [isOpen, setIsOpen]       = useState(false);
   const [dueAccount, setDueAccount] = useState<Account | null>(null);
-  const cycleClosedRef = useRef(false);
 
   const { data: accounts = [] } = useAccounts();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (accounts.length === 0) return;
+    if (accounts.length === 0 || !billingEnabled) return;
 
-    // 1. Chiusura ciclo automatica (closingDay = oggi)
-    if (closingEnabled && !cycleClosedRef.current) {
-      const toClose = accounts.filter(
-        (a) => a.type === 'CREDIT_CARD' && a.closingDay === todayDay && a.balance < 0
-      );
-      if (toClose.length > 0) {
-        cycleClosedRef.current = true;
-        localStorage.setItem(CC_CLOSING_KEY, today);
-        toClose.forEach((cc) => {
-          accountsAPI.closeBillingCycle(cc.id).then(() => {
-            queryClient.invalidateQueries({ queryKey: ['accounts'] });
-            queryClient.invalidateQueries({ queryKey: ['planned'] });
-            queryClient.invalidateQueries({ queryKey: ['calendar'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
-          }).catch(() => { /* silenzioso */ });
-        });
-      }
-    }
+    // Modal di pagamento: mostra il promemoria se una CC è dovuta oggi (billingDay,
+    // con clamping ai mesi corti) e ha debito.
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const due = accounts.find(
+      (a) =>
+        a.type === 'CREDIT_CARD' &&
+        a.balance < 0 &&
+        a.billingDay != null &&
+        Math.min(a.billingDay, daysInMonth) === todayDay,
+    ) ?? null;
 
-    // 2. Modal di pagamento (billingDay = oggi, per settle manuale)
-    if (billingEnabled) {
-      const due = accounts.find(
-        (a) => a.type === 'CREDIT_CARD' && a.billingDay === todayDay && a.balance < 0
-      ) ?? null;
-      if (due) {
-        setDueAccount(due);
-        setIsOpen(true);
-      } else {
-        localStorage.setItem(CC_BILLING_KEY, today);
-      }
+    if (due) {
+      setDueAccount(due);
+      setIsOpen(true);
+    } else {
+      localStorage.setItem(CC_BILLING_KEY, today);
     }
-  }, [accounts, billingEnabled, closingEnabled, today, todayDay, queryClient]);
+  }, [accounts, billingEnabled, today, todayDay]);
 
   const dismiss = () => {
     localStorage.setItem(CC_BILLING_KEY, today);
