@@ -194,7 +194,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
             value={title}
             maxLength={TITLE_MAX}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={direction === 'CREDIT' ? 'Es. Vacanza da dividere' : 'Es. F24 2026'}
+            placeholder={direction === 'CREDIT' ? 'Es. Prestito a un amico' : 'Es. Acquisto a rate'}
             className="form-input"
           />
         </div>

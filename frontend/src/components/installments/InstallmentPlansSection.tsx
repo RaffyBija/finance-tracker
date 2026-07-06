@@ -65,7 +65,7 @@ export default function InstallmentPlansSection() {
         <EmptyState
           icon={<Layers size={22} />}
           title="Nessun piano a rate"
-          description="Crea un piano per un debito o un credito dilazionato (es. rate F24, soldi che ti devono tornare)."
+          description="Crea un piano per un debito o un credito dilazionato (es. un acquisto a rate, soldi che ti devono tornare)."
           actionLabel="Nuovo piano a rate"
           onAction={openModal}
         />

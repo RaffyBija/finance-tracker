@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/shared/PageHeader';
 import { usePending } from '../contexts/PendingContext';
-import { useInstallmentPlans } from '../hooks/useInstallmentPlans';
 import ScadenzarioTabs, {
   type ScadenzarioTabKey,
 } from '../components/installments/ScadenzarioTabs';
@@ -21,8 +20,7 @@ const tabFromHash = (hash: string): ScadenzarioTabKey => HASHES[hash] ?? 'piani'
 export default function ScadenzarioPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { recurringDueCount, plannedDueCount } = usePending();
-  const { plans } = useInstallmentPlans();
+  const { recurringDueCount, plannedDueCount, installmentDueCount } = usePending();
 
   const [tab, setTab] = useState<ScadenzarioTabKey>(tabFromHash(location.hash));
 
@@ -36,8 +34,6 @@ export default function ScadenzarioPage() {
     navigate(`/scadenzario#${key}`, { replace: true });
   };
 
-  const activePlans = plans.filter((p) => p.status === 'ACTIVE').length;
-
   return (
     <div className="container-custom">
       <PageHeader
@@ -45,11 +41,12 @@ export default function ScadenzarioPage() {
         subtitle="Il registro dei tuoi movimenti futuri: piani a rate, pianificate e ricorrenti."
       />
 
+      {/* Tutti i badge contano cose IN SCADENZA (rate/pianificate/occorrenze ≤ oggi) */}
       <ScadenzarioTabs
         active={tab}
         onChange={changeTab}
         tabs={[
-          { key: 'piani', label: 'Piani a rate', count: activePlans },
+          { key: 'piani', label: 'Piani a rate', count: installmentDueCount },
           { key: 'pianificate', label: 'Pianificate', count: plannedDueCount },
           { key: 'ricorrenti', label: 'Ricorrenti', count: recurringDueCount },
         ]}

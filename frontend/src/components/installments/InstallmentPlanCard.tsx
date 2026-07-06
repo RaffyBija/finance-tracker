@@ -21,7 +21,7 @@ export default function InstallmentPlanCard({ plan, onEdit, onDelete, onPay }: P
   const [expanded, setExpanded] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { totalCount, paidCount, remainingAmount, nextDueDate } = plan.progress;
+  const { totalCount, paidCount, paidAmount, remainingAmount, nextDueDate } = plan.progress;
 
   // Dopo un pagamento la lista si ricarica: rimuovi dalla selezione le rate
   // che non sono più "non pagate".
@@ -86,7 +86,13 @@ export default function InstallmentPlanCard({ plan, onEdit, onDelete, onPay }: P
       </div>
 
       <div className="plan-card-progressrow">
-        <InstallmentProgressBar paidCount={paidCount} totalCount={totalCount} direction={plan.direction} />
+        <InstallmentProgressBar
+          paidCount={paidCount}
+          totalCount={totalCount}
+          paidAmount={paidAmount}
+          totalAmount={paidAmount + remainingAmount}
+          direction={plan.direction}
+        />
         <span className="plan-card-progresslabel">
           {paidCount} su {totalCount}
         </span>

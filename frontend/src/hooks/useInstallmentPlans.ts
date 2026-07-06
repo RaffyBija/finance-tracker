@@ -9,10 +9,10 @@ import type {
 } from '../types';
 
 // CRUD del piano: tocca il piano stesso, le rate (pianificate → badge/scadenze),
-// dashboard, contatore pending e calendario.
-const INSTALLMENT_KEYS = ['installments', 'planned', 'dashboard', 'pending-planned', 'calendar'];
+// dashboard, contatori pending e calendario.
+const INSTALLMENT_KEYS = ['installments', 'planned', 'dashboard', 'pending-planned', 'pending-installments', 'calendar'];
 // Pagamento: crea una transazione reale → invalida anche transazioni, conti.
-const INSTALLMENT_PAID_KEYS = ['installments', 'planned', 'transactions', 'dashboard', 'pending-planned', 'calendar', 'accounts'];
+const INSTALLMENT_PAID_KEYS = ['installments', 'planned', 'transactions', 'dashboard', 'pending-planned', 'pending-installments', 'calendar', 'accounts'];
 
 export function useInstallmentPlans() {
   const { data: plans = [], isLoading } = useQuery({
