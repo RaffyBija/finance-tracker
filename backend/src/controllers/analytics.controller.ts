@@ -2,8 +2,8 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { countOccurrences } from './dashboard.controller';
-import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
+import { countOccurrences, listOccurrenceDates } from './dashboard.controller';
+import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, type CcEvent } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
 
 const HIST_MONTHS = 3;
@@ -204,19 +204,28 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     let knownRemainingIncome = 0;
     let knownRemainingExpenses = 0;
 
+    // Le spese addebitate su CC non escono dalla liquidità alla loro data: confluiscono
+    // nell'addebito del ciclo (projectCcCharges), contato solo se fattura entro fine mese.
+    const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
+    const ccEvents: CcEvent[] = [];
+
     if (daysRemaining > 0) {
       for (const rec of recurringActive) {
-        const occ = countOccurrences(
-          {
-            frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-            dayOfMonth: rec.dayOfMonth,
-            startDate: rec.startDate,
-            endDate: rec.endDate,
-            amount: rec.amount,
-          },
-          tomorrowStart,
-          monthEnd,
-        );
+        const rule = {
+          frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+          dayOfMonth: rec.dayOfMonth,
+          startDate: rec.startDate,
+          endDate: rec.endDate,
+          amount: rec.amount,
+        };
+        if (rec.accountId && ccIds.has(rec.accountId)) {
+          const amount = Number(rec.amount);
+          for (const date of listOccurrenceDates(rule, tomorrowStart, monthEnd)) {
+            ccEvents.push({ cardId: rec.accountId, date, signed: rec.type === 'INCOME' ? -amount : amount });
+          }
+          continue;
+        }
+        const occ = countOccurrences(rule, tomorrowStart, monthEnd);
         if (occ === 0) continue;
         const total = occ * Number(rec.amount);
         if (rec.type === 'INCOME') knownRemainingIncome += total;
@@ -225,15 +234,21 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     }
 
     for (const p of plannedRemaining) {
+      if (p.accountId && ccIds.has(p.accountId)) {
+        const amount = Number(p.amount);
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        continue;
+      }
       if (p.type === 'INCOME') knownRemainingIncome += Number(p.amount);
       else knownRemainingExpenses += Number(p.amount);
     }
 
-    // Debito CC del ciclo aperto con billing entro fine mese → impegno noto rimanente
-    // (currentBalance esclude le CC: lo re-introduciamo come uscita futura).
+    // Addebiti CC (debito del ciclo aperto + spese future su CC) con billing entro fine
+    // mese → impegno noto rimanente (currentBalance esclude le CC: li re-introduciamo).
     if (daysRemaining > 0) {
-      const ccDue = openCCObligations(accounts, tomorrowStart, monthEnd, now);
-      knownRemainingExpenses += ccDue.total;
+      for (const charge of projectCcCharges(accounts, ccEvents, tomorrowStart, monthEnd, now)) {
+        knownRemainingExpenses += charge.amount;
+      }
     }
 
     // ── Proiezione ──
