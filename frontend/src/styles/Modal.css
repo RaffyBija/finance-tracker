@@ -609,20 +609,18 @@ input[type="date"].form-input::-webkit-date-and-time-value {
     padding: 0;
   }
 
-  /* Il container occupa tutto il viewport. L'altezza segue `--modal-vvh`
-     (visualViewport, impostata da ModalBase): quando si apre la tastiera la
-     sheet si accorcia all'area visibile invece di finire dietro la tastiera.
-     `--modal-vvt` compensa lo SPOSTAMENTO del visual viewport su iOS (la
-     tastiera non solo accorcia il viewport, lo trasla): senza margin-top la
-     sheet resterebbe ancorata al layout viewport, con header fuori schermo
-     sopra e bottoni sotto la tastiera. Fallback 0/100% dove visualViewport
-     non è disponibile. */
+  /* Il container occupa TUTTO il viewport, sempre — anche con la tastiera
+     aperta (deciso 2026-07-07 su feedback da iPhone reale). La tastiera è UI
+     nativa in overlay: non restringiamo la sheet al visualViewport (provato
+     due volte con --modal-vvh/--modal-vvt: su Safari iOS reale produceva un
+     modal compresso e disallineato). iOS scrolla da sé il campo focalizzato
+     dentro `.modal-content`; su Android `interactive-widget=resizes-content`
+     restringe il layout viewport, quindi il 100% segue la tastiera. */
   .modal-container {
     max-width: 100%;
     width: 100%;
-    height: var(--modal-vvh, 100%);
-    max-height: var(--modal-vvh, 100%);
-    margin-top: var(--modal-vvt, 0px);
+    height: 100%;
+    max-height: 100%;
     border-radius: 0;
     animation: modal-slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
@@ -650,8 +648,13 @@ input[type="date"].form-input::-webkit-date-and-time-value {
     margin: -6px -6px -6px 0;
   }
 
+  /* scroll-padding: quando iOS/il browser scrolla il campo focalizzato nella
+     zona visibile sopra la tastiera, lascia un margine così il campo non
+     resta incollato al bordo (o coperto dalla barra bottoni sticky). */
   .modal-content {
     padding: 1rem 1.25rem 1.5rem;
+    scroll-padding-top: 1rem;
+    scroll-padding-bottom: 6rem;
   }
 
   .modal-form input,
@@ -740,8 +743,8 @@ input[type="date"].form-input::-webkit-date-and-time-value {
 }
 
 /* Landscape su telefono stretto (<541px di larghezza ma molto basso): la sheet
-   è già a tutto schermo via `--modal-vvh`; comprimiamo solo il chrome verticale
-   per lasciare spazio ai campi. */
+   è già a tutto schermo; comprimiamo solo il chrome verticale per lasciare
+   spazio ai campi. */
 @media (max-width: 540px) and (max-height: 480px) {
   .modal-header {
     padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 1.25rem 0.5rem;
