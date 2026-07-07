@@ -413,7 +413,7 @@ export default function RecurringFormModal({
         </div>
 
         <div className="form-actions">
-          <button type="button" onClick={guard.requestClose} className="btn btn-ghost btn-md">
+          <button type="button" onClick={guard.requestClose} className="btn btn-ghost btn-md btn-cancel">
             Annulla
           </button>
           {!editingItem && (

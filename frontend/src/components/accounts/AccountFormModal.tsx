@@ -313,7 +313,7 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
         )}
 
         <div className="form-actions">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-md">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-md btn-cancel">
             Annulla
           </button>
           <button type="submit" disabled={isPending} className="btn btn-primary btn-md">

@@ -425,7 +425,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
             </label>
 
             <div className="form-actions">
-              <button type="button" className="btn btn-ghost btn-md" onClick={onClose}>
+              <button type="button" className="btn btn-ghost btn-md btn-cancel" onClick={onClose}>
                 Annulla
               </button>
               <button

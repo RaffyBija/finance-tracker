@@ -93,7 +93,7 @@ export default function PayInstallmentsModal({
         )}
 
         <div className="form-actions">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-md">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-md btn-cancel">
             Annulla
           </button>
           <button

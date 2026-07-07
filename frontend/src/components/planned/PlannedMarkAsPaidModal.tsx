@@ -47,7 +47,7 @@ export default function PlannedMarkAsPaidModal({
         </div>
 
         <div className="form-actions">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-md" disabled={isPending}>
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-md btn-cancel" disabled={isPending}>
             Annulla
           </button>
           <button

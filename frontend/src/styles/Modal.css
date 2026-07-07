@@ -700,6 +700,21 @@ input[type="date"].form-input::-webkit-date-and-time-value {
     border-radius: 12px;
   }
 
+  /* Recupero altezza nel footer (i form mobile hanno poco spazio sopra la
+     tastiera): l'Annulla dei form sparisce — la X in header è già la via
+     d'uscita. La classe .btn-cancel è SOLO sui form: i ConfirmModal
+     (conferme distruttive) tengono il loro Annulla. */
+  .form-actions .btn-cancel {
+    display: none;
+  }
+
+  /* L'azione secondaria ("Salva e aggiungi un'altra") si fa compatta:
+     resta raggiungibile ma cede la scena alla CTA primaria. */
+  .form-actions .btn-secondary {
+    height: 2.25rem;
+    font-size: 0.875rem;
+  }
+
   .modal-footer {
     flex-direction: column-reverse;
     padding: 1rem 1.25rem;
