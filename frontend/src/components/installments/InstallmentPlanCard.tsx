@@ -1,55 +1,39 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, ChevronDown } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
-import { formatDateShort } from '../../utils/date';
-import { directionMeta } from './planMeta';
+import { directionMeta, rataStatus } from './planMeta';
 import InstallmentProgressBar from './InstallmentProgressBar';
-import InstallmentRataList from './InstallmentRataList';
 import type { InstallmentPlan } from '../../types';
 
 interface Props {
   plan: InstallmentPlan;
-  onEdit: (plan: InstallmentPlan) => void;
-  onDelete: (id: string) => void;
-  onPay: (plan: InstallmentPlan, plannedIds: string[]) => void;
+  onOpen: (plan: InstallmentPlan) => void;
 }
 
-export default function InstallmentPlanCard({ plan, onEdit, onDelete, onPay }: Props) {
+// Card-riassunto del piano: titolo, avanzamento e prossima rata.
+// La lista rate e le azioni vivono nel modal di dettaglio (click sulla card),
+// stesso pattern delle card Budget → BudgetDetailModal.
+export default function InstallmentPlanCard({ plan, onOpen }: Props) {
   const { formatCurrency } = useFormatCurrency();
   const meta = directionMeta(plan.direction);
   const { Icon } = meta;
-  const [expanded, setExpanded] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { totalCount, paidCount, paidAmount, remainingAmount, nextDueDate } = plan.progress;
-
-  // Dopo un pagamento la lista si ricarica: rimuovi dalla selezione le rate
-  // che non sono più "non pagate".
-  useEffect(() => {
-    const unpaid = new Set(plan.installments.filter((r) => !r.isPaid).map((r) => r.id));
-    setSelectedIds((prev) => {
-      const next = new Set([...prev].filter((id) => unpaid.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [plan.installments]);
-
-  const toggleSelect = (id: string) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-
-  const selectedSum = useMemo(
-    () =>
-      plan.installments
-        .filter((r) => selectedIds.has(r.id))
-        .reduce((s, r) => s + Number(r.amount), 0),
-    [plan.installments, selectedIds],
-  );
+  const { totalCount, paidCount, paidAmount, remainingAmount } = plan.progress;
+  const nextRata = plan.installments.find((r) => !r.isPaid);
+  const nextStatus = nextRata ? rataStatus(nextRata, meta.verbPast) : null;
 
   return (
-    <div className="card plan-card">
+    <div
+      className="card plan-card plan-card-clickable"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(plan)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(plan);
+        }
+      }}
+    >
       <div className="plan-card-header">
         <div className="plan-card-titlewrap">
           <span className={`plan-card-icon plan-card-icon--${meta.tone}`}>
@@ -62,26 +46,10 @@ export default function InstallmentPlanCard({ plan, onEdit, onDelete, onPay }: P
             </span>
           </div>
         </div>
-
-        <div className="plan-card-header-actions">
+        <div className="plan-card-header-right">
           {plan.status === 'COMPLETED' && <span className="badge badge-success">Completato</span>}
           {plan.status === 'CANCELLED' && <span className="badge badge-neutral">Annullato</span>}
-          <button
-            type="button"
-            className="btn-icon-neutral"
-            onClick={() => onEdit(plan)}
-            aria-label="Modifica piano"
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            type="button"
-            className="btn-icon-danger"
-            onClick={() => onDelete(plan.id)}
-            aria-label="Elimina piano"
-          >
-            <Trash2 size={16} />
-          </button>
+          <ChevronRight size={18} className="plan-card-chevron" aria-hidden="true" />
         </div>
       </div>
 
@@ -105,47 +73,18 @@ export default function InstallmentPlanCard({ plan, onEdit, onDelete, onPay }: P
           </span>
           <span className="plan-card-stat-value">{formatCurrency(remainingAmount)}</span>
         </div>
-        {nextDueDate && (
+        {nextRata && nextStatus && (
           <div className="plan-card-stat">
-            <span className="plan-card-stat-label">Prossima scadenza</span>
-            <span className="plan-card-stat-value">{formatDateShort(nextDueDate)}</span>
+            <span className="plan-card-stat-label">
+              {plan.direction === 'CREDIT' ? 'Prossimo incasso' : 'Prossima rata'}
+            </span>
+            <span className="plan-card-stat-value plan-card-next">
+              {formatCurrency(Number(nextRata.amount))}
+              <span className={`plan-rate-badge ${nextStatus.cls}`}>{nextStatus.text}</span>
+            </span>
           </div>
         )}
-        <button
-          type="button"
-          className={`plan-card-expand${expanded ? ' is-open' : ''}`}
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          {expanded ? 'Nascondi rate' : 'Mostra rate'}
-          <ChevronDown size={15} />
-        </button>
       </div>
-
-      {expanded && (
-        <InstallmentRataList
-          installments={plan.installments}
-          direction={plan.direction}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onPayOne={(id) => onPay(plan, [id])}
-        />
-      )}
-
-      {selectedIds.size > 0 && (
-        <div className="plan-pay-bar">
-          <span className="plan-pay-bar-info">
-            {selectedIds.size} {selectedIds.size === 1 ? 'rata' : 'rate'} · {formatCurrency(selectedSum)}
-          </span>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => onPay(plan, [...selectedIds])}
-          >
-            {meta.verb} selezionate
-          </button>
-        </div>
-      )}
     </div>
   );
 }

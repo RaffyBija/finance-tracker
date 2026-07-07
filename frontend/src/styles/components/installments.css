@@ -59,11 +59,24 @@
   .plan-card-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── Card piano (estende .card) ── */
+/* ── Card piano (estende .card) ──
+   Card-riassunto cliccabile: la lista rate vive nel modal di dettaglio. */
 .plan-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 20px;
+}
+.plan-card-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.plan-card-clickable:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+.plan-card-clickable:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
 }
 .plan-card-header {
   display: flex;
@@ -92,12 +105,13 @@
   overflow-wrap: anywhere;
 }
 .plan-card-sub { font-size: 0.8rem; color: #78716c; }
-.plan-card-header-actions {
+.plan-card-header-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
 }
+.plan-card-chevron { color: #a8a29e; }
 
 /* ── Barra progresso ── */
 .plan-card-progressrow { display: flex; align-items: center; gap: 10px; }
@@ -144,17 +158,27 @@
   color: #1c1917;
   font-variant-numeric: tabular-nums;
 }
-.plan-card-expand {
-  margin-left: auto;
+.plan-card-next {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #0d9488;
+  gap: 6px;
 }
-.plan-card-expand svg { transition: transform 0.2s; }
-.plan-card-expand.is-open svg { transform: rotate(180deg); }
+
+/* ── Modal dettaglio piano ── */
+.plan-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.plan-detail-sub { font-size: 0.875rem; color: #78716c; }
+.plan-detail-notes {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #57534e;
+  background: #fafaf9;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
 
 /* ── Lista rate ── */
 .plan-rate-list {
@@ -300,28 +324,38 @@
 .rate-edit-remove { flex: 0 0 auto; }
 .rate-editor-add { margin-top: 10px; }
 
-/* ── Generatore rate (solo in creazione) ── */
+/* ── Generatore rate (solo in creazione) ──
+   Disclosure chiusa di default: da chiuso è una riga quieta, aperto mostra
+   i campi. Evita due superfici di inserimento identiche impilate. */
 .rate-generator {
   margin-bottom: 12px;
-  padding: 12px;
   border-radius: 10px;
   background: #fafaf9;
   border: 1px dashed #d6d3d1;
 }
-.rate-generator-title {
-  display: inline-flex;
+.rate-generator-toggle {
+  display: flex;
+  width: 100%;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
   font-size: 0.8rem;
   font-weight: 700;
   color: #57534e;
+  text-align: left;
 }
+.rate-generator-chevron {
+  margin-left: auto;
+  color: #a8a29e;
+  transition: transform 0.2s;
+}
+.rate-generator.is-open .rate-generator-chevron { transform: rotate(180deg); }
 .rate-generator-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   align-items: end;
+  padding: 0 12px;
 }
 .rate-generator-fields .form-group { margin: 0; }
 @media (min-width: 541px) {
@@ -329,6 +363,7 @@
 }
 .rate-generator-hint {
   margin-top: 8px;
+  padding: 0 12px 12px;
   font-size: 0.75rem;
   line-height: 1.45;
   color: #a8a29e;
@@ -344,13 +379,18 @@
 
 .dark .plan-card-title { color: #f5f5f4; }
 .dark .plan-card-sub { color: #a8a29e; }
+.dark .plan-card-clickable:hover { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4); }
+.dark .plan-card-clickable:focus-visible { outline-color: #2dd4bf; }
+.dark .plan-card-chevron { color: #78716c; }
+
+.dark .plan-detail-sub { color: #a8a29e; }
+.dark .plan-detail-notes { background: #1c1917; color: #d6d3d1; }
 
 .dark .plan-progress { background: #44403c; }
 .dark .plan-card-progresslabel { color: #a8a29e; }
 
 .dark .plan-card-stat-label { color: #78716c; }
 .dark .plan-card-stat-value { color: #f5f5f4; }
-.dark .plan-card-expand { color: #2dd4bf; }
 
 .dark .plan-rate-list { border-top-color: #44403c; }
 .dark .plan-rate-row { border-bottom-color: #3a3532; }
@@ -366,7 +406,7 @@
 .dark .plan-pay-bar-info { color: #5eead4; }
 
 .dark .rate-generator { background: #1c1917; border-color: #44403c; }
-.dark .rate-generator-title { color: #d6d3d1; }
+.dark .rate-generator-toggle { color: #d6d3d1; }
 .dark .rate-generator-hint { color: #78716c; }
 
 .dark .pay-modal-intro { color: #a8a29e; }

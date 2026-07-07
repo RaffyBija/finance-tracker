@@ -4,7 +4,7 @@ import AccountSelector from '../accounts/AccountSelector';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { formatDayMonth } from '../../utils/date';
-import { directionMeta } from './planMeta';
+import { directionMeta, rataShortLabel } from './planMeta';
 import type { InstallmentPlan, InstallmentRata } from '../../types';
 
 interface Props {
@@ -44,8 +44,6 @@ export default function PayInstallmentsModal({
   const meta = directionMeta(plan.direction);
   const total = rate.reduce((s, r) => s + Number(r.amount), 0);
   const isCredit = plan.direction === 'CREDIT';
-  const shortLabel = (r: InstallmentRata) =>
-    r.counterparty?.trim() || r.description.split(' — ').slice(1).join(' — ') || r.description;
 
   return (
     <BaseModal
@@ -63,7 +61,7 @@ export default function PayInstallmentsModal({
         <ul className="pay-modal-list">
           {rate.map((r) => (
             <li key={r.id} className="pay-modal-item">
-              <span className="pay-modal-item-label">{shortLabel(r)}</span>
+              <span className="pay-modal-item-label">{rataShortLabel(r)}</span>
               <span className="pay-modal-item-date">{formatDayMonth(r.plannedDate)}</span>
               <span className="pay-modal-item-amount">{formatCurrency(Number(r.amount))}</span>
             </li>

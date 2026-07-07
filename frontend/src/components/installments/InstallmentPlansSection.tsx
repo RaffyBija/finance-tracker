@@ -11,6 +11,7 @@ import { SkeletonList } from '../shared/Skeleton';
 import EmptyState from '../shared/EmptyState';
 import ConfirmModal from '../shared/ConfirmModal';
 import InstallmentPlanCard from './InstallmentPlanCard';
+import InstallmentPlanDetailModal from './InstallmentPlanDetailModal';
 import InstallmentPlanFormModal from './InstallmentPlanFormModal';
 import PayInstallmentsModal from './PayInstallmentsModal';
 import type { InstallmentPlan } from '../../types';
@@ -28,8 +29,30 @@ export default function InstallmentPlansSection() {
     useFormModal<InstallmentPlan>();
   const toast = useToast();
 
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
+
+  // Il dettaglio legge sempre il piano fresco dalla query (non uno snapshot),
+  // così dopo un refetch la lista rate resta aggiornata.
+  const detailPlan = plans.find((p) => p.id === detailId) ?? null;
+
+  // Le azioni dal dettaglio chiudono il dettaglio e aprono il modal dedicato
+  // (stesso flusso di BudgetDetailModal: mai due modali impilati).
+  const handleEditFromDetail = (plan: InstallmentPlan) => {
+    setDetailId(null);
+    openEditModal(plan);
+  };
+
+  const handleDeleteFromDetail = (id: string) => {
+    setDetailId(null);
+    setDeletingId(id);
+  };
+
+  const handlePayFromDetail = (plan: InstallmentPlan, ids: string[]) => {
+    setDetailId(null);
+    setPayTarget({ plan, ids });
+  };
 
   const handleConfirmDelete = async () => {
     if (!deletingId) return;
@@ -72,13 +95,7 @@ export default function InstallmentPlansSection() {
       ) : (
         <div className="plan-card-grid">
           {plans.map((plan) => (
-            <InstallmentPlanCard
-              key={plan.id}
-              plan={plan}
-              onEdit={openEditModal}
-              onDelete={setDeletingId}
-              onPay={(p, ids) => setPayTarget({ plan: p, ids })}
-            />
+            <InstallmentPlanCard key={plan.id} plan={plan} onOpen={(p) => setDetailId(p.id)} />
           ))}
         </div>
       )}
@@ -89,6 +106,15 @@ export default function InstallmentPlansSection() {
           <span className="fab-label">Nuovo piano</span>
         </button>
       )}
+
+      <InstallmentPlanDetailModal
+        isOpen={!!detailPlan}
+        plan={detailPlan}
+        onClose={() => setDetailId(null)}
+        onEdit={handleEditFromDetail}
+        onDelete={handleDeleteFromDetail}
+        onPay={handlePayFromDetail}
+      />
 
       <InstallmentPlanFormModal
         isOpen={isOpen}

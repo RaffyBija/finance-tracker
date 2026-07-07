@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Wand2 } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Wand2 } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import AccountSelector from '../accounts/AccountSelector';
@@ -69,8 +69,11 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
   const [accountId, setAccountId] = useState('');
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<RateRow[]>([blankRow()]);
-  // Generatore rate (solo creazione): totale da dividere, numero rate, prima scadenza.
+  // Generatore rate (solo creazione): totale da dividere, numero rate, prima
+  // scadenza. Chiuso di default: si apre solo se serve, per non affollare il
+  // form con due superfici di inserimento identiche.
   const [gen, setGen] = useState({ total: 0, count: '', firstDate: today() });
+  const [genOpen, setGenOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = !!editingItem;
@@ -82,6 +85,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
     if (!isOpen) return;
     setError(null);
     setGen({ total: 0, count: '', firstDate: today() });
+    setGenOpen(false);
     if (editingItem) {
       setDirection(editingItem.direction);
       setTitle(editingItem.title);
@@ -139,6 +143,9 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
         counterparty: '',
       })),
     );
+    // Il pannello ha fatto il suo lavoro: si richiude e lascia la scena
+    // alle rate generate, pronte da ritoccare.
+    setGenOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -281,56 +288,65 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
           )}
 
           {!isEdit && (
-            <div className="rate-generator">
-              <span className="rate-generator-title">
+            <div className={`rate-generator${genOpen ? ' is-open' : ''}`}>
+              <button
+                type="button"
+                className="rate-generator-toggle"
+                aria-expanded={genOpen}
+                onClick={() => setGenOpen((v) => !v)}
+              >
                 <Wand2 size={14} /> Genera le rate da un totale
-              </span>
-              <div className="rate-generator-fields">
-                <InputDecimal
-                  formData={gen}
-                  field="total"
-                  setFormData={setGen}
-                  label="Importo totale"
-                  placeholder="0,00"
-                />
-                <div className="form-group">
-                  <label className="form-label" htmlFor="gen-count">Numero rate</label>
-                  <input
-                    id="gen-count"
-                    type="number"
-                    min={GEN_MIN_COUNT}
-                    max={GEN_MAX_COUNT}
-                    step={1}
-                    inputMode="numeric"
-                    value={gen.count}
-                    onChange={(e) => setGen((g) => ({ ...g, count: e.target.value }))}
-                    placeholder="Es. 5"
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="gen-first">Prima scadenza</label>
-                  <input
-                    id="gen-first"
-                    type="date"
-                    value={gen.firstDate}
-                    onChange={(e) => setGen((g) => ({ ...g, firstDate: e.target.value }))}
-                    className="form-input"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-md"
-                  onClick={generateRows}
-                  disabled={!canGenerate}
-                >
-                  Genera
-                </button>
-              </div>
-              <p className="rate-generator-hint">
-                Rate mensili di pari importo, l'ultima assorbe l'arrotondamento. Dopo puoi
-                ritoccare importi e date; generare sostituisce le rate qui sotto.
-              </p>
+                <ChevronDown size={15} className="rate-generator-chevron" />
+              </button>
+              {genOpen && (
+                <>
+                  <div className="rate-generator-fields">
+                    <InputDecimal
+                      formData={gen}
+                      field="total"
+                      setFormData={setGen}
+                      label="Importo totale"
+                      placeholder="0,00"
+                    />
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="gen-count">Numero rate</label>
+                      <input
+                        id="gen-count"
+                        type="number"
+                        min={GEN_MIN_COUNT}
+                        max={GEN_MAX_COUNT}
+                        step={1}
+                        inputMode="numeric"
+                        value={gen.count}
+                        onChange={(e) => setGen((g) => ({ ...g, count: e.target.value }))}
+                        placeholder="Es. 5"
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="gen-first">Prima scadenza</label>
+                      <input
+                        id="gen-first"
+                        type="date"
+                        value={gen.firstDate}
+                        onChange={(e) => setGen((g) => ({ ...g, firstDate: e.target.value }))}
+                        className="form-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-md"
+                      onClick={generateRows}
+                      disabled={!canGenerate}
+                    >
+                      Genera
+                    </button>
+                  </div>
+                  <p className="rate-generator-hint">
+                    Rate mensili di pari importo, poi ritoccabili. Generare sostituisce le rate qui sotto.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
