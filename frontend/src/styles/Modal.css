@@ -77,13 +77,20 @@
   }
 }
 
-/* ── Layout a due colonne per form su tablet/desktop ── */
+/* ── Layout a due colonne per form su tablet/desktop ──
+   `min-width: 0` sulle celle: senza, il min-content dei figli (in Safari i
+   campi data hanno larghezza intrinseca fissa) impedisce alle colonne 1fr di
+   restringersi e la riga sfonda il modal. */
 @media (min-width: 541px) {
   .modal-form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     align-items: start;
+  }
+
+  .modal-form-row > * {
+    min-width: 0;
   }
 }
 
@@ -189,6 +196,22 @@
   border-color: #0d9488;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
   background-color: #fff;
+}
+
+/* ── Campi data: normalizzazione WebKit/iOS ──
+   Safari dà ai date input una larghezza intrinseca fissa che ignora flex/grid
+   (il campo "occupa più del dovuto" e sfonda le colonne) e su iOS centra il
+   valore. `min-width: 0` li rende restringibili come gli altri input;
+   il pseudo-elemento riallinea il testo a sinistra come ogni altro campo. */
+.modal-form input[type="date"],
+input[type="date"].form-input {
+  min-width: 0;
+}
+
+.modal-form input[type="date"]::-webkit-date-and-time-value,
+input[type="date"].form-input::-webkit-date-and-time-value {
+  text-align: start;
+  margin: 0;
 }
 
 /* Le textarea non hanno l'altezza fissa degli input: crescono con le righe e si
@@ -589,12 +612,17 @@
   /* Il container occupa tutto il viewport. L'altezza segue `--modal-vvh`
      (visualViewport, impostata da ModalBase): quando si apre la tastiera la
      sheet si accorcia all'area visibile invece di finire dietro la tastiera.
-     Fallback a 100% dove visualViewport non è disponibile. */
+     `--modal-vvt` compensa lo SPOSTAMENTO del visual viewport su iOS (la
+     tastiera non solo accorcia il viewport, lo trasla): senza margin-top la
+     sheet resterebbe ancorata al layout viewport, con header fuori schermo
+     sopra e bottoni sotto la tastiera. Fallback 0/100% dove visualViewport
+     non è disponibile. */
   .modal-container {
     max-width: 100%;
     width: 100%;
     height: var(--modal-vvh, 100%);
     max-height: var(--modal-vvh, 100%);
+    margin-top: var(--modal-vvt, 0px);
     border-radius: 0;
     animation: modal-slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }

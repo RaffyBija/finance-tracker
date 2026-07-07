@@ -318,9 +318,9 @@
   gap: 8px;
   align-items: center;
 }
-.rate-edit-row .form-group { margin: 0; flex: 1 1 120px; }
-.rate-edit-row > input[type="date"] { flex: 1 1 130px; }
-.rate-edit-row > input[type="text"] { flex: 1 1 120px; }
+.rate-edit-row .form-group { margin: 0; flex: 1 1 120px; min-width: 0; }
+.rate-edit-row > input[type="date"] { flex: 1 1 130px; min-width: 0; }
+.rate-edit-row > input[type="text"] { flex: 1 1 120px; min-width: 0; }
 .rate-edit-remove { flex: 0 0 auto; }
 .rate-editor-add { margin-top: 10px; }
 

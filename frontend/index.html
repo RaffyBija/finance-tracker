@@ -6,7 +6,11 @@
       (function(){var t=localStorage.getItem('theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||((t==='system'||t===null)&&p)){document.documentElement.classList.add('dark');}})();
     </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: attiva env(safe-area-inset-*) su iOS (notch/home
+         indicator), già usati da Modal.css e navbar. interactive-widget: su
+         Android Chrome la tastiera restringe il layout viewport (come fa già
+         --modal-vvh su iOS); Safari lo ignora senza effetti collaterali. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Finance Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

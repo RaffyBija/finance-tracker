@@ -16,11 +16,33 @@ interface BaseModalProps {
 // bloccato su `hidden`.
 let modalOpenCount = 0;
 let savedBodyOverflow = '';
+let savedScrollY = 0;
+let fixedLockApplied = false;
+// Conteggio dei modali che tracciano il visualViewport (stesso principio di
+// modalOpenCount): le CSS var --modal-vvh/--modal-vvt vengono rimosse solo
+// quando si chiude l'ULTIMO modale, non da ogni cleanup.
+let viewportTrackers = 0;
 
 function lockBodyScroll() {
   if (modalOpenCount === 0) {
     savedBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    // iOS Safari ignora `overflow: hidden` sul body: la pagina dietro al modal
+    // continua a scrollare e, all'apertura della tastiera, Safari trascina il
+    // layout viewport. L'unico lock affidabile su WebKit touch è il body
+    // `position: fixed` con compensazione dello scroll (ripristinato in unlock).
+    // Solo su puntatore coarse: sul desktop cambierebbe la scrollbar per nulla.
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      savedScrollY = window.scrollY;
+      const b = document.body.style;
+      b.position = 'fixed';
+      b.top = `-${savedScrollY}px`;
+      b.left = '0';
+      b.right = '0';
+      b.width = '100%';
+      fixedLockApplied = true;
+    }
   }
   modalOpenCount += 1;
 }
@@ -29,6 +51,16 @@ function unlockBodyScroll() {
   modalOpenCount = Math.max(0, modalOpenCount - 1);
   if (modalOpenCount === 0) {
     document.body.style.overflow = savedBodyOverflow;
+    if (fixedLockApplied) {
+      const b = document.body.style;
+      b.position = '';
+      b.top = '';
+      b.left = '';
+      b.right = '';
+      b.width = '';
+      fixedLockApplied = false;
+      window.scrollTo(0, savedScrollY);
+    }
   }
 }
 
@@ -69,25 +101,38 @@ export default function BaseModal({
 
   // Tastiera mobile: `dvh`/`100%` non si accorciano quando si apre la tastiera
   // su iOS, così la sheet a tutto schermo finirebbe dietro la tastiera. Tracciamo
-  // l'altezza reale visibile (`visualViewport.height`) in una CSS var che la
-  // Modal.css usa per l'altezza del container su mobile: la sheet si adatta
-  // all'area visibile e i bottoni sticky restano raggiungibili sopra la tastiera.
+  // l'area reale visibile del visualViewport in due CSS var usate da Modal.css:
+  // `--modal-vvh` (altezza: la sheet si accorcia sopra la tastiera) e
+  // `--modal-vvt` (offsetTop: su iOS la tastiera non solo accorcia il viewport,
+  // lo SPOSTA — senza compensare l'offset la sheet resta ancorata al layout
+  // viewport e finisce con l'header fuori schermo e i bottoni dietro la tastiera).
+  // Le var sono globali (:root) e condivise dai modali impilati (es. ConfirmModal
+  // sopra un form): come per lo scroll-lock, il conteggio fa sì che solo l'ultimo
+  // modale a chiudersi le rimuova — altrimenti la sheet sottostante perderebbe
+  // la compensazione tastiera proprio mentre è ancora aperta.
   useEffect(() => {
     if (!isOpen) return;
     const vv = window.visualViewport;
     if (!vv) return;
 
     const sync = () => {
-      document.documentElement.style.setProperty('--modal-vvh', `${vv.height}px`);
+      const s = document.documentElement.style;
+      s.setProperty('--modal-vvh', `${vv.height}px`);
+      s.setProperty('--modal-vvt', `${vv.offsetTop}px`);
     };
     sync();
+    viewportTrackers += 1;
     vv.addEventListener('resize', sync);
     vv.addEventListener('scroll', sync);
 
     return () => {
       vv.removeEventListener('resize', sync);
       vv.removeEventListener('scroll', sync);
-      document.documentElement.style.removeProperty('--modal-vvh');
+      viewportTrackers = Math.max(0, viewportTrackers - 1);
+      if (viewportTrackers === 0) {
+        document.documentElement.style.removeProperty('--modal-vvh');
+        document.documentElement.style.removeProperty('--modal-vvt');
+      }
     };
   }, [isOpen]);
 
