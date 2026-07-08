@@ -270,7 +270,7 @@ export const dashboardAPI = {
   return response.data;
 },
 
-  getProjectionSeries: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string; historyDays?: number }) => {
+  getProjectionSeries: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string; historyDays?: number; includeSuspended?: boolean }) => {
   const response = await api.get<ProjectionSeries>('/dashboard/projection-series', { params });
   return response.data;
 },

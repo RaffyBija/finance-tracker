@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, TrendingUp, TrendingDown,
-  Repeat, CalendarClock, CreditCard, SlidersHorizontal, X,
+  Repeat, CalendarClock, CreditCard, SlidersHorizontal, X, HelpCircle,
 } from 'lucide-react';
 import { useProjectionSeries } from '../hooks/useDashboard';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
@@ -28,12 +28,14 @@ const SOURCE_ICON = {
   recurring: Repeat,
   planned: CalendarClock,
   cc: CreditCard,
+  sospeso: HelpCircle,
 } as const;
 
 const SOURCE_LABEL = {
   recurring: 'Ricorrente',
   planned: 'Pianificata',
   cc: 'Carta di credito',
+  sospeso: 'Sospeso',
 } as const;
 
 export default function ProjectionPage() {
@@ -48,13 +50,17 @@ export default function ProjectionPage() {
   // Scenario "what-if": variazione di liquidità simulata oggi.
   const [adjust, setAdjust] = useState(0);
 
+  // Sospesi (senza data): opt-in, di default esclusi dalla proiezione (stima
+  // approssimata, contati come se accadessero oggi — mai mescolati silenziosamente).
+  const [includeSuspended, setIncludeSuspended] = useState(false);
+
   // La proiezione parte da oggi: niente date di inizio nel passato (baseline errata).
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const queryParams =
     mode === 'months'
-      ? { months: selectedMonths, historyDays: historyForMonths(selectedMonths) }
-      : { startDate: customRange.startDate, endDate: customRange.endDate, historyDays: 30 };
+      ? { months: selectedMonths, historyDays: historyForMonths(selectedMonths), includeSuspended }
+      : { startDate: customRange.startDate, endDate: customRange.endDate, historyDays: 30, includeSuspended };
 
   const isCustomValid = mode === 'custom' && !!customRange.startDate && !!customRange.endDate;
   const enabled = mode === 'months' || isCustomValid;
@@ -154,6 +160,18 @@ export default function ProjectionPage() {
           )}
         </div>
 
+        <label className="form-checkbox-row">
+          <input
+            type="checkbox"
+            checked={includeSuspended}
+            onChange={(e) => setIncludeSuspended(e.target.checked)}
+          />
+          Includi sospesi (stima)
+        </label>
+        {includeSuspended && (
+          <p className="form-help">Nessuna data reale: contati come se accadessero oggi.</p>
+        )}
+
         <div className={`projection-custom-wrapper${showCustom ? ' is-open' : ''}`}>
           <div className="projection-custom-panel">
             <div className="projection-custom-row">
@@ -244,6 +262,7 @@ export default function ProjectionPage() {
               </span>
               <span className="projection-meta-item is-muted">
                 {data.recurringCount} fisse · {data.plannedCount} pianificate
+                {data.suspendedCount > 0 && ` · ${data.suspendedCount} sospesi`}
               </span>
             </div>
           </>

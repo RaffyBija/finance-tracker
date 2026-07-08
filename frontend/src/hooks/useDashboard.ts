@@ -19,6 +19,7 @@ interface ProjectionSeriesParams {
   endDate?: string;
   accountId?: string;
   historyDays?: number;
+  includeSuspended?: boolean;
 }
 
 // staleTime: 0 + refetchOnMount: true → refetch garantito ad ogni mount (override del default globale false)

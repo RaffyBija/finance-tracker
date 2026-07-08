@@ -95,7 +95,7 @@ export interface CreatePlannedTransactionDTO {
   type: 'INCOME' | 'EXPENSE';
   description: string;
   categoryId?: string;
-  plannedDate: Date;
+  plannedDate?: string;   // assente/vuota = Sospeso (nessuna data nota)
   notes?: string;
 }
 

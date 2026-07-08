@@ -12,8 +12,9 @@ function DueItem({ item, onRegister, isPending }: {
   isPending: boolean;
 }) {
   const { formatSignedCurrency } = useFormatCurrency();
-  const isOverdue = new Date(item.plannedDate) < new Date(new Date().setHours(0, 0, 0, 0));
-  const dateLabel = formatDayMonth(item.plannedDate);
+  // Sezione alimentata da getPlannedDue: filtra per data ≤ oggi, mai null qui.
+  const isOverdue = new Date(item.plannedDate!) < new Date(new Date().setHours(0, 0, 0, 0));
+  const dateLabel = formatDayMonth(item.plannedDate!);
 
   return (
     <div className="pending-section-item">
@@ -58,7 +59,7 @@ export default function PlannedDueSection() {
 
   const handleRegister = async (id: string) => {
     try {
-      await markAsPaidMutation.mutateAsync(id);
+      await markAsPaidMutation.mutateAsync({ id });
       toast.success('Transazione registrata con successo');
     } catch {
       toast.error('Errore nella registrazione');

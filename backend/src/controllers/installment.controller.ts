@@ -25,7 +25,7 @@ const planInclude = {
 // Progresso di un piano calcolato dalle sue rate: "X su Y", incassato/pagato,
 // residuo e prossima scadenza (prima rata non ancora saldata).
 function computePlanProgress(
-  installments: Array<{ amount: unknown; isPaid: boolean; plannedDate: Date }>,
+  installments: Array<{ amount: unknown; isPaid: boolean; plannedDate: Date | null }>,
 ) {
   let paidCount = 0;
   let paidAmount = 0;
@@ -39,7 +39,9 @@ function computePlanProgress(
       paidAmount += amt;
     } else {
       remainingAmount += amt;
-      if (!nextDueDate || r.plannedDate < nextDueDate) nextDueDate = r.plannedDate;
+      // Le rate hanno sempre una data in pratica (generate dal piano); il campo è
+      // nullable solo per i Sospesi (voci indipendenti, non rate di un piano).
+      if (r.plannedDate && (!nextDueDate || r.plannedDate < nextDueDate)) nextDueDate = r.plannedDate;
     }
   }
 
@@ -52,7 +54,7 @@ function computePlanProgress(
   };
 }
 
-type PlanWithRate = { installments: Array<{ amount: unknown; isPaid: boolean; plannedDate: Date }> };
+type PlanWithRate = { installments: Array<{ amount: unknown; isPaid: boolean; plannedDate: Date | null }> };
 const withProgress = <T extends PlanWithRate>(plan: T) => ({
   ...plan,
   progress: computePlanProgress(plan.installments),

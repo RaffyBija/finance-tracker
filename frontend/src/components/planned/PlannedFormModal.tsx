@@ -24,6 +24,8 @@ interface PlannedFormModalProps {
   categories: Category[];
   onClose: () => void;
   onSuccess: () => void;
+  // Apri il form già in modalità "Sospeso" (usato dal tab Sospesi dello Scadenzario).
+  defaultNoDate?: boolean;
 }
 
 export default function PlannedFormModal({
@@ -32,6 +34,7 @@ export default function PlannedFormModal({
   categories,
   onClose,
   onSuccess,
+  defaultNoDate = false,
 }: PlannedFormModalProps) {
   const createMutation = useCreatePlanned();
   const updateMutation = useUpdatePlanned();
@@ -50,6 +53,10 @@ export default function PlannedFormModal({
     accountId: defaultAccount?.id ?? '',
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Sospeso = pianificata senza data (importo noto, data ignota). Il checkbox è
+  // disabilitato in modifica se l'item ha già una data: niente "de-promozione",
+  // solo Sospeso→Pianificata (aggiungendo la data), mai il contrario in questo form.
+  const [noDate, setNoDate] = useState(defaultNoDate);
   const guard = useUnsavedGuard(formData, onClose);
 
   // Form vuoto. `carry` consente di conservare alcuni campi tra un salvataggio e
@@ -75,11 +82,12 @@ export default function PlannedFormModal({
       type: editingItem.type,
       description: editingItem.description,
       categoryId: editingItem.categoryId || '',
-      plannedDate: editingItem.plannedDate.split('T')[0],
+      plannedDate: editingItem.plannedDate?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       notes: editingItem.notes || '',
       accountId: editingItem.accountId ?? defaultAccount?.id ?? '',
     } : blankPlanned();
     setFormData(init);
+    setNoDate(editingItem ? editingItem.plannedDate == null : defaultNoDate);
     guard.capture(init);
   }, [editingItem, isOpen]);
 
@@ -98,7 +106,7 @@ export default function PlannedFormModal({
     return null;
   },
   plannedDate: (value) => {
-    if (!value) return 'La data pianificata è obbligatoria';
+    if (!noDate && !value) return 'La data pianificata è obbligatoria (o spunta "Sospeso")';
     return null;
   },
   notes: (value) => {
@@ -116,12 +124,17 @@ export default function PlannedFormModal({
   const persist = async (): Promise<boolean> => {
     setSubmitError(null);
     if (!validate(formData)) return false;
+    // Sospeso: nessuna data inviata (il backend la salva come null).
+    const payload: CreatePlannedTransactionDTO = {
+      ...formData,
+      plannedDate: noDate ? undefined : formData.plannedDate,
+    };
     try {
       if (editingItem) {
-        await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
+        await updateMutation.mutateAsync({ id: editingItem.id, data: payload });
         toast.success('Spesa pianificata aggiornata con successo');
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
         toast.success('Spesa pianificata creata con successo');
       }
       return true;
@@ -196,17 +209,33 @@ export default function PlannedFormModal({
             <FieldError id="pl-amount-err" message={errors.amount} />
           </div>
           <div className="form-group">
-            <label className="form-label form-label-required">Data pianificata</label>
-            <input type="date" value={formData.plannedDate}
-              onChange={(e) => {
-                setFormData({ ...formData, plannedDate: e.target.value })
-                clearError('plannedDate');
-              }}
-              aria-invalid={!!errors.plannedDate || undefined}
-              aria-describedby={errors.plannedDate ? 'pl-date-err' : undefined}
-              className="form-input" />
-            <FieldError id="pl-date-err" message={errors.plannedDate} />
-            <p className="form-help">Diventerà una transazione reale in questa data.</p>
+            <label className={`form-label${noDate ? '' : ' form-label-required'}`}>Data pianificata</label>
+            {!noDate && (
+              <>
+                <input type="date" value={formData.plannedDate}
+                  onChange={(e) => {
+                    setFormData({ ...formData, plannedDate: e.target.value })
+                    clearError('plannedDate');
+                  }}
+                  aria-invalid={!!errors.plannedDate || undefined}
+                  aria-describedby={errors.plannedDate ? 'pl-date-err' : undefined}
+                  className="form-input" />
+                <FieldError id="pl-date-err" message={errors.plannedDate} />
+              </>
+            )}
+            <label className="form-checkbox-row" title={editingItem?.plannedDate != null ? 'Già pianificata con una data: rimuovi la spunta non è supportato' : undefined}>
+              <input type="checkbox" checked={noDate}
+                disabled={editingItem?.plannedDate != null}
+                onChange={(e) => {
+                  setNoDate(e.target.checked);
+                  if (e.target.checked) clearError('plannedDate');
+                }}
+              />
+              Non conosco ancora la data (Sospeso)
+            </label>
+            <p className="form-help">
+              {noDate ? 'Comparirà tra i Sospesi finché non gli assegni una data.' : 'Diventerà una transazione reale in questa data.'}
+            </p>
           </div>
         </div>
 

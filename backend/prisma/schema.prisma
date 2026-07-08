@@ -203,7 +203,7 @@ model PlannedTransaction {
   type        TransactionType
   description String
   categoryId  String?
-  plannedDate DateTime
+  plannedDate DateTime?       // null = "Sospeso": importo noto, data ignota
   isPaid      Boolean         @default(false)
   notes       String?
   userId      String

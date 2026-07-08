@@ -41,6 +41,16 @@ export function usePlannedTransactions() {
   };
 }
 
+// Sospesi: pianificate senza data (importo noto, data ignota). Lista separata
+// dalle Pianificate normali (mutuamente esclusive lato backend).
+export function useSuspendedTransactions() {
+  return useQuery({
+    queryKey: ['planned', 'suspended'],
+    queryFn: () => plannedApi.getAll({ suspendedOnly: true }),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
 const invalidatePlanned = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {
   keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
   broadcastInvalidation(keys);
@@ -57,7 +67,8 @@ export function useDeletePlanned() {
 export function useMarkAsPaid() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => plannedApi.markAsPaid(id),
+    // date: obbligatoria solo per i Sospesi (nessuna plannedDate da cui derivarla).
+    mutationFn: ({ id, date }: { id: string; date?: string }) => plannedApi.markAsPaid(id, date),
     onSuccess: () => invalidatePlanned(queryClient, PLANNED_PAID_KEYS),
   });
 }

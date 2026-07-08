@@ -97,7 +97,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
         .map((r) => ({
           key: rowKeySeq++,
           amount: Number(r.amount),
-          plannedDate: r.plannedDate.split('T')[0],
+          plannedDate: r.plannedDate!.split('T')[0], // le rate hanno sempre una data
           counterparty: r.counterparty ?? '',
         }));
       setRows(unpaid.length > 0 ? unpaid : [blankRow()]);
