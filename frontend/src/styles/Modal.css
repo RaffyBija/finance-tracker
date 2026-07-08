@@ -173,6 +173,15 @@
   gap: 0;
 }
 
+/* Riga checkbox (es. "Sospeso"): è anch'essa una <label>, quindi eredita
+   flex-column da `.modal-form label` sopra e finisce impilata/centrata invece
+   che in riga. Stessa tecnica della regola precedente: specificità ≥. */
+.modal-form label.form-checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .modal-form input,
 .modal-form select,
 .form-input,
