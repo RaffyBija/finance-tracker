@@ -2,7 +2,7 @@ import apiClient from './client';
 import type { PlannedTransaction, CreatePlannedTransactionDTO } from '../types/index';
 
 export const plannedApi = {
-  getAll: async (params?: { unpaidOnly?: boolean; upcoming?: boolean }): Promise<PlannedTransaction[]> => {
+  getAll: async (params?: { unpaidOnly?: boolean; upcoming?: boolean; suspendedOnly?: boolean }): Promise<PlannedTransaction[]> => {
     const response = await apiClient.get<PlannedTransaction[]>('/planned', { params });
     return response.data;
   },
@@ -31,8 +31,8 @@ export const plannedApi = {
     return response.data;
   },
 
-  markAsPaid: async (id: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
-    const response = await apiClient.patch(`/planned/${id}/mark-paid`);
+  markAsPaid: async (id: string, date?: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
+    const response = await apiClient.patch(`/planned/${id}/mark-paid`, date ? { date } : undefined);
     return response.data;
   },
 };

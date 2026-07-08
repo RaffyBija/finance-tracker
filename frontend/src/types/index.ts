@@ -179,7 +179,7 @@ export interface ProjectionEvent {
   label: string;
   amount: number;
   type: TransactionType;
-  source: 'recurring' | 'planned' | 'cc';
+  source: 'recurring' | 'planned' | 'cc' | 'sospeso';
 }
 
 export interface ProjectionSeries {
@@ -189,6 +189,7 @@ export interface ProjectionSeries {
   projectedBalance: number;
   recurringCount: number;
   plannedCount: number;
+  suspendedCount: number;
   points: ProjectionPoint[];
   events: ProjectionEvent[];
 }
@@ -385,7 +386,7 @@ export interface PlannedTransaction {
   description: string;
   categoryId?: string;
   accountId?: string | null;
-  plannedDate: string;
+  plannedDate: string | null;   // null = "Sospeso": importo noto, data ignota
   isPaid: boolean;
   notes?: string;
   userId: string;
@@ -404,7 +405,7 @@ export interface CreatePlannedTransactionDTO {
   type: TransactionType;
   description: string;
   categoryId?: string;
-  plannedDate: string;
+  plannedDate?: string;   // assente = Sospeso
   notes?: string;
   accountId?: string;
 }

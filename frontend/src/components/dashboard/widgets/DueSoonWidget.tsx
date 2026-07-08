@@ -39,7 +39,7 @@ export default function DueSoonWidget() {
     const planned = plannedDueData.map<DueRow>((p) => ({
       id: `plan-${p.id}`,
       description: p.description,
-      date: p.plannedDate,
+      date: p.plannedDate!, // getPlannedDue filtra per data ≤ oggi: mai null qui
       amount: Number(p.amount),
       type: p.type,
       source: 'planned',

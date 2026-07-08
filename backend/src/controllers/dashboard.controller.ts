@@ -392,7 +392,8 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       // Pianificata addebitata su CC (solo proiezione globale) → confluisce nel ciclo
       if (!scopeId && p.accountId && ccIds.has(p.accountId)) {
         const amount = Number(p.amount);
-        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        // Filtrata per range di plannedDate a monte: mai null qui.
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
         continue;
       }
       if (p.type === 'INCOME') projectedIncome  += Number(p.amount);
@@ -447,11 +448,12 @@ const dayKey = (d: Date): string => {
 export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { months, startDate, endDate, accountId, historyDays } = req.query;
+    const { months, startDate, endDate, accountId, historyDays, includeSuspended } = req.query;
     const scopeId = typeof accountId === 'string' && accountId ? accountId : null;
     const histDays = Math.min(Math.max(parseInt((historyDays as string) || '30', 10) || 30, 7), 365);
+    const withSuspended = includeSuspended === 'true';
 
-    const paramSuffix = `${months ? `m${months}` : `${startDate}_${endDate}`}_h${histDays}${scopeId ? `_a${scopeId}` : ''}`;
+    const paramSuffix = `${months ? `m${months}` : `${startDate}_${endDate}`}_h${histDays}${scopeId ? `_a${scopeId}` : ''}${withSuspended ? '_s1' : ''}`;
     const cacheKey    = analyticsCache.keys.projectionSeries(userId, paramSuffix);
     const cached      = analyticsCache.get<object>(cacheKey);
     if (cached) return res.json(cached);
@@ -485,12 +487,13 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       ? (accounts.find((a) => a.id === scopeId)?.balance ?? 0)
       : await getLiquidBalance(userId, accounts);
 
-    // ── FUTURO: raccoglie gli eventi (ricorrenti + pianificate + CC) ──
-    const events: { date: Date; label: string; amount: number; type: 'INCOME' | 'EXPENSE'; source: 'recurring' | 'planned' | 'cc' }[] = [];
+    // ── FUTURO: raccoglie gli eventi (ricorrenti + pianificate + CC + sospesi) ──
+    const events: { date: Date; label: string; amount: number; type: 'INCOME' | 'EXPENSE'; source: 'recurring' | 'planned' | 'cc' | 'sospeso' }[] = [];
     let projectedIncome  = 0;
     let projectedExpense = 0;
     let recurringCount   = 0;
     let plannedCount     = 0;
+    let suspendedCount   = 0;
 
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
@@ -546,13 +549,42 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     plannedCount = plannedTransactions.length;
     for (const p of plannedTransactions) {
       const amount = Number(p.amount);
+      // Filtrata per range di plannedDate a monte: mai null qui.
       if (!scopeId && p.accountId && ccIds.has(p.accountId)) {
-        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
         continue;
       }
       if (p.type === 'INCOME') projectedIncome  += amount;
       else                     projectedExpense += amount;
-      events.push({ date: p.plannedDate, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned' });
+      events.push({ date: p.plannedDate!, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned' });
+    }
+
+    // Sospesi (plannedDate null, opt-in via includeSuspended): nessuna data reale, quindi
+    // contati come se accadessero oggi (anchor della proiezione) — è una stima di
+    // esposizione totale, non un evento datato come gli altri. Mai inclusi di default.
+    if (withSuspended) {
+      const suspended = await prisma.plannedTransaction.findMany({
+        where: {
+          userId,
+          planId: null,
+          isPaid: false,
+          plannedDate: null,
+          ...(scopeId ? { accountId: scopeId } : {}),
+        },
+      });
+      suspendedCount = suspended.length;
+      for (const s of suspended) {
+        const amount = Number(s.amount);
+        // Un Sospeso su CC (solo proiezione globale) confluisce nel ciclo come le
+        // altre voci, non abbassa/alza direttamente la liquidità proiettata.
+        if (!scopeId && s.accountId && ccIds.has(s.accountId)) {
+          ccEvents.push({ cardId: s.accountId, date: rangeStart, signed: s.type === 'INCOME' ? -amount : amount });
+          continue;
+        }
+        if (s.type === 'INCOME') projectedIncome  += amount;
+        else                     projectedExpense += amount;
+        events.push({ date: rangeStart, label: s.description, amount, type: s.type as 'INCOME' | 'EXPENSE', source: 'sospeso' });
+      }
     }
 
     // Addebiti CC futuri → uscita di liquidità al billingDay del ciclo (debito del ciclo
@@ -636,6 +668,7 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       projectedBalance: currentBalance + projectedIncome - projectedExpense,
       recurringCount,
       plannedCount,
+      suspendedCount,
       points: [...actualPoints, ...points],
       events: events.map((e) => ({ date: dayKey(e.date), label: e.label, amount: e.amount, type: e.type, source: e.source })),
     };

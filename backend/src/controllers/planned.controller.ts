@@ -37,18 +37,24 @@ export const getPlannedDue = async (req: AuthRequest, res: Response) => {
 export const getPlannedTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { unpaidOnly, upcoming } = req.query;
+    const { unpaidOnly, upcoming, suspendedOnly } = req.query;
 
     // Esclude le rate dei piani a rate (planId valorizzato): quelle vivono nel
     // loro piano, non nella lista delle pianificate singole (niente doppioni).
     const where: any = { userId, planId: null };
+
+    // Sospesi (plannedDate null) e Pianificate (plannedDate valorizzata) sono
+    // mutuamente esclusivi: senza suspendedOnly la lista "Pianificate" non deve
+    // mai mostrare i Sospesi.
+    where.plannedDate = suspendedOnly === 'true' ? null : { not: null };
 
     if (unpaidOnly === 'true') {
       where.isPaid = false;
     }
 
     if (upcoming === 'true') {
-      where.plannedDate = { gte: new Date() };
+      // gte + not:null: resta coerente con la mutua esclusione Sospesi/Pianificate sopra.
+      where.plannedDate = { gte: new Date(), not: null };
       where.isPaid = false;
     }
 
@@ -58,9 +64,11 @@ export const getPlannedTransactions = async (req: AuthRequest, res: Response) =>
         category: true,
         account: { select: { id: true, name: true, color: true, type: true } },
       },
-      orderBy: {
-        plannedDate: 'asc',
-      },
+      // Secondo criterio per un ordine deterministico anche tra i Sospesi (plannedDate tutta null).
+      orderBy: [
+        { plannedDate: 'asc' },
+        { createdAt: 'desc' },
+      ],
     });
 
     res.json(planned);
@@ -109,7 +117,8 @@ export const createPlannedTransaction = async (req: AuthRequest, res: Response) 
       accountId,
     }: CreatePlannedTransactionDTO & { accountId?: string } = req.body;
 
-    if (!amount || amount <= 0 || !type || !description || !plannedDate) {
+    // plannedDate è opzionale: assente/vuota = "Sospeso" (importo noto, data ignota).
+    if (!amount || amount <= 0 || !type || !description) {
       return res.status(400).json({ error: 'Dati non validi' });
     }
 
@@ -135,7 +144,7 @@ export const createPlannedTransaction = async (req: AuthRequest, res: Response) 
         type,
         description,
         categoryId,
-        plannedDate: new Date(plannedDate),
+        plannedDate: plannedDate ? new Date(plannedDate) : null,
         notes,
         userId,
         ...(accountId && { accountId }),
@@ -239,6 +248,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { date } = req.body;
 
     const planned = await prisma.plannedTransaction.findFirst({
       where: { id, userId },
@@ -248,14 +258,25 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Transazione pianificata non trovata' });
     }
 
-    // Crea la transazione reale, propagando il conto della pianificata
+    // Un Sospeso (plannedDate null) non ha una data da cui derivare quella della
+    // transazione reale: va richiesta esplicitamente dal client.
+    if (planned.plannedDate === null && !date) {
+      return res.status(400).json({ error: 'Indica la data della transazione' });
+    }
+
+    if (date !== undefined && isNaN(new Date(date).getTime())) {
+      return res.status(400).json({ error: 'Data non valida' });
+    }
+
+    // Crea la transazione reale, propagando il conto della pianificata.
+    // Per le pianificate normali il comportamento resta invariato: data = oggi.
     const transaction = await prisma.transaction.create({
       data: {
         amount: planned.amount,
         type: planned.type,
         description: planned.description,
         categoryId: planned.categoryId,
-        date: new Date(),
+        date: date ? new Date(date) : new Date(),
         userId,
         ...(planned.accountId && { accountId: planned.accountId }),
       },

@@ -22,7 +22,8 @@ export default function NextExpenseTile() {
     plannedDueData
       .filter((p) => p.type === 'EXPENSE')
       .forEach((p) =>
-        items.push({ name: p.description, date: p.plannedDate, amount: Number(p.amount), to: '/planned' })
+        // getPlannedDue filtra per data ≤ oggi: mai null qui.
+        items.push({ name: p.description, date: p.plannedDate!, amount: Number(p.amount), to: '/planned' })
       );
 
     return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;

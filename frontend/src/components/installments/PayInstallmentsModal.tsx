@@ -62,7 +62,7 @@ export default function PayInstallmentsModal({
           {rate.map((r) => (
             <li key={r.id} className="pay-modal-item">
               <span className="pay-modal-item-label">{rataShortLabel(r)}</span>
-              <span className="pay-modal-item-date">{formatDayMonth(r.plannedDate)}</span>
+              <span className="pay-modal-item-date">{formatDayMonth(r.plannedDate!)}</span>
               <span className="pay-modal-item-amount">{formatCurrency(Number(r.amount))}</span>
             </li>
           ))}

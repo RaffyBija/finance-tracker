@@ -34,9 +34,10 @@ export default function PlannedList({
     };
   };
 
-  // Raggruppa per data
+  // Raggruppa per data. Il backend esclude i Sospesi (plannedDate null) da questa
+  // lista di default: qui plannedDate è sempre valorizzata.
   const groupedPlanned = planned.reduce((groups, p) => {
-    const date = p.plannedDate.split('T')[0];
+    const date = p.plannedDate!.split('T')[0];
     if (!groups[date]) groups[date] = [];
     groups[date].push(p);
     return groups;

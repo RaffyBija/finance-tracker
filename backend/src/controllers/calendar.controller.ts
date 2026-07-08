@@ -170,7 +170,8 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
 
     // Planned transactions
     for (const p of plannedTransactions) {
-      const dateStr = toDateStr(new Date(p.plannedDate));
+      // Filtrata per range di plannedDate a monte: mai null qui.
+      const dateStr = toDateStr(new Date(p.plannedDate!));
       const day     = getOrCreate(dateStr);
       const amount  = Number(p.amount);
       if (p.type === 'INCOME') day.income   += amount;

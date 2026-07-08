@@ -236,7 +236,8 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     for (const p of plannedRemaining) {
       if (p.accountId && ccIds.has(p.accountId)) {
         const amount = Number(p.amount);
-        ccEvents.push({ cardId: p.accountId, date: p.plannedDate, signed: p.type === 'INCOME' ? -amount : amount });
+        // Filtrata per range di plannedDate a monte: mai null qui.
+        ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
         continue;
       }
       if (p.type === 'INCOME') knownRemainingIncome += Number(p.amount);

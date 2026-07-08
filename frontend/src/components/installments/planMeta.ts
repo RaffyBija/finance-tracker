@@ -14,7 +14,7 @@ export const directionMeta = (d: PlanDirection) =>
 // Riusato da card (prossima rata) e lista rate nel dettaglio.
 export function rataStatus(r: InstallmentRata, verbPast: string) {
   if (r.isPaid) return { text: verbPast, cls: 'plan-rate-badge--paid' };
-  const d = new Date(r.plannedDate);
+  const d = new Date(r.plannedDate!); // le rate hanno sempre una data
   if (isToday(d)) return { text: 'Oggi', cls: 'plan-rate-badge--today' };
   if (isPast(d)) return { text: 'Scaduta', cls: 'plan-rate-badge--overdue' };
   if (isTomorrow(d)) return { text: 'Domani', cls: 'plan-rate-badge--soon' };

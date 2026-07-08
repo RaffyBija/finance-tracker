@@ -1,4 +1,4 @@
-export type ScadenzarioTabKey = 'piani' | 'pianificate' | 'ricorrenti';
+export type ScadenzarioTabKey = 'piani' | 'pianificate' | 'ricorrenti' | 'sospesi';
 
 export interface ScadenzarioTabDef {
   key: ScadenzarioTabKey;

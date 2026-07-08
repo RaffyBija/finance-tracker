@@ -6,13 +6,14 @@ import ScadenzarioTabs, {
   type ScadenzarioTabKey,
 } from '../components/installments/ScadenzarioTabs';
 import InstallmentPlansSection from '../components/installments/InstallmentPlansSection';
-import { PlannedTransactions } from './PlannedPage';
+import { PlannedTransactions, SuspendedTransactions } from './PlannedPage';
 import { RecurringTransactions } from './RecurringTransactions';
 
 const HASHES: Record<string, ScadenzarioTabKey> = {
   '#piani': 'piani',
   '#pianificate': 'pianificate',
   '#ricorrenti': 'ricorrenti',
+  '#sospesi': 'sospesi',
 };
 
 const tabFromHash = (hash: string): ScadenzarioTabKey => HASHES[hash] ?? 'piani';
@@ -49,12 +50,14 @@ export default function ScadenzarioPage() {
           { key: 'piani', label: 'Piani a rate', count: installmentDueCount },
           { key: 'pianificate', label: 'Pianificate', count: plannedDueCount },
           { key: 'ricorrenti', label: 'Ricorrenti', count: recurringDueCount },
+          { key: 'sospesi', label: 'Sospesi' },
         ]}
       />
 
       {tab === 'piani' && <InstallmentPlansSection />}
       {tab === 'pianificate' && <PlannedTransactions embedded />}
       {tab === 'ricorrenti' && <RecurringTransactions embedded />}
+      {tab === 'sospesi' && <SuspendedTransactions embedded />}
     </div>
   );
 }
