@@ -85,8 +85,14 @@ export default function ProjectionPage() {
 
   const { data, isFetching } = useProjectionSeries(queryParams, enabled);
 
+  // Validazione esplicita lato JS, non ci si affida solo all'attributo HTML `min`:
+  // Safari non lo applica in modo affidabile su `<input type="date">` (bug noto,
+  // Firefox/Chrome invece bloccano il passato già a livello di picker nativo).
   const isPendingValid =
-    !!pendingRange.startDate && !!pendingRange.endDate && pendingRange.startDate < pendingRange.endDate;
+    !!pendingRange.startDate && !!pendingRange.endDate &&
+    pendingRange.startDate >= todayIso &&
+    pendingRange.startDate < pendingRange.endDate;
+  const isPendingPast = !!pendingRange.startDate && pendingRange.startDate < todayIso;
 
   const handleMonthsChange = (m: number) => {
     setSelectedMonths(m);
@@ -108,6 +114,24 @@ export default function ProjectionPage() {
     setShowCustom(false);
   };
 
+  // Scorciatoia "fine mese corrente": utile per capire subito come si chiude il
+  // mese in corso, senza aprire il pannello personalizzato e scegliere le date a mano.
+  const endOfMonthIso = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+  }, []);
+  const isEndOfMonthDisabled = todayIso >= endOfMonthIso; // oggi è già l'ultimo giorno del mese
+  const isEndOfMonthActive =
+    mode === 'custom' && customRange.startDate === todayIso && customRange.endDate === endOfMonthIso;
+
+  const handleEndOfMonth = () => {
+    if (isEndOfMonthDisabled) return;
+    const range = { startDate: todayIso, endDate: endOfMonthIso };
+    setPendingRange(range);
+    setCustomRange(range);
+    setMode('custom');
+  };
+
   // Applica lo scenario: sposta solo il tratto proiettato (la storia reale non cambia).
   const adjustedPoints = useMemo(() => {
     if (!data) return [];
@@ -115,9 +139,10 @@ export default function ProjectionPage() {
     return data.points.map((p) => (p.projected ? { ...p, balance: p.balance + adjust } : p));
   }, [data, adjust]);
 
-  // Raggruppa gli eventi per mese.
+  // Raggruppa gli eventi per mese, con i totali entrate/uscite di quel mese
+  // (quadro rapido di come si chiude ogni mese, senza dover sommare le voci a mano).
   const groupedEvents = useMemo(() => {
-    if (!data) return [] as { key: string; label: string; items: ProjectionEvent[] }[];
+    if (!data) return [] as { key: string; label: string; items: ProjectionEvent[]; income: number; expense: number }[];
     const groups: Record<string, ProjectionEvent[]> = {};
     for (const ev of data.events) {
       const k = monthKey(ev.date);
@@ -125,7 +150,12 @@ export default function ProjectionPage() {
     }
     return Object.keys(groups)
       .sort()
-      .map((k) => ({ key: k, label: monthLabel(groups[k][0].date), items: groups[k] }));
+      .map((k) => {
+        const items = groups[k];
+        const income = items.filter((e) => e.type === 'INCOME').reduce((s, e) => s + e.amount, 0);
+        const expense = items.filter((e) => e.type === 'EXPENSE').reduce((s, e) => s + e.amount, 0);
+        return { key: k, label: monthLabel(items[0].date), items, income, expense };
+      });
   }, [data]);
 
   const currentBalance = data?.currentBalance ?? 0;
@@ -164,6 +194,16 @@ export default function ProjectionPage() {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={handleEndOfMonth}
+            disabled={isEndOfMonthDisabled}
+            className={`projection-custom-toggle${isEndOfMonthActive ? ' is-open' : ''}`}
+            title={isEndOfMonthDisabled ? 'Oggi è già l\'ultimo giorno del mese' : 'Proietta fino a fine mese'}
+          >
+            <CalendarClock size={13} />
+            Fine mese
+          </button>
 
           <button
             onClick={() => setShowCustom((v) => !v)}
@@ -241,6 +281,9 @@ export default function ProjectionPage() {
                 Applica
               </button>
             </div>
+            {isPendingPast && (
+              <p className="form-help">La data di inizio non può essere nel passato.</p>
+            )}
           </div>
         </div>
 
@@ -317,7 +360,13 @@ export default function ProjectionPage() {
           <div className="projection-detail">
             {groupedEvents.map((group) => (
               <div key={group.key}>
-                <p className="projection-detail-month">{group.label}</p>
+                <div className="projection-detail-month-row">
+                  <p className="projection-detail-month">{group.label}</p>
+                  <span className="projection-detail-month-summary">
+                    <span className="projection-meta-income">+{formatCurrency(group.income)}</span>
+                    <span className="projection-meta-expense">−{formatCurrency(group.expense)}</span>
+                  </span>
+                </div>
                 {group.items.map((ev, i) => {
                   const Icon = SOURCE_ICON[ev.source];
                   return (
