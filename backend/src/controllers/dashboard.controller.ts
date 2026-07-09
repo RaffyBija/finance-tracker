@@ -544,6 +544,14 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       ? (accounts.find((a) => a.id === scopeId)?.balance ?? 0)
       : await getLiquidBalance(userId, accounts);
 
+    // Vista per-conto: includiamo anche le CC collegate a QUESTO conto (linkedAccountId).
+    // Isolare una CC dal proprio ciclo di fatturazione non ha senso (il suo saldo da
+    // sola non è significativo) — il ciclo va sempre visto insieme al conto su cui si
+    // scaricherà l'addebito, esattamente come già avviene in modalità "tutti i conti".
+    const scopedAccountIds = scopeId
+      ? [scopeId, ...accounts.filter((a) => a.type === 'CREDIT_CARD' && a.linkedAccountId === scopeId).map((a) => a.id)]
+      : null;
+
     // ── FUTURO: raccoglie gli eventi (ricorrenti + pianificate + CC + sospesi) ──
     const events: { date: Date; label: string; amount: number; type: 'INCOME' | 'EXPENSE'; source: 'recurring' | 'planned' | 'cc' | 'sospeso' }[] = [];
     let projectedIncome  = 0;
@@ -555,16 +563,17 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
         userId,
-        ...(scopeId ? { accountId: scopeId } : {}),
+        ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
         isActive: true,
         startDate: { lte: rangeEnd },
         OR: [{ endDate: null }, { endDate: { gte: rangeStart } }],
       },
     });
 
-    // Conti CC: le spese addebitate su carta (solo proiezione globale) non escono dalla
-    // liquidità alla loro data → raccolte come ccEvents e proiettate come addebito del
-    // ciclo (projectCcCharges). Nel ramo per-conto (scopeId) la logica resta invariata.
+    // Conti CC: le spese addebitate su carta non escono dalla liquidità alla loro data
+    // → raccolte come ccEvents e proiettate come addebito del ciclo (projectCcCharges).
+    // Vale sia in vista globale sia in vista per-conto (per le CC collegate a scopeId,
+    // filtrate a monte da scopedAccountIds).
     const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
     const ccEvents: CcEvent[] = [];
 
@@ -581,7 +590,7 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
         rangeEnd,
       );
       const amount = Number(rec.amount);
-      const isCc = !scopeId && rec.accountId && ccIds.has(rec.accountId);
+      const isCc = rec.accountId && ccIds.has(rec.accountId);
       for (const date of occurrences) {
         recurringCount += 1;
         if (isCc) {
@@ -597,7 +606,7 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     const plannedTransactions = await prisma.plannedTransaction.findMany({
       where: {
         userId,
-        ...(scopeId ? { accountId: scopeId } : {}),
+        ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
         isPaid: false,
         plannedDate: { gte: rangeStart, lte: rangeEnd },
       },
@@ -607,7 +616,7 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     for (const p of plannedTransactions) {
       const amount = Number(p.amount);
       // Filtrata per range di plannedDate a monte: mai null qui.
-      if (!scopeId && p.accountId && ccIds.has(p.accountId)) {
+      if (p.accountId && ccIds.has(p.accountId)) {
         ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
         continue;
       }
@@ -626,15 +635,15 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
           planId: null,
           isPaid: false,
           plannedDate: null,
-          ...(scopeId ? { accountId: scopeId } : {}),
+          ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
         },
       });
       suspendedCount = suspended.length;
       for (const s of suspended) {
         const amount = Number(s.amount);
-        // Un Sospeso su CC (solo proiezione globale) confluisce nel ciclo come le
-        // altre voci, non abbassa/alza direttamente la liquidità proiettata.
-        if (!scopeId && s.accountId && ccIds.has(s.accountId)) {
+        // Un Sospeso su CC confluisce nel ciclo come le altre voci, non abbassa/alza
+        // direttamente la liquidità proiettata.
+        if (s.accountId && ccIds.has(s.accountId)) {
           ccEvents.push({ cardId: s.accountId, date: rangeStart, signed: s.type === 'INCOME' ? -amount : amount });
           continue;
         }
@@ -645,13 +654,15 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     }
 
     // Addebiti CC futuri → uscita di liquidità al billingDay del ciclo (debito del ciclo
-    // aperto + spese future su CC, aggregati per ciclo, una volta sola). Solo nella
-    // proiezione globale (per-conto BANK non è dovuto da questo saldo).
-    if (!scopeId) {
-      for (const charge of projectCcCharges(accounts, ccEvents, rangeStart, rangeEnd, now)) {
-        projectedExpense += charge.amount;
-        events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc' });
-      }
+    // aperto + spese future su CC, aggregati per ciclo, una volta sola). In vista per-conto
+    // limitato alle sole CC collegate a scopeId (projectCcCharges filtra internamente per
+    // CREDIT_CARD ed è no-op se l'array non ne contiene nessuna).
+    const ccAccountsForCharge = scopeId
+      ? accounts.filter((a) => a.type === 'CREDIT_CARD' && (a.id === scopeId || a.linkedAccountId === scopeId))
+      : accounts;
+    for (const charge of projectCcCharges(ccAccountsForCharge, ccEvents, rangeStart, rangeEnd, now)) {
+      projectedExpense += charge.amount;
+      events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc' });
     }
 
     // ── Costruzione tratto PROIETTATO (dashed): un punto per ogni giorno civile ──
