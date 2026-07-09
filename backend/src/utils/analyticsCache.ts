@@ -118,10 +118,12 @@ export const analyticsCache = {
 
   // Un conto è cambiato (create/update/delete): nome/colore e composizione sono
   // embeddati nella serie per-conto → invalida le serie patrimonio. Il saldo BANK
-  // è anche il cuscinetto dei suggerimenti budget → invalidali.
+  // è anche il cuscinetto dei suggerimenti budget → invalidali. currentBalance
+  // della proiezione dipende dallo stesso saldo (globale o per-conto) → invalida anche quella.
   onAccountMutated: (uid: string) => {
     delNetWorth(uid);
     delBudgetSuggestions(uid);
+    delProjections(uid);
   },
 
   // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, TrendingUp, TrendingDown,
   Repeat, CalendarClock, CreditCard, SlidersHorizontal, X, HelpCircle,
 } from 'lucide-react';
 import { useProjectionSeries } from '../hooks/useDashboard';
+import { useAccounts } from '../hooks/useAccounts';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import ProjectionChart from '../components/dashboard/ProjectionChart';
 import { InputDecimal } from '../components/layout/InputNumberDecimal';
@@ -40,12 +41,14 @@ const SOURCE_LABEL = {
 
 export default function ProjectionPage() {
   const { formatCurrency, currency } = useFormatCurrency();
+  const { data: accounts = [] } = useAccounts();
 
   const [mode, setMode] = useState<Mode>('months');
   const [selectedMonths, setSelectedMonths] = useState(6);
   const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });
   const [pendingRange, setPendingRange] = useState({ startDate: '', endDate: '' });
   const [showCustom, setShowCustom] = useState(false);
+  const [accountFilter, setAccountFilter] = useState<string>('ALL');
 
   // Scenario "what-if": variazione di liquidità simulata oggi.
   const [adjust, setAdjust] = useState(0);
@@ -57,10 +60,20 @@ export default function ProjectionPage() {
   // La proiezione parte da oggi: niente date di inizio nel passato (baseline errata).
   const todayIso = new Date().toISOString().slice(0, 10);
 
+  // Se il conto selezionato viene eliminato altrove, torna alla vista globale
+  // invece di continuare a interrogare un accountId ormai inesistente.
+  useEffect(() => {
+    if (accountFilter !== 'ALL' && accounts.length > 0 && !accounts.some((a) => a.id === accountFilter)) {
+      setAccountFilter('ALL');
+    }
+  }, [accounts, accountFilter]);
+
+  const accountId = accountFilter !== 'ALL' ? accountFilter : undefined;
+  const selectedAccount = accountId ? accounts.find((a) => a.id === accountId) : null;
   const queryParams =
     mode === 'months'
-      ? { months: selectedMonths, historyDays: historyForMonths(selectedMonths), includeSuspended }
-      : { startDate: customRange.startDate, endDate: customRange.endDate, historyDays: 30, includeSuspended };
+      ? { months: selectedMonths, historyDays: historyForMonths(selectedMonths), includeSuspended, accountId }
+      : { startDate: customRange.startDate, endDate: customRange.endDate, historyDays: 30, includeSuspended, accountId };
 
   const isCustomValid = mode === 'custom' && !!customRange.startDate && !!customRange.endDate;
   const enabled = mode === 'months' || isCustomValid;
@@ -125,7 +138,9 @@ export default function ProjectionPage() {
           </Link>
           <h1 className="page-header-title">Andamento del saldo</h1>
           <p className="page-header-subtitle">
-            Proiezione della liquidità con ricorrenti, pianificate e debito carte
+            {selectedAccount
+              ? `Proiezione del saldo di ${selectedAccount.name}`
+              : 'Proiezione della liquidità con ricorrenti, pianificate e debito carte'}
           </p>
         </div>
       </div>
@@ -159,6 +174,27 @@ export default function ProjectionPage() {
             </button>
           )}
         </div>
+
+        {accounts.length > 1 && (
+          <div className="account-filter-pills">
+            <button
+              className={`account-filter-pill${accountFilter === 'ALL' ? ' is-active' : ''}`}
+              onClick={() => setAccountFilter('ALL')}
+            >
+              Tutti i conti
+            </button>
+            {accounts.map((account) => (
+              <button
+                key={account.id}
+                className={`account-filter-pill${accountFilter === account.id ? ' is-active' : ''}`}
+                onClick={() => setAccountFilter(account.id)}
+              >
+                <span className="account-filter-pill-dot" style={{ backgroundColor: account.color }} />
+                {account.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <label className="form-checkbox-row">
           <input

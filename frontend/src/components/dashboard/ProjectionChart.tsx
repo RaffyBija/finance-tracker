@@ -45,7 +45,7 @@ function ProjectionTooltip({ active, payload, formatCurrency }: any) {
 }
 
 export default function ProjectionChart({ points, height = 220, compact = false }: ProjectionChartProps) {
-  const { formatCurrency } = useFormatCurrency();
+  const { formatCurrency, formatCurrencyAxis } = useFormatCurrency();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -108,7 +108,7 @@ export default function ProjectionChart({ points, height = 220, compact = false 
             tickLine={false}
             axisLine={false}
             width={56}
-            tickFormatter={(v) => formatCurrency(Number(v))}
+            tickFormatter={(v) => formatCurrencyAxis(Number(v))}
           />
 
           <Tooltip content={<ProjectionTooltip formatCurrency={formatCurrency} />} />

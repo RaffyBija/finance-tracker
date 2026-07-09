@@ -445,6 +445,49 @@ const dayKey = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
+// Costruisce il tratto PROIETTATO del grafico: un punto per OGNI giorno civile
+// tra rangeStart e rangeEnd (inclusi), mai un punto per evento. Se più eventi
+// cadono lo stesso giorno vengono aggregati in un solo delta netto, e i giorni
+// senza eventi riportano in avanti l'ultimo saldo noto (forward-fill). Questo
+// mantiene l'asse X (categoriale in Recharts, non a scala temporale) sempre a
+// densità 1 punto/giorno: senza questo, un giorno con più eventi produceva più
+// punti duplicati con la stessa data ma saldo intermedio/finale, disallineando
+// la posizione visiva dal tempo reale e rendendo la lettura del grafico
+// dipendente dall'orizzonte scelto.
+// Il punto di rangeStart ("oggi") resta fissato a currentBalance esatto — gli
+// eventi datati oggi si riflettono solo dal punto di domani in poi, per
+// preservare la giunzione visiva con actualPoints (che converge già a
+// currentBalance) e la label "Oggi" mostrata in ProjectionPage/ProjectedView.
+export function buildProjectedPoints(
+  currentBalance: number,
+  events: { date: Date; amount: number; type: 'INCOME' | 'EXPENSE' }[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): { date: string; balance: number; projected: boolean }[] {
+  const deltaByDay: Record<string, number> = {};
+  for (const ev of events) {
+    const k = dayKey(ev.date);
+    const signed = ev.type === 'INCOME' ? ev.amount : -ev.amount;
+    deltaByDay[k] = (deltaByDay[k] ?? 0) + signed;
+  }
+
+  const points: { date: string; balance: number; projected: boolean }[] = [];
+  let running = currentBalance;
+
+  points.push({ date: dayKey(rangeStart), balance: running, projected: true });
+  running += deltaByDay[dayKey(rangeStart)] ?? 0;
+
+  const day = new Date(rangeStart);
+  day.setDate(day.getDate() + 1);
+  while (day <= rangeEnd) {
+    const k = dayKey(day);
+    running += deltaByDay[k] ?? 0;
+    points.push({ date: k, balance: running, projected: true });
+    day.setDate(day.getDate() + 1);
+  }
+  return points;
+}
+
 export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
@@ -479,6 +522,20 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
 
     if (rangeStart >= rangeEnd) {
       return res.status(400).json({ error: 'La data di inizio deve essere precedente a quella di fine' });
+    }
+
+    // Tetto difensivo: nessun preset supera 24 mesi, un range custom senza
+    // limite superiore lato client potrebbe altrimenti generare milioni di
+    // punti giornalieri nel loop di buildProjectedPoints.
+    // NB: setDate (non aritmetica in ms) per restare calendar-safe attraverso
+    // il cambio ora legale, poi re-normalizza a fine giornata: rangeEnd deve
+    // sempre rimanere 23:59:59.999 per coerenza con le query Prisma `lte` sotto.
+    const MAX_SPAN_DAYS = 1095; // ~3 anni
+    if (rangeEnd.getTime() - rangeStart.getTime() > MAX_SPAN_DAYS * 86400000) {
+      const clamped = new Date(rangeStart);
+      clamped.setDate(clamped.getDate() + MAX_SPAN_DAYS);
+      clamped.setHours(23, 59, 59, 999);
+      rangeEnd = clamped;
     }
 
     // ── Saldo attuale (anchor del tratto proiettato) ──
@@ -597,19 +654,9 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // ── Costruzione tratto PROIETTATO (dashed): accumulo cronologico ──
+    // ── Costruzione tratto PROIETTATO (dashed): un punto per ogni giorno civile ──
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
-    const points: { date: string; balance: number; projected: boolean }[] = [];
-    let running = currentBalance;
-    points.push({ date: dayKey(rangeStart), balance: running, projected: true }); // anchor "oggi"
-    for (const ev of events) {
-      running += ev.type === 'INCOME' ? ev.amount : -ev.amount;
-      points.push({ date: dayKey(ev.date), balance: running, projected: true });
-    }
-    // Punto finale a fine orizzonte (se nessun evento cade esattamente lì)
-    if (points[points.length - 1].date !== dayKey(rangeEnd)) {
-      points.push({ date: dayKey(rangeEnd), balance: running, projected: true });
-    }
+    const points = buildProjectedPoints(currentBalance, events, rangeStart, rangeEnd);
 
     // ── Tratto ACTUAL (solid): storia recente ricostruita all'indietro ──
     const pastStart = new Date(rangeStart);
