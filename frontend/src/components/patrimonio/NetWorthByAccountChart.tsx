@@ -7,8 +7,10 @@ import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useTheme } from '../../contexts/ThemeContext';
 import { formatMonthShort, formatMonth } from '../../utils/date';
 
-// Andamento del patrimonio scomposto per conto: area impilata, un livello per
-// conto BANK. La somma per mese coincide con la serie aggregata (NetWorthChart).
+// Andamento del patrimonio scomposto per conto: una curva indipendente per
+// conto BANK, ognuna parte da zero (nessuno stacking: impilare le aree fa
+// apparire la banda disegnata per ultima come se toccasse il valore più alto,
+// anche quando il suo conto vale meno — è il cumulativo, non il suo valore).
 
 const FALLBACK = '#0d9488';
 const isValidColor = (c?: string | null) => !!c && /^#[0-9A-Fa-f]{3,6}$/.test(c);
@@ -54,46 +56,58 @@ export default function NetWorthByAccountChart({ data, height = 300 }: Props) {
   if (!data.accounts.length) return null;
 
   return (
-    <div className="networth-chart" style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={rows} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-          <XAxis
-            dataKey="month"
-            tickFormatter={(m) => formatMonthShort(m + '-01')}
-            tick={{ fontSize: 11, fill: axisColor }}
-            tickLine={false}
-            axisLine={{ stroke: gridColor }}
-            minTickGap={20}
-          />
-          <YAxis
-            tick={{ fontSize: 11, fill: axisColor }}
-            tickLine={false}
-            axisLine={false}
-            width={56}
-            tickFormatter={(v) => formatCurrencyAxis(Number(v))}
-          />
-          <Tooltip content={<StackTooltip formatCurrency={formatCurrency} />} />
-          {data.accounts.map((acc) => {
-            const color = isValidColor(acc.color) ? acc.color! : FALLBACK;
-            return (
-              <Area
-                key={acc.id}
-                type="monotone"
-                dataKey={acc.id}
-                name={acc.name}
-                stackId="networth"
-                stroke={color}
-                strokeWidth={1.5}
-                fill={color}
-                fillOpacity={0.18}
-                dot={false}
-                activeDot={{ r: 3, fill: color }}
-              />
-            );
-          })}
-        </AreaChart>
-      </ResponsiveContainer>
+    <div>
+      <div className="networth-chart" style={{ width: '100%', height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={rows} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+            <XAxis
+              dataKey="month"
+              tickFormatter={(m) => formatMonthShort(m + '-01')}
+              tick={{ fontSize: 11, fill: axisColor }}
+              tickLine={false}
+              axisLine={{ stroke: gridColor }}
+              minTickGap={20}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: axisColor }}
+              tickLine={false}
+              axisLine={false}
+              width={56}
+              tickFormatter={(v) => formatCurrencyAxis(Number(v))}
+            />
+            <Tooltip content={<StackTooltip formatCurrency={formatCurrency} />} />
+            {data.accounts.map((acc) => {
+              const color = isValidColor(acc.color) ? acc.color! : FALLBACK;
+              return (
+                <Area
+                  key={acc.id}
+                  type="monotone"
+                  dataKey={acc.id}
+                  name={acc.name}
+                  stroke={color}
+                  strokeWidth={1.5}
+                  fill={color}
+                  fillOpacity={0.12}
+                  dot={false}
+                  activeDot={{ r: 3, fill: color }}
+                />
+              );
+            })}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="networth-account-legend">
+        {data.accounts.map((acc) => (
+          <span key={acc.id} className="networth-account-legend-item">
+            <span
+              className="dashboard-legend-dot"
+              style={{ width: 8, height: 8, background: isValidColor(acc.color) ? acc.color! : FALLBACK }}
+            />
+            {acc.name}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

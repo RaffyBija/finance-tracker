@@ -403,6 +403,23 @@
   color: #78716c;
 }
 
+/* Legenda conti (vista "Per conto", NetWorthByAccountChart senza stacking:
+   senza impilamento le aree si sovrappongono, la legenda chiarisce i colori) */
+.networth-account-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  padding: 0.75rem 1.25rem 1.25rem;
+}
+
+.networth-account-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #78716c;
+}
+
 /* ── Dark mode (override espliciti) ─────────────────────────────────────── */
 .dark .patrimonio-hero,
 .dark .patrimonio-stat {
@@ -468,3 +485,4 @@
 .dark .cc-exposure-name { color: #f5f5f4; }
 .dark .cc-exposure-value { color: #f87171; }
 .dark .category-trend-legend-item { color: #a8a29e; }
+.dark .networth-account-legend-item { color: #a8a29e; }
