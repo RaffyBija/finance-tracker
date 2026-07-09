@@ -42,6 +42,11 @@ const SOURCE_LABEL = {
 export default function ProjectionPage() {
   const { formatCurrency, currency } = useFormatCurrency();
   const { data: accounts = [] } = useAccounts();
+  // Solo i conti BANK sono selezionabili: isolare una CC dal proprio ciclo di
+  // fatturazione non ha senso (il suo saldo da solo non è significativo). Il ciclo
+  // della CC collegata confluisce comunque nella proiezione del suo conto BANK
+  // (vedi scopedAccountIds/linkedAccountId lato backend).
+  const bankAccounts = accounts.filter((a) => a.type === 'BANK');
 
   const [mode, setMode] = useState<Mode>('months');
   const [selectedMonths, setSelectedMonths] = useState(6);
@@ -63,13 +68,13 @@ export default function ProjectionPage() {
   // Se il conto selezionato viene eliminato altrove, torna alla vista globale
   // invece di continuare a interrogare un accountId ormai inesistente.
   useEffect(() => {
-    if (accountFilter !== 'ALL' && accounts.length > 0 && !accounts.some((a) => a.id === accountFilter)) {
+    if (accountFilter !== 'ALL' && bankAccounts.length > 0 && !bankAccounts.some((a) => a.id === accountFilter)) {
       setAccountFilter('ALL');
     }
-  }, [accounts, accountFilter]);
+  }, [bankAccounts, accountFilter]);
 
   const accountId = accountFilter !== 'ALL' ? accountFilter : undefined;
-  const selectedAccount = accountId ? accounts.find((a) => a.id === accountId) : null;
+  const selectedAccount = accountId ? bankAccounts.find((a) => a.id === accountId) : null;
   const queryParams =
     mode === 'months'
       ? { months: selectedMonths, historyDays: historyForMonths(selectedMonths), includeSuspended, accountId }
@@ -175,7 +180,7 @@ export default function ProjectionPage() {
           )}
         </div>
 
-        {accounts.length > 1 && (
+        {bankAccounts.length > 1 && (
           <div className="account-filter-pills">
             <button
               className={`account-filter-pill${accountFilter === 'ALL' ? ' is-active' : ''}`}
@@ -183,7 +188,7 @@ export default function ProjectionPage() {
             >
               Tutti i conti
             </button>
-            {accounts.map((account) => (
+            {bankAccounts.map((account) => (
               <button
                 key={account.id}
                 className={`account-filter-pill${accountFilter === account.id ? ' is-active' : ''}`}
