@@ -32,7 +32,7 @@ export const plannedApi = {
   },
 
   markAsPaid: async (id: string, date?: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
-    const response = await apiClient.patch(`/planned/${id}/mark-paid`, date ? { date } : undefined);
+    const response = await apiClient.patch(`/planned/${id}/mark-paid`, date ? { date } : {});
     return response.data;
   },
 };
