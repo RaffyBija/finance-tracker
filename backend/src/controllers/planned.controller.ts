@@ -248,7 +248,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { date } = req.body;
+    const { date } = req.body || {};
 
     const planned = await prisma.plannedTransaction.findFirst({
       where: { id, userId },
