@@ -892,6 +892,13 @@
    (l'@apply nel layer bake-rebbe il valore light, vedi feedback-dark-mode). */
 .dark .tx-list-icon-income { background-color: #064e3b; }
 .dark .tx-list-icon-expense { background-color: #450a0a; }
+/* transaction-card-icon: stesso schema di tx-list-icon (bake @apply), mancava
+   la controparte dark — pillola quasi bianca su card scura senza questo override. */
+.dark .transaction-card-icon-income { background-color: #064e3b; color: #34d399; }
+.dark .transaction-card-icon-expense { background-color: #450a0a; color: #f87171; }
+/* transaction-card-amount: idem, importo entrata/uscita nella lista transazioni. */
+.dark .transaction-card-amount-income { color: #34d399; }
+.dark .transaction-card-amount-expense { color: #f87171; }
 /* Trasferimento (neutro): bg-neutral-100 sarebbe troppo chiaro in dark. */
 .dark .transaction-card-icon-transfer { background-color: #44403c; color: #a8a29e; }
 .dark .transaction-card-amount-transfer { color: #a8a29e; }
@@ -2472,13 +2479,19 @@
 .dark .projection-flow-node-label { color: #78716c; }
 .dark .projection-flow-node-value { color: #f5f5f4; }
 .dark .projection-flow-arrow { color: #57534e; }
+.dark .projection-flow-delta.is-positive { color: #34d399; }
+.dark .projection-flow-delta.is-negative { color: #f87171; }
 .dark .projection-meta { border-top-color: #44403c; }
+.dark .projection-meta-income { color: #34d399; }
+.dark .projection-meta-expense { color: #f87171; }
 .dark .projection-chart-tip-tag { color: #78716c; }
 .dark .projection-detail-month { color: #78716c; }
 .dark .projection-detail-item { border-bottom-color: #292524; }
 .dark .projection-detail-icon { background: #1c1917; color: #a8a29e; }
 .dark .projection-detail-label { color: #f5f5f4; }
 .dark .projection-detail-meta { color: #78716c; }
+.dark .projection-detail-amount.is-income { color: #34d399; }
+.dark .projection-detail-amount.is-expense { color: #f87171; }
 .dark .outlook-footer { border-top-color: #44403c; }
 .dark .outlook-detail-link { color: #2dd4bf; }
 .dark .projection-empty { color: #78716c; }

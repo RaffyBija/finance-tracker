@@ -716,6 +716,8 @@
 .dark .form-help { color: #57534e; }
 .dark .form-advanced-toggle { color: #78716c; }
 .dark .form-advanced-toggle:hover { color: #d6d3d1; }
+.dark .form-char-count { color: #78716c; }
+.dark .form-char-count.is-limit { color: #f87171; }
 
 .dark .form-fieldset { border-color: #44403c; }
 .dark .form-legend { color: #a8a29e; }
