@@ -4,20 +4,20 @@ export default function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
-      <div className="text-center max-w-md">
-        <p className="text-8xl font-bold text-primary-200 mb-2 leading-none">
+    <div className="notfound-page">
+      <div className="notfound-content">
+        <p className="notfound-code">
           404
         </p>
 
-        <h1 className="text-2xl font-bold text-neutral-900 mb-3">
+        <h1 className="notfound-title">
           Pagina non trovata
         </h1>
-        <p className="text-neutral-500 mb-8">
+        <p className="notfound-text">
           La pagina che stai cercando non esiste o è stata spostata.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="notfound-actions">
           <button
             onClick={() => navigate("/dashboard")}
             className="btn btn-primary btn-md"

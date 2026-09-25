@@ -21,10 +21,10 @@ export default function PlannedListItem({
   const { formatSignedCurrency } = useFormatCurrency();
   return (
     <div className="list-card-item">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex items-start gap-4 flex-1 min-w-0">
+      <div className="list-item-row">
+        <div className="list-item-main">
           <div
-            className={`${planned.type === 'INCOME' ? 'tx-list-icon-income' : 'tx-list-icon-expense'}${planned.isPaid ? ' opacity-50' : ''}`}
+            className={`${planned.type === 'INCOME' ? 'tx-list-icon-income' : 'tx-list-icon-expense'}${planned.isPaid ? ' list-item-icon-paid' : ''}`}
           >
             {planned.type === 'INCOME' ? (
               <TrendingUp className="icon-lg" />
@@ -32,42 +32,38 @@ export default function PlannedListItem({
               <TrendingDown className="icon-lg" />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3
-                className={`font-semibold text-lg truncate ${
-                  planned.isPaid ? 'line-through text-neutral-400' : ''
-                }`}
-              >
+          <div className="list-item-body">
+            <div className="list-item-title-row">
+              <h3 className={`list-item-title${planned.isPaid ? ' is-paid' : ''}`}>
                 {planned.description}
               </h3>
               {planned.isPaid && <span className="badge-paid">Pagato</span>}
             </div>
-            <p className="text-sm text-neutral-500">
+            <p className="list-item-subtitle">
               {planned.category?.name || 'Senza categoria'}
             </p>
             {planned.notes && (
-              <div className="flex items-start gap-2 mt-2 text-sm text-neutral-600 bg-neutral-50 p-2 rounded">
-                <StickyNote className="icon-sm mt-0.5 flex-shrink-0" />
+              <div className="list-item-note">
+                <StickyNote className="icon-sm" />
                 <p>{planned.notes}</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap sm:ml-4">
+        <div className="list-item-actions is-offset">
           <span
-            className={`text-xl font-bold whitespace-nowrap ${
-              planned.type === 'INCOME' ? 'text-success-600' : 'text-danger-600'
-            } ${planned.isPaid ? 'line-through text-neutral-400' : ''}`}
+            className={`list-item-amount ${
+              planned.type === 'INCOME' ? 'is-income' : 'is-expense'
+            }${planned.isPaid ? ' is-paid' : ''}`}
           >
             {formatSignedCurrency(Number(planned.amount), planned.type)}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="list-item-action-buttons">
             {!planned.isPaid && (
               <button
                 onClick={() => onMarkAsPaid(planned)}
-                className="btn-icon text-success-600 hover:bg-success-50"
+                className="btn-icon-success"
                 title="Segna come pagato"
                 aria-label="Segna come pagato"
               >

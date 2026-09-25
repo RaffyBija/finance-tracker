@@ -1,0 +1,329 @@
+/* ============================================
+   PRIVACY POLICY PAGE
+   Pagina standalone (fuori da Layout/app-shell): topbar, hero, indice
+   mobile/desktop, sezioni di contenuto, footer.
+
+   NB: valori CSS diretti, NON @apply — stesso pattern già usato in
+   installments.css/dashboard-widgets.css/patrimonio.css. Un file @import
+   con @apply estensivo fuori da @layer components produce in build (dev
+   E produzione, verificato) regole .dark corrotte/duplicate per interazione
+   con la JIT di Tailwind — non un problema di @layer sì/no, ma di @apply
+   in sé in questo punto della catena di import. Valori hex diretti la
+   evitano alla radice.
+   ============================================ */
+
+.privacy-page {
+  min-height: 100vh;
+  background-color: #fafaf9;
+}
+
+/* Container centrato riusato da topbar/hero/contenuto principale. */
+.privacy-container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 72rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .privacy-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* ── Top bar ── */
+.privacy-topbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e7e5e4;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.privacy-topbar-inner {
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.privacy-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #44403c;
+  transition: color 0.15s;
+}
+.privacy-brand-link:hover { color: #0d9488; }
+.privacy-brand-icon {
+  background-color: #0d9488;
+  border-radius: 0.5rem;
+  padding: 0.375rem;
+  color: #ffffff;
+  display: flex;
+}
+.privacy-brand-text {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.privacy-lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #f5f5f4;
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+.privacy-lang-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  color: #78716c;
+}
+.privacy-lang-btn:hover { color: #44403c; }
+.privacy-lang-btn.is-active {
+  background-color: #ffffff;
+  color: #0f766e;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* ── Hero ── */
+.privacy-hero {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e7e5e4;
+}
+.privacy-hero-inner {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+.privacy-hero-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  color: #1c1917;
+  margin-bottom: 0.5rem;
+}
+.privacy-hero-subtitle {
+  color: #78716c;
+  margin-bottom: 0.75rem;
+}
+.privacy-hero-updated {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #a8a29e;
+  background-color: #f5f5f4;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+}
+
+/* ── Indice mobile a tendina ── */
+.privacy-mobile-toc {
+  position: sticky;
+  top: 3.5rem;
+  z-index: 30;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e7e5e4;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+@media (min-width: 1024px) {
+  .privacy-mobile-toc { display: none; }
+}
+.privacy-mobile-toc-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #44403c;
+}
+.privacy-mobile-toc-panel {
+  border-top: 1px solid #f5f5f4;
+  background-color: #ffffff;
+}
+.privacy-mobile-toc-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  transition: color 0.15s, background-color 0.15s;
+  color: #57534e;
+}
+.privacy-mobile-toc-item:hover { background-color: #fafaf9; }
+.privacy-mobile-toc-item.is-active {
+  color: #0f766e;
+  background-color: #f0fdfa;
+  font-weight: 500;
+}
+
+/* ── Layout principale ── */
+.privacy-main-inner {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+.privacy-layout {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.privacy-sidebar {
+  display: none;
+  width: 14rem;
+  flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+  .privacy-sidebar { display: block; }
+}
+.privacy-sidebar-sticky {
+  position: sticky;
+  top: 6rem;
+}
+.privacy-sidebar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #a8a29e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+.privacy-sidebar-nav > * + * {
+  margin-top: 0.25rem;
+}
+.privacy-sidebar-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: color 0.15s, background-color 0.15s;
+  color: #57534e;
+}
+.privacy-sidebar-item:hover { background-color: #f5f5f4; color: #1c1917; }
+.privacy-sidebar-item.is-active {
+  background-color: #f0fdfa;
+  color: #0f766e;
+  font-weight: 500;
+  border-left: 2px solid #14b8a6;
+  padding-left: 0.625rem;
+}
+
+.privacy-content {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+.privacy-content > * + * {
+  margin-top: 3rem;
+}
+.privacy-section {
+  scroll-margin-top: 7rem;
+}
+.privacy-section-card {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid #e7e5e4;
+  padding: 1.5rem;
+}
+@media (min-width: 640px) {
+  .privacy-section-card { padding: 2rem; }
+}
+.privacy-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1c1917;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f5f5f4;
+}
+
+/* Testo formattato (RenderContent). */
+.privacy-prose > * + * {
+  margin-top: 0.75rem;
+}
+.privacy-prose-list {
+  list-style-type: disc;
+  list-style-position: inside;
+  color: #44403c;
+}
+.privacy-prose-list > * + * {
+  margin-top: 0.25rem;
+}
+.privacy-prose-li {
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+.privacy-prose-p {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: #44403c;
+}
+.privacy-prose-strong {
+  font-weight: 600;
+  color: #1c1917;
+}
+
+/* ── Footer pagina ── */
+.privacy-footer {
+  text-align: center;
+  padding-bottom: 2rem;
+}
+.privacy-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #0d9488;
+  font-weight: 500;
+}
+.privacy-footer-link:hover { color: #0f766e; }
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+.dark .privacy-page { background-color: #1c1917; }
+
+.dark .privacy-topbar,
+.dark .privacy-hero,
+.dark .privacy-mobile-toc,
+.dark .privacy-mobile-toc-panel,
+.dark .privacy-section-card {
+  background-color: #292524;
+  border-color: #44403c;
+}
+
+.dark .privacy-brand-link { color: #d6d3d1; }
+.dark .privacy-brand-link:hover { color: #2dd4bf; }
+
+.dark .privacy-lang-toggle { background-color: #44403c; }
+.dark .privacy-lang-btn { color: #a8a29e; }
+.dark .privacy-lang-btn:hover { color: #e7e5e4; }
+.dark .privacy-lang-btn.is-active { background-color: #1c1917; color: #5eead4; }
+
+.dark .privacy-hero-title,
+.dark .privacy-section-title,
+.dark .privacy-prose-strong {
+  color: #f5f5f4;
+}
+.dark .privacy-hero-subtitle { color: #78716c; }
+.dark .privacy-hero-updated { background-color: #44403c; color: #a8a29e; }
+.dark .privacy-section-title { border-bottom-color: #44403c; }
+
+.dark .privacy-mobile-toc-trigger { color: #d6d3d1; }
+.dark .privacy-mobile-toc-item { color: #a8a29e; }
+.dark .privacy-mobile-toc-item:hover { background-color: #44403c; }
+.dark .privacy-mobile-toc-item.is-active { background-color: #0d2d2a; color: #5eead4; }
+
+.dark .privacy-sidebar-label { color: #57534e; }
+.dark .privacy-sidebar-item { color: #a8a29e; }
+.dark .privacy-sidebar-item:hover { background-color: #44403c; color: #f5f5f4; }
+.dark .privacy-sidebar-item.is-active { background-color: #0d2d2a; color: #5eead4; border-left-color: #14b8a6; }
+
+.dark .privacy-prose-list,
+.dark .privacy-prose-p {
+  color: #d6d3d1;
+}
+
+.dark .privacy-footer-link { color: #2dd4bf; }
+.dark .privacy-footer-link:hover { color: #5eead4; }

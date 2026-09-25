@@ -260,9 +260,19 @@
     @apply bg-danger-600 text-white;
   }
 
+  .btn-filter-warning-active {
+    @apply bg-warning-600 text-white;
+  }
+
   .btn-filter-inactive {
     @apply bg-neutral-100 text-neutral-700;
     @apply hover:bg-neutral-200;
+  }
+
+  /* Filtri che devono occupare lo spazio disponibile su mobile e tornare
+     alla larghezza naturale da sm in su (es. PlannedFilters). */
+  .btn-filter-grow {
+    @apply flex-1 sm:flex-initial;
   }
 
   /* ============================

@@ -18,7 +18,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <TourProvider total={TOUR_STEPS.length}>
       <PendingProvider>
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+        <div className="app-shell">
           <Navbar />
           <main className="layout-main">
             <ErrorBoundary>

@@ -218,16 +218,16 @@ const ui = {
 
 function RenderContent({ text }: { text: string }) {
   return (
-    <div className="space-y-3">
+    <div className="privacy-prose">
       {text.split('\n\n').map((paragraph, i) => {
         if (!paragraph.trim()) return null;
 
         // Lista puntata
         if (paragraph.startsWith('- ')) {
           return (
-            <ul key={i} className="list-disc list-inside space-y-1 text-neutral-700">
+            <ul key={i} className="privacy-prose-list">
               {paragraph.split('\n').map((line, j) => (
-                <li key={j} className="text-sm leading-relaxed">
+                <li key={j} className="privacy-prose-li">
                   {renderInline(line.replace(/^- /, ''))}
                 </li>
               ))}
@@ -236,7 +236,7 @@ function RenderContent({ text }: { text: string }) {
         }
 
         return (
-          <p key={i} className="text-sm leading-relaxed text-neutral-700">
+          <p key={i} className="privacy-prose-p">
             {renderInline(paragraph)}
           </p>
         );
@@ -249,7 +249,7 @@ function renderInline(text: string): React.ReactNode[] {
   const parts = text.split(/\*\*(.*?)\*\*/g);
   return parts.map((part, i) =>
     i % 2 === 1
-      ? <strong key={i} className="font-semibold text-neutral-900">{part}</strong>
+      ? <strong key={i} className="privacy-prose-strong">{part}</strong>
       : <span key={i}>{part}</span>
   );
 }
@@ -297,29 +297,25 @@ export const Privacy = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="privacy-page">
 
       {/* ── Top bar ── */}
-      <div className="bg-white border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-neutral-700 hover:text-primary-600 transition-colors">
-            <div className="bg-primary-600 rounded-lg p-1.5">
-              <Wallet className="w-4 h-4 text-white" />
+      <div className="privacy-topbar">
+        <div className="privacy-container privacy-topbar-inner">
+          <Link to="/" className="privacy-brand-link">
+            <div className="privacy-brand-icon">
+              <Wallet size={16} />
             </div>
-            <span className="font-semibold text-sm">Finance Tracker</span>
+            <span className="privacy-brand-text">Finance Tracker</span>
           </Link>
 
           {/* Lang toggle */}
-          <div className="flex items-center gap-1 bg-neutral-100 rounded-full p-1">
+          <div className="privacy-lang-toggle">
             {(['it', 'en'] as Lang[]).map((l) => (
               <button
                 key={l}
                 onClick={() => setLang(l)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                  lang === l
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-neutral-500 hover:text-neutral-700'
-                }`}
+                className={`privacy-lang-btn${lang === l ? ' is-active' : ''}`}
               >
                 {l.toUpperCase()}
               </button>
@@ -329,36 +325,32 @@ export const Privacy = () => {
       </div>
 
       {/* ── Hero ── */}
-      <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-2">{t.title}</h1>
-          <p className="text-neutral-500 mb-3">{t.subtitle}</p>
-          <span className="inline-block text-xs text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">
+      <div className="privacy-hero">
+        <div className="privacy-container privacy-hero-inner">
+          <h1 className="privacy-hero-title">{t.title}</h1>
+          <p className="privacy-hero-subtitle">{t.subtitle}</p>
+          <span className="privacy-hero-updated">
             {t.updated}
           </span>
         </div>
       </div>
 
       {/* ── Mobile: indice a tendina ── */}
-      <div className="lg:hidden sticky top-14 z-30 bg-white border-b border-neutral-200 shadow-sm">
+      <div className="privacy-mobile-toc">
         <button
           onClick={() => setMobileOpen((o) => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-neutral-700"
+          className="privacy-mobile-toc-trigger"
         >
           <span>{content.find((s) => s.id === activeSection)?.title ?? t.tocTitle}</span>
-          {mobileOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          {mobileOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
         {mobileOpen && (
-          <div className="border-t border-neutral-100 bg-white">
+          <div className="privacy-mobile-toc-panel">
             {content.map((s) => (
               <button
                 key={s.id}
                 onClick={() => scrollTo(s.id)}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                  activeSection === s.id
-                    ? 'text-primary-700 bg-primary-50 font-medium'
-                    : 'text-neutral-600 hover:bg-neutral-50'
-                }`}
+                className={`privacy-mobile-toc-item${activeSection === s.id ? ' is-active' : ''}`}
               >
                 {s.title}
               </button>
@@ -368,25 +360,21 @@ export const Privacy = () => {
       </div>
 
       {/* ── Layout principale ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex gap-10">
+      <div className="privacy-container privacy-main-inner">
+        <div className="privacy-layout">
 
           {/* ── Sidebar desktop ── */}
-          <aside className="hidden lg:block w-56 flex-shrink-0">
-            <div className="sticky top-24">
-              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
+          <aside className="privacy-sidebar">
+            <div className="privacy-sidebar-sticky">
+              <p className="privacy-sidebar-label">
                 {t.tocTitle}
               </p>
-              <nav className="space-y-1">
+              <nav className="privacy-sidebar-nav">
                 {content.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => scrollTo(s.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeSection === s.id
-                        ? 'bg-primary-50 text-primary-700 font-medium border-l-2 border-primary-500 pl-2.5'
-                        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                    }`}
+                    className={`privacy-sidebar-item${activeSection === s.id ? ' is-active' : ''}`}
                   >
                     {s.title}
                   </button>
@@ -396,16 +384,16 @@ export const Privacy = () => {
           </aside>
 
           {/* ── Contenuto ── */}
-          <main className="flex-1 min-w-0 space-y-12">
+          <main className="privacy-content">
             {content.map((s) => (
               <section
                 key={s.id}
                 id={s.id}
                 ref={(el) => { sectionRefs.current[s.id] = el; }}
-                className="scroll-mt-28"
+                className="privacy-section"
               >
-                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
-                  <h2 className="text-lg font-semibold text-neutral-900 mb-5 pb-4 border-b border-neutral-100">
+                <div className="privacy-section-card">
+                  <h2 className="privacy-section-title">
                     {s.title}
                   </h2>
                   <RenderContent text={s.content} />
@@ -414,10 +402,10 @@ export const Privacy = () => {
             ))}
 
             {/* Footer pagina */}
-            <div className="text-center pb-8">
+            <div className="privacy-footer">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                className="privacy-footer-link"
               >
                 ← {t.backHome}
               </Link>
