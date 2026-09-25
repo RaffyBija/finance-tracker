@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
+import { bankAccountScope } from '../utils/balance';
 
 // Returns all dates a recurring transaction falls on within [monthStart, effectiveEnd]
 function getRecurringDatesInMonth(
@@ -86,9 +87,18 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
     const monthStart = new Date(year, month,     1,  0,  0,  0,   0);
     const monthEnd   = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
+    // Stessa esclusione CC di Dashboard/Proiezione: una spesa su carta non è
+    // un'uscita di liquidità alla sua data (confluisce nel debito del ciclo),
+    // quindi né le transazioni reali né le pianificate su un conto CC vanno
+    // sommate qui — altrimenti la stessa spesa appare due volte (acquisto +
+    // addebito aggregato del ciclo). L'addebito stesso (PlannedTransaction creata
+    // da syncCyclePlanned) ha invece accountId sul conto BANK collegato, quindi
+    // resta incluso correttamente, alla sua data di billing.
+    const ccScope = await bankAccountScope(userId);
+
     const [transactions, plannedTransactions, recurringTransactions, openingBalanceRows] = await Promise.all([
       prisma.transaction.findMany({
-        where: { userId, date: { gte: monthStart, lte: monthEnd }, transferId: null },
+        where: { userId, date: { gte: monthStart, lte: monthEnd }, transferId: null, ...ccScope },
         include: {
           category: { select: { id: true, name: true, color: true, icon: true } },
           items: { select: { category: { select: { name: true } } } },
@@ -96,7 +106,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
         orderBy: { date: 'asc' },
       }),
       prisma.plannedTransaction.findMany({
-        where: { userId, plannedDate: { gte: monthStart, lte: monthEnd }, isPaid: false },
+        where: { userId, plannedDate: { gte: monthStart, lte: monthEnd }, isPaid: false, ...ccScope },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
         orderBy: { plannedDate: 'asc' },
       }),
@@ -106,12 +116,13 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
           isActive: true,
           startDate: { lte: monthEnd },
           OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+          ...ccScope,
         },
         include: { category: { select: { id: true, name: true, color: true, icon: true } } },
       }),
       prisma.transaction.groupBy({
         by: ['type'],
-        where: { userId, date: { lt: monthStart }, transferId: null },
+        where: { userId, date: { lt: monthStart }, transferId: null, ...ccScope },
         _sum: { amount: true },
       }),
     ]);

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, type CcEvent } from '../utils/balance';
+import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, bankAccountScope, type CcEvent } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
@@ -16,7 +16,7 @@ export const getSummary = async (req: AuthRequest, res: Response) => {
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId, transferId: null };
+    const where: any = { userId, transferId: null, ...(await bankAccountScope(userId)) };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
 
     const [totalIncome, totalExpense, transactionCount] = await Promise.all([
@@ -55,7 +55,7 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId, transferId: null };
+    const where: any = { userId, transferId: null, ...(await bankAccountScope(userId)) };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
     if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
 
@@ -128,7 +128,7 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
     startDate.setMonth(startDate.getMonth() - monthsCount);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId, date: { gte: startDate }, transferId: null },
+      where: { userId, date: { gte: startDate }, transferId: null, ...(await bankAccountScope(userId)) },
       orderBy: { date: 'asc' },
     });
 
@@ -980,7 +980,7 @@ export const getCategoryTrend = async (req: AuthRequest, res: Response) => {
     firstMonthStart.setHours(0, 0, 0, 0);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId, type, transferId: null, date: { gte: firstMonthStart } },
+      where: { userId, type, transferId: null, date: { gte: firstMonthStart }, ...(await bankAccountScope(userId)) },
       include: { category: true, items: { include: { category: true } } },
     });
 

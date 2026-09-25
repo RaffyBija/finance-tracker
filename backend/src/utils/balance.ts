@@ -110,6 +110,29 @@ export async function getLiquidBalance(
     .reduce((sum, a) => sum + a.balance, 0);
 }
 
+// Restringe una query di Transaction ai soli conti BANK (liquidità reale/spesa
+// storica): le CC ne restano fuori perché una spesa su carta non è un'uscita di
+// liquidità alla sua data — confluisce nel debito del ciclo e diventa un'unica
+// uscita reale solo quando il ciclo viene saldato (vedi projectCcCharges e
+// syncCyclePlanned). Senza questo filtro la stessa spesa viene contata due volte:
+// una come acquisto sulla CC, una come addebito aggregato quando il ciclo è pagato.
+//
+//   Stessa regola già applicata alla ricostruzione storica della Proiezione
+//   (getProjectionSeries): nessun filtro se l'utente non ha ancora nessun conto
+//   (comportamento storico "tutte le transazioni", coerente con getLiquidBalance).
+//   Centralizzata qui perché va applicata in modo identico da Dashboard
+//   (getSummary/getCategoryStats/getMonthlyTrend/getCategoryTrend) e Calendario:
+//   prima erano tre implementazioni indipendenti, spesso divergenti.
+export async function bankAccountScope(userId: string): Promise<{ accountId?: { in: string[] } }> {
+  const accounts = await prisma.account.findMany({
+    where: { userId },
+    select: { id: true, type: true },
+  });
+  if (accounts.length === 0) return {};
+  const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
+  return { accountId: { in: bankIds } };
+}
+
 // Debiti dei cicli CC ancora aperti, proiettati come uscite future alla prossima
 // data di addebito. Una volta che il ciclo viene chiuso (closeBillingCycle) il
 // saldo CC torna a 0 e il debito diventa una pianificata: i due meccanismi sono

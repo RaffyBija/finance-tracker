@@ -33,28 +33,37 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     tomorrowStart.setDate(tomorrowStart.getDate() + 1);
     tomorrowStart.setHours(0, 0, 0, 0);
 
+    // Conti dell'utente: servono sia per il saldo (liquidità reale) sia per
+    // derivare lo scope BANK-only, senza una seconda query Account separata.
+    const accounts = await getAccountsWithBalances(userId);
+    const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
+    // Stessa esclusione CC di Dashboard/Calendario/Proiezione: una spesa su
+    // carta non è un'uscita di liquidità alla sua data (confluisce nel debito
+    // del ciclo) — senza questo filtro actualExpenses/histAvgExpenses contano
+    // la spesa due volte (acquisto CC + addebito aggregato quando il ciclo
+    // viene saldato), disallineando il Forecast da Dashboard/Proiezione.
+    const ccScope = accounts.length > 0 ? { accountId: { in: bankIds } } : {};
+
     const [
       currentMonthTx,
       historicalTx,
-      accounts,
       recurringActive,
       plannedRemaining,
     ] = await Promise.all([
       prisma.transaction.findMany({
-        where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null, transferId: null },
+        where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null, transferId: null, ...ccScope },
         include: {
           category: { select: { id: true, name: true, color: true, icon: true } },
           items: { include: { category: { select: { id: true, name: true, color: true, icon: true } } } },
         },
       }),
       prisma.transaction.findMany({
-        where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null, transferId: null },
+        where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null, transferId: null, ...ccScope },
         include: {
           category: { select: { id: true, name: true, icon: true, color: true } },
           items: { include: { category: { select: { id: true, name: true, icon: true, color: true } } } },
         },
       }),
-      getAccountsWithBalances(userId),
       prisma.recurringTransaction.findMany({
         where: { userId, isActive: true },
       }),
