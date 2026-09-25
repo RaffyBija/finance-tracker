@@ -60,7 +60,7 @@ export default function BudgetDetailModal({
   onEdit,
   onDelete,
 }: BudgetDetailModalProps) {
-  const { data, isLoading } = useBudgetHistory(isOpen && budget ? budget.id : null, 6);
+  const { data, isLoading, isError } = useBudgetHistory(isOpen && budget ? budget.id : null, 6);
   const { formatCurrency, formatCurrencyAxis } = useFormatCurrency();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -90,6 +90,10 @@ export default function BudgetDetailModal({
 
         {isLoading ? (
           <SkeletonChart />
+        ) : isError ? (
+          <div className="dashboard-chart-empty">
+            Errore nel caricamento dello storico. Riprova più tardi.
+          </div>
         ) : !hasTrend ? (
           <div className="dashboard-chart-empty">
             Servono almeno due periodi per mostrare un andamento. Torna qui il

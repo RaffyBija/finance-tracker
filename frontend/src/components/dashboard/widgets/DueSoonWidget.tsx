@@ -19,7 +19,7 @@ interface DueRow {
 // Widget "In scadenza" — ricorrenti + pianificate imminenti (riusa PendingContext).
 export default function DueSoonWidget() {
   const navigate = useNavigate();
-  const { recurringDueData, plannedDueData } = usePending();
+  const { recurringDueData, plannedDueData, isError } = usePending();
   const { formatSignedCurrency } = useFormatCurrency();
 
   const rows = useMemo<DueRow[]>(() => {
@@ -56,7 +56,12 @@ export default function DueSoonWidget() {
       <div className="widget-head">
         <h3 className="widget-title">In scadenza</h3>
       </div>
-      {rows.length === 0 ? (
+      {isError ? (
+        <div className="dashboard-empty-state">
+          <CalendarClock size={20} className="due-soon-empty-icon" />
+          Errore nel caricamento delle scadenze.
+        </div>
+      ) : rows.length === 0 ? (
         <div className="dashboard-empty-state">
           <CalendarClock size={20} className="due-soon-empty-icon" />
           Nessuna scadenza imminente

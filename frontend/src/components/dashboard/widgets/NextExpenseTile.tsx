@@ -8,7 +8,7 @@ import { formatDateShort } from '../../../utils/date';
 // (ricorrente o pianificato), per importo + data. Stato calmo se nulla in arrivo.
 export default function NextExpenseTile() {
   const navigate = useNavigate();
-  const { recurringDueData, plannedDueData } = usePending();
+  const { recurringDueData, plannedDueData, isError } = usePending();
   const { formatCurrency } = useFormatCurrency();
 
   const next = useMemo(() => {
@@ -28,6 +28,15 @@ export default function NextExpenseTile() {
 
     return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
   }, [recurringDueData, plannedDueData]);
+
+  if (isError) {
+    return (
+      <div className="dashboard-tile dashboard-tile-empty">
+        <span className="dashboard-tile-label">Prossima uscita</span>
+        <span className="dashboard-tile-figure-muted">Errore caricamento</span>
+      </div>
+    );
+  }
 
   if (!next) {
     return (

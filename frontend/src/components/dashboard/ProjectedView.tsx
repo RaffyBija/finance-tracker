@@ -65,7 +65,7 @@ export default function ProjectedView() {
 
   // Un'unica fonte: la serie contiene sia i punti del grafico sia gli aggregati
   // (currentBalance, projected*, conteggi) usati nel riepilogo numerico.
-  const { data, isFetching } = useProjectionSeries(queryParams, enabled);
+  const { data, isFetching, isError } = useProjectionSeries(queryParams, enabled);
 
   const handleMonthsChange = (months: number) => {
     setSelectedMonths(months);
@@ -179,6 +179,10 @@ export default function ProjectedView() {
               <div style={{ height: '1.5rem', width: '7rem', background: '#e7e5e4', borderRadius: '0.25rem' }} className="animate-pulse" />
             </div>
           </div>
+        </div>
+      ) : isError ? (
+        <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>
+          Errore nel caricamento della proiezione. Riprova più tardi.
         </div>
       ) : !data ? (
         <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>

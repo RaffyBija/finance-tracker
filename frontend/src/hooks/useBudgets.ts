@@ -7,7 +7,7 @@ import type { CreateBudgetDTO } from '../types';
 const BUDGET_KEYS = ['budgets', 'budget-history', 'budget-suggestions', 'dashboard'];
 
 export function useBudgets() {
-  const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
+  const { data: budgets = [], isLoading: budgetsLoading, isError: budgetsError } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => budgetApi.getAll(),
     staleTime: 3 * 60 * 1000,
@@ -24,6 +24,7 @@ export function useBudgets() {
     categories,
     isLoading: budgetsLoading,
     categoriesLoading,
+    isError: budgetsError,
   };
 }
 

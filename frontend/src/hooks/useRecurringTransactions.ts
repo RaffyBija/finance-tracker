@@ -15,7 +15,7 @@ export function useRecurringDue() {
   const [enabled] = useState(() => localStorage.getItem(DUE_CHECK_KEY) !== today);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data } = useQuery<RecurringDueResponse>({
+  const { data, isError } = useQuery<RecurringDueResponse>({
     queryKey: ['recurring-due'],
     queryFn: recurringApi.getDue,
     enabled,
@@ -38,7 +38,7 @@ export function useRecurringDue() {
     setIsOpen(false);
   };
 
-  return { data: data ?? null, isOpen, dismiss };
+  return { data: data ?? null, isOpen, dismiss, isError };
 }
 
 const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {

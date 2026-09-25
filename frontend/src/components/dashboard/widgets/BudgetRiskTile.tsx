@@ -8,7 +8,7 @@ const RISK_THRESHOLD = 80;
 // in evidenza. Stato calmo (verde) quando è tutto sotto controllo.
 export default function BudgetRiskTile() {
   const navigate = useNavigate();
-  const { budgets } = useBudgets();
+  const { budgets, isError } = useBudgets();
 
   const { atRisk, worst } = useMemo(() => {
     const risky = budgets
@@ -16,6 +16,15 @@ export default function BudgetRiskTile() {
       .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0));
     return { atRisk: risky.length, worst: risky[0] };
   }, [budgets]);
+
+  if (isError) {
+    return (
+      <div className="dashboard-tile dashboard-tile-budget">
+        <span className="dashboard-tile-label">Budget</span>
+        <span className="dashboard-tile-figure-muted">Errore caricamento</span>
+      </div>
+    );
+  }
 
   if (budgets.length === 0) return null;
 

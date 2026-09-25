@@ -22,13 +22,30 @@ const freqLabel: Record<string, string> = {
 
 export default function SubscriptionCostCard() {
   const { formatCurrency } = useFormatCurrency();
-  const { data: recurring = [], isLoading } = useQuery({
+  const { data: recurring = [], isLoading, isError } = useQuery({
     queryKey: ['recurring'],
     queryFn: () => recurringApi.getAll(),
     staleTime: 3 * 60 * 1000,
   });
 
   if (isLoading) return <SkeletonCard />;
+
+  if (isError) {
+    return (
+      <div className="subscription-card">
+        <div className="subscription-card-header">
+          <div className="forecast-card-title-group">
+            <RepeatIcon size={16} className="forecast-card-icon" />
+            <div>
+              <span className="forecast-card-title">Spese ricorrenti</span>
+              <p className="forecast-card-subtitle">Spese fisse e abbonamenti attivi normalizzati al mese</p>
+            </div>
+          </div>
+        </div>
+        <p className="subscription-empty">Errore nel caricamento delle spese ricorrenti.</p>
+      </div>
+    );
+  }
 
   const activeExpenses = recurring
     .filter((r) => r.isActive && r.type === 'EXPENSE')

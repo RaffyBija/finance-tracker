@@ -4,7 +4,7 @@ import { SkeletonList } from '../../shared/Skeleton';
 
 // Widget "Transazioni recenti" — ultime 5 transazioni di tutti i conti.
 export default function RecentTransactionsWidget() {
-  const { data: recentTransactions = [], isLoading } = useRecentTransactions(5);
+  const { data: recentTransactions = [], isLoading, isError } = useRecentTransactions(5);
 
   if (isLoading) return <SkeletonList rows={5} />;
 
@@ -14,7 +14,9 @@ export default function RecentTransactionsWidget() {
         <h3 className="widget-title">Transazioni recenti</h3>
       </div>
       <div className="card-divided">
-        {recentTransactions.length === 0 ? (
+        {isError ? (
+          <div className="dashboard-empty-state">Errore nel caricamento delle transazioni.</div>
+        ) : recentTransactions.length === 0 ? (
           <div className="dashboard-empty-state">Nessuna transazione recente</div>
         ) : (
           recentTransactions.map((transaction) => (

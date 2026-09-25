@@ -22,9 +22,16 @@ function ForecastSkeleton() {
 
 export default function ForecastView() {
   const { formatCurrency } = useFormatCurrency();
-  const { data: forecast, isLoading } = useForecast();
+  const { data: forecast, isLoading, isError } = useForecast();
 
   if (isLoading) return <ForecastSkeleton />;
+  if (isError) {
+    return (
+      <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>
+        Errore nel calcolo della stima. Riprova più tardi.
+      </div>
+    );
+  }
   if (!forecast) {
     return (
       <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>

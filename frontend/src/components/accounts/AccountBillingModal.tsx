@@ -24,7 +24,7 @@ export default function AccountBillingModal({
   const settleMutation = useSettleAccount();
   const toast = useToast();
   const { data: categories = [] } = useCategories('EXPENSE');
-  const { data: cycles = [] } = useBillingCycles(account?.id ?? null, isOpen);
+  const { data: cycles = [], isError: cyclesError } = useBillingCycles(account?.id ?? null, isOpen);
   const [categoryId, setCategoryId] = useState('');
   const { formatCurrency } = useFormatCurrency();
 
@@ -58,6 +58,14 @@ export default function AccountBillingModal({
         <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
           Oggi è il giorno di addebito della tua carta. Vuoi registrare il pagamento?
         </p>
+
+        {cyclesError && (
+          <p style={{ fontSize: '0.8125rem', color: '#b91c1c' }}>
+            Non è stato possibile calcolare l'importo dovuto (errore di caricamento). L'importo
+            sotto potrebbe non essere corretto: verifica lo storico cicli prima di registrare
+            l'addebito, oppure salta e riprova più tardi.
+          </p>
+        )}
 
         {/* Riepilogo addebito */}
         <div style={{
@@ -143,7 +151,7 @@ export default function AccountBillingModal({
           <button
             type="button"
             onClick={handleSettle}
-            disabled={settleMutation.isPending || debt <= 0}
+            disabled={settleMutation.isPending || debt <= 0 || cyclesError}
             className="btn btn-primary btn-md"
           >
             {settleMutation.isPending ? 'Registrazione...' : 'Registra addebito'}
