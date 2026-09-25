@@ -54,8 +54,8 @@ export default function RecurringListItem({
 
   return (
     <div className={cardClass} onClick={handleCardClick}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+      <div className="list-item-row is-center">
+        <div className="list-item-main is-center">
           <div className={recurring.type === 'INCOME' ? 'tx-list-icon-income' : 'tx-list-icon-expense'}>
             {recurring.type === 'INCOME' ? (
               <TrendingUp className="icon-lg" />
@@ -63,9 +63,9 @@ export default function RecurringListItem({
               <TrendingDown className="icon-lg" />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-lg truncate">{recurring.description}</h3>
+          <div className="list-item-body">
+            <div className="list-item-title-row">
+              <h3 className="list-item-title">{recurring.description}</h3>
               <span
                 className={`${
                   recurring.isActive ? 'badge-status-active' : 'badge-status-inactive'
@@ -83,35 +83,33 @@ export default function RecurringListItem({
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500 mt-1">
+            <div className="list-item-meta-row">
               <span>{recurring.category?.name || 'Senza categoria'}</span>
               <span>•</span>
-              <div className="flex items-center gap-1">
+              <div className="list-item-meta-inline">
                 <Calendar className="icon-sm" />
                 {getFrequencyLabel(recurring.frequency, recurring.dayOfMonth)}
               </div>
             </div>
-            <p className="text-xs text-neutral-400 mt-1">
+            <p className="list-item-date-hint">
               Dal {formatDateShort(recurring.startDate)}
               {recurring.endDate && ` al ${formatDateShort(recurring.endDate)}`}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+        <div className="list-item-actions">
           <span
-            className={`text-xl font-bold whitespace-nowrap ${
-              recurring.type === 'INCOME' ? 'text-success-600' : 'text-danger-600'
+            className={`list-item-amount ${
+              recurring.type === 'INCOME' ? 'is-income' : 'is-expense'
             }`}
           >
             {formatSignedCurrency(Number(recurring.amount), recurring.type)}
           </span>
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="list-item-action-buttons" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => onToggle(recurring.id)}
-              className={`btn-icon ${
-                recurring.isActive ? 'text-success-600 hover:bg-success-50' : 'btn-icon-neutral'
-              }`}
+              className={recurring.isActive ? 'btn-icon-success' : 'btn-icon-neutral'}
               title={recurring.isActive ? 'Disattiva ricorrente' : 'Attiva ricorrente'}
               aria-label={recurring.isActive ? 'Disattiva ricorrente' : 'Attiva ricorrente'}
             >

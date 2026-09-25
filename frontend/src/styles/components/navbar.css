@@ -259,6 +259,17 @@
   }
 }
 
+/* ── Overlay invisibile per chiudere il ProfileDropdown al click fuori ──
+   z-index 49, sotto il solo pannello (50): vive dentro .navbar, che già
+   stabilisce il proprio stacking context a 100, quindi 49 conta solo
+   localmente rispetto al pannello — non va confrontato con la scala
+   globale 90/100/110. */
+.navbar-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
 /* ── Profile dropdown panel ── */
 .navbar-profile-panel {
   position: absolute;
@@ -564,6 +575,12 @@
   margin-left: auto;
 }
 
+/* ── Shell di pagina: sfondo dietro navbar/main/bottom-nav ── */
+.app-shell {
+  min-height: 100vh;
+  background-color: #fafaf9;
+}
+
 /* ── Layout main padding for mobile bottom bar ── */
 .layout-main {
   max-width: 80rem;
@@ -586,6 +603,8 @@
 /* ============================================================
    DARK MODE
    ============================================================ */
+.dark .app-shell { background-color: #1c1917; }
+
 .dark .navbar {
   background: #1c1917;
   border-bottom-color: #292524;

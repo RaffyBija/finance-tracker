@@ -57,7 +57,7 @@ export default function PlannedList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="planned-list-stack">
       {sortedDates.map((date) => {
         const badge = getDateBadge(date);
         return (

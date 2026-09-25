@@ -90,7 +90,7 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="navbar-dropdown-backdrop" onClick={onClose} />
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
       <div className="navbar-profile-panel">
         <div className="navbar-profile-header">

@@ -11,19 +11,19 @@ export default function PlannedFilters({
   setFilterStatus,
 }: PlannedFiltersProps) {
   return (
-    <div className="card card-md mb-6">
-      <div className="flex flex-wrap gap-2 sm:gap-4">
+    <div className="card card-md planned-filters-card">
+      <div className="planned-filters-row">
         <button
           onClick={() => setFilterStatus('UNPAID')}
-          className={`btn-filter flex-1 sm:flex-initial ${
-            filterStatus === 'UNPAID' ? 'bg-warning-600 text-white' : 'btn-filter-inactive'
+          className={`btn-filter btn-filter-grow ${
+            filterStatus === 'UNPAID' ? 'btn-filter-warning-active' : 'btn-filter-inactive'
           }`}
         >
           Da Pagare
         </button>
         <button
           onClick={() => setFilterStatus('PAID')}
-          className={`btn-filter flex-1 sm:flex-initial ${
+          className={`btn-filter btn-filter-grow ${
             filterStatus === 'PAID' ? 'btn-filter-income-active' : 'btn-filter-inactive'
           }`}
         >
@@ -31,7 +31,7 @@ export default function PlannedFilters({
         </button>
         <button
           onClick={() => setFilterStatus('ALL')}
-          className={`btn-filter flex-1 sm:flex-initial ${
+          className={`btn-filter btn-filter-grow ${
             filterStatus === 'ALL' ? 'btn-filter-all-active' : 'btn-filter-inactive'
           }`}
         >

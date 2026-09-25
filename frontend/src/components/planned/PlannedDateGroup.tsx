@@ -27,9 +27,9 @@ export default function PlannedDateGroup({
 }: PlannedDateGroupProps) {
   return (
     <div className="card">
-      <div className="card-header flex items-center gap-3">
+      <div className="planned-date-group-header">
         <Calendar className="icon-md text-neutral-600" />
-        <span className="font-semibold text-neutral-900">
+        <span className="planned-date-group-title">
           {formatDateFull(date)}
         </span>
         <span className={badgeClassName}>{badgeText}</span>

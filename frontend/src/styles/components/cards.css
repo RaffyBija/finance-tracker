@@ -169,6 +169,108 @@
   }
 
   /* ============================
+     LIST ITEM ROW (Pianificate / Ricorrenti)
+     Struttura condivisa da PlannedListItem e RecurringListItem: stessa riga
+     icona + testo + importo + azioni, unificata in un'unica famiglia di
+     classi invece di ripetere le stesse utility Tailwind in due file.
+     ============================ */
+  .list-item-row {
+    @apply flex flex-col sm:flex-row items-start justify-between gap-4;
+  }
+  .list-item-row.is-center {
+    @apply items-start sm:items-center;
+  }
+
+  .list-item-main {
+    @apply flex items-start gap-4 flex-1 min-w-0;
+  }
+  .list-item-main.is-center {
+    @apply items-start sm:items-center;
+  }
+
+  /* Icona entrata/uscita sbiadita quando la voce è già pagata/eseguita. */
+  .list-item-icon-paid {
+    @apply opacity-50;
+  }
+
+  .list-item-body {
+    @apply flex-1 min-w-0;
+  }
+
+  .list-item-title-row {
+    @apply flex items-center gap-2 flex-wrap;
+  }
+
+  .list-item-title {
+    @apply font-semibold text-lg truncate;
+  }
+  .list-item-title.is-paid {
+    @apply line-through text-neutral-400;
+  }
+
+  .list-item-subtitle {
+    @apply text-sm text-neutral-500;
+  }
+
+  /* Riga meta con più segmenti separati da "•" (categoria, frequenza, ecc). */
+  .list-item-meta-row {
+    @apply flex flex-wrap items-center gap-2 text-sm text-neutral-500 mt-1;
+  }
+  .list-item-meta-inline {
+    @apply flex items-center gap-1;
+  }
+
+  .list-item-date-hint {
+    @apply text-xs text-neutral-400 mt-1;
+  }
+
+  .list-item-note {
+    @apply flex items-start gap-2 mt-2 text-sm text-neutral-600 bg-neutral-50 p-2 rounded;
+  }
+  .list-item-note svg {
+    @apply mt-0.5 flex-shrink-0;
+  }
+
+  .list-item-actions {
+    @apply flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap;
+  }
+  .list-item-actions.is-offset {
+    @apply sm:ml-4;
+  }
+
+  .list-item-amount {
+    @apply text-xl font-bold whitespace-nowrap;
+  }
+  .list-item-amount.is-income { @apply text-success-600; }
+  .list-item-amount.is-expense { @apply text-danger-600; }
+  .list-item-amount.is-paid { @apply line-through text-neutral-400; }
+
+  .list-item-action-buttons {
+    @apply flex items-center gap-2;
+  }
+
+  /* Riga filtri di PlannedFilters (mobile: pulsanti a tutta larghezza). */
+  .planned-filters-row {
+    @apply flex flex-wrap gap-2 sm:gap-4;
+  }
+  .planned-filters-card {
+    @apply mb-6;
+  }
+
+  /* Stack verticale dei gruppi per data in PlannedList. */
+  .planned-list-stack {
+    @apply space-y-6;
+  }
+
+  /* Header del gruppo per data in PlannedDateGroup. */
+  .planned-date-group-header {
+    @apply card-header flex items-center gap-3;
+  }
+  .planned-date-group-title {
+    @apply font-semibold text-neutral-900;
+  }
+
+  /* ============================
      CATEGORY CARD (existing style improved)
      ============================ */
   .category-card {
@@ -667,6 +769,34 @@
   }
 
   /* ============================
+     404 PAGE (fuori da Layout/app-shell: serve il proprio sfondo)
+     ============================ */
+  .notfound-page {
+    @apply min-h-screen flex items-center justify-center px-4;
+    background-color: #fafaf9;
+  }
+
+  .notfound-content {
+    @apply text-center max-w-md;
+  }
+
+  .notfound-code {
+    @apply text-8xl font-bold text-primary-200 mb-2 leading-none;
+  }
+
+  .notfound-title {
+    @apply text-2xl font-bold text-neutral-900 mb-3;
+  }
+
+  .notfound-text {
+    @apply text-neutral-500 mb-8;
+  }
+
+  .notfound-actions {
+    @apply flex flex-col sm:flex-row gap-3 justify-center;
+  }
+
+  /* ============================
      PROJECTED BALANCE RESULT (legacy — kept for fallback)
      ============================ */
   .projected-balance-result {
@@ -903,6 +1033,28 @@
 .dark .transaction-card-icon-transfer { background-color: #44403c; color: #a8a29e; }
 .dark .transaction-card-amount-transfer { color: #a8a29e; }
 .dark .transfer-arrow { color: #78716c; }
+
+/* list-item-* (Pianificate/Ricorrenti): stesso schema entrata/uscita di
+   transaction-card-amount, più la nota (bg-neutral-50 sarebbe quasi bianca
+   su card scura) e il titolo del gruppo data (text-neutral-900 = quasi nero,
+   illeggibile su sfondo scuro). */
+.dark .list-item-amount.is-income { color: #34d399; }
+.dark .list-item-amount.is-expense { color: #f87171; }
+.dark .list-item-note { background-color: #1c1917; color: #a8a29e; }
+.dark .planned-date-group-title { color: #f5f5f4; }
+/* Prima del refactor queste erano utility Tailwind letterali nel JSX
+   (text-neutral-400/500), coperte dal fallback globale in index.css. Ora
+   che sono @apply bakeate in classi semantiche quel fallback non le tocca
+   più: serve l'override esplicito, stesso principio di sopra. */
+.dark .list-item-subtitle,
+.dark .list-item-meta-row,
+.dark .list-item-date-hint { color: #78716c; }
+.dark .list-item-title.is-paid,
+.dark .list-item-amount.is-paid { color: #57534e; }
+
+.dark .notfound-page { background-color: #1c1917; }
+.dark .notfound-title { color: #f5f5f4; }
+.dark .notfound-text { color: #78716c; }
 
 /* ============================================================
    PROJECTED DETAIL FILTER BAR
