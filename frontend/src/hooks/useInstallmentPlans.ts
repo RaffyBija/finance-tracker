@@ -15,7 +15,7 @@ const INSTALLMENT_KEYS = ['installments', 'planned', 'dashboard', 'pending-plann
 const INSTALLMENT_PAID_KEYS = ['installments', 'planned', 'transactions', 'dashboard', 'pending-planned', 'pending-installments', 'calendar', 'accounts'];
 
 export function useInstallmentPlans() {
-  const { data: plans = [], isLoading } = useQuery({
+  const { data: plans = [], isLoading, isError } = useQuery({
     queryKey: ['installments'],
     queryFn: () => installmentsApi.getAll(),
     staleTime: 2 * 60 * 1000,
@@ -27,7 +27,7 @@ export function useInstallmentPlans() {
     staleTime: 10 * 60 * 1000,
   });
 
-  return { plans, categories, isLoading };
+  return { plans, categories, isLoading, isError };
 }
 
 const invalidate = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {

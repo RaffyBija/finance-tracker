@@ -65,7 +65,7 @@ export default function CategoryPieWidget() {
     return month.getMonth() === now.getMonth() && month.getFullYear() === now.getFullYear();
   }, [month]);
 
-  const { data: categoryStats = [], isLoading } = useCategoryStats(range);
+  const { data: categoryStats = [], isLoading, isError } = useCategoryStats(range);
   const expenseCategoryStats = useMemo(
     () => categoryStats.filter((s) => s.type === 'EXPENSE'),
     [categoryStats]
@@ -99,7 +99,15 @@ export default function CategoryPieWidget() {
         </div>
       </div>
 
-      {expenseCategoryStats.length === 0 ? (
+      {isError ? (
+        <div className="category-empty">
+          <span className="category-empty-icon"><Receipt size={20} /></span>
+          <p className="category-empty-title">Errore nel caricamento</p>
+          <p className="category-empty-text">
+            Non è stato possibile recuperare le spese per categoria. Riprova più tardi.
+          </p>
+        </div>
+      ) : expenseCategoryStats.length === 0 ? (
         <div className="category-empty">
           <span className="category-empty-icon"><Receipt size={20} /></span>
           <p className="category-empty-title">

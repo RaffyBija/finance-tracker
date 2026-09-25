@@ -10,7 +10,7 @@ const progressClass = (pct: number) => (pct >= 100 ? 'is-danger' : pct >= 80 ? '
 // Widget "Budget" — progress dei budget attivi, i più a rischio in alto.
 export default function BudgetOverviewWidget() {
   const navigate = useNavigate();
-  const { budgets, isLoading } = useBudgets();
+  const { budgets, isLoading, isError } = useBudgets();
   const { formatCurrency } = useFormatCurrency();
 
   const sorted = useMemo(
@@ -25,7 +25,9 @@ export default function BudgetOverviewWidget() {
       <div className="widget-head">
         <h3 className="widget-title">Budget</h3>
       </div>
-      {sorted.length === 0 ? (
+      {isError ? (
+        <div className="dashboard-empty-state">Errore nel caricamento dei budget.</div>
+      ) : sorted.length === 0 ? (
         <div className="dashboard-empty-state">
           <Target size={20} className="budget-overview-empty-icon" />
           Nessun budget attivo

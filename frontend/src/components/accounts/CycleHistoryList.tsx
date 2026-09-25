@@ -28,7 +28,7 @@ function projectedBilling(periodStart: string, periodEnd: string, billingDay: nu
  *  Montata inline nella pagina dettaglio carta (/accounts/:id). */
 export default function CycleHistoryList({ accountId, enabled = true, showIntro = true, billingDay }: CycleHistoryListProps) {
   const { formatCurrency } = useFormatCurrency();
-  const { data: cycles = [], isLoading } = useBillingCycles(accountId, enabled);
+  const { data: cycles = [], isLoading, isError } = useBillingCycles(accountId, enabled);
 
   return (
     <>
@@ -54,6 +54,8 @@ export default function CycleHistoryList({ accountId, enabled = true, showIntro 
             </div>
           ))}
         </div>
+      ) : isError ? (
+        <p className="cycle-history-state">Errore nel caricamento dei cicli. Riprova più tardi.</p>
       ) : cycles.length === 0 ? (
         <p className="cycle-history-state">Nessun ciclo registrato.</p>
       ) : (

@@ -24,7 +24,7 @@ const CustomBarTooltip = memo(({ active, payload, label }: any) => {
 
 // Widget "Trend mensile" — barre entrate/uscite degli ultimi 6 mesi.
 export default function MonthlyTrendWidget() {
-  const { data: monthlyTrend = [], isLoading } = useMonthlyTrend(6);
+  const { data: monthlyTrend = [], isLoading, isError } = useMonthlyTrend(6);
 
   const formattedTrend = useMemo(
     () => monthlyTrend.map((item) => ({ ...item, month: formatMonthShort(item.month + '-01') })),
@@ -32,6 +32,17 @@ export default function MonthlyTrendWidget() {
   );
 
   if (isLoading) return <SkeletonChart />;
+
+  if (isError) {
+    return (
+      <div className="card">
+        <div className="widget-head">
+          <h3 className="widget-title">Trend mensile</h3>
+        </div>
+        <div className="dashboard-chart-empty">Errore nel caricamento del trend mensile.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="card">

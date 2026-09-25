@@ -8,8 +8,17 @@ const usageTone = (pct: number) => (pct >= 80 ? 'is-danger' : pct >= 50 ? 'is-wa
 
 export default function CCTilesWidget() {
   const navigate = useNavigate();
-  const { data: accounts = [] } = useAccounts();
+  const { data: accounts = [], isError } = useAccounts();
   const { formatCurrency } = useFormatCurrency();
+
+  if (isError) {
+    return (
+      <div className="dashboard-tile dashboard-tile-cc">
+        <span className="dashboard-tile-label">Carte</span>
+        <span className="dashboard-tile-figure-muted">Errore caricamento</span>
+      </div>
+    );
+  }
 
   const cards = accounts.filter((a) => a.type === 'CREDIT_CARD');
   if (cards.length === 0) return null;

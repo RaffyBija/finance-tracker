@@ -12,6 +12,11 @@ interface PendingContextValue {
   recurringDueData: RecurringDueResponse | undefined;
   plannedDueData: PlannedTransaction[];
   installmentDueData: InstallmentDueRata[];
+  /** Vera se una qualunque delle tre query è ancora al primo caricamento. */
+  isLoading: boolean;
+  /** Vera se una qualunque delle tre query è fallita (retry:false, quindi
+   *  definitivo per questa sessione finché non c'è un refetch/invalidazione). */
+  isError: boolean;
   refresh: () => void;
 }
 
@@ -22,27 +27,41 @@ const PendingContext = createContext<PendingContextValue>({
   recurringDueData: undefined,
   plannedDueData: [],
   installmentDueData: [],
+  isLoading: false,
+  isError: false,
   refresh: () => {},
 });
 
 export function PendingProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: recurringDueData } = useQuery<RecurringDueResponse>({
+  const {
+    data: recurringDueData,
+    isLoading: recurringLoading,
+    isError: recurringError,
+  } = useQuery<RecurringDueResponse>({
     queryKey: ['pending-recurring'],
     queryFn: recurringApi.getDue,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
-  const { data: plannedDueData = [] } = useQuery<PlannedTransaction[]>({
+  const {
+    data: plannedDueData = [],
+    isLoading: plannedLoading,
+    isError: plannedError,
+  } = useQuery<PlannedTransaction[]>({
     queryKey: ['pending-planned'],
     queryFn: plannedApi.getDue,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
-  const { data: installmentDueData = [] } = useQuery<InstallmentDueRata[]>({
+  const {
+    data: installmentDueData = [],
+    isLoading: installmentLoading,
+    isError: installmentError,
+  } = useQuery<InstallmentDueRata[]>({
     queryKey: ['pending-installments'],
     queryFn: installmentsApi.getDue,
     staleTime: 5 * 60 * 1000,
@@ -67,6 +86,8 @@ export function PendingProvider({ children }: { children: ReactNode }) {
       recurringDueData,
       plannedDueData,
       installmentDueData,
+      isLoading: recurringLoading || plannedLoading || installmentLoading,
+      isError: recurringError || plannedError || installmentError,
       refresh,
     }}>
       {children}

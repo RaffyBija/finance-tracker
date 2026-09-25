@@ -22,7 +22,7 @@ interface PayTarget {
 }
 
 export default function InstallmentPlansSection() {
-  const { plans, categories, isLoading } = useInstallmentPlans();
+  const { plans, categories, isLoading, isError } = useInstallmentPlans();
   const deleteMutation = useDeleteInstallmentPlan();
   const payMutation = usePayInstallments();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
@@ -84,6 +84,8 @@ export default function InstallmentPlansSection() {
     <div className="scadenzario-section">
       {isLoading ? (
         <SkeletonList rows={4} />
+      ) : isError ? (
+        <div className="dashboard-empty-state">Errore nel caricamento dei piani a rate. Riprova più tardi.</div>
       ) : plans.length === 0 ? (
         <EmptyState
           icon={<Layers size={22} />}
