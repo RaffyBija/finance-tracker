@@ -21,9 +21,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # Nessun lockfile tracciato nel repo (package-lock.json è gitignored):
-      # npm ci non è utilizzabile, si usa npm install come in sviluppo locale.
-      - run: npm install
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
       - run: npm run build
       - run: npm test -- --run
 
@@ -37,7 +37,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
       - run: npm run build
       - run: npm test -- --run
       # Lint ha debito pregresso noto (126 problemi, audit/REPORT.md): visibile
