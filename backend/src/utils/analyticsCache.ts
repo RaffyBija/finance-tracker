@@ -120,10 +120,16 @@ export const analyticsCache = {
   // embeddati nella serie per-conto → invalida le serie patrimonio. Il saldo BANK
   // è anche il cuscinetto dei suggerimenti budget → invalidali. currentBalance
   // della proiezione dipende dallo stesso saldo (globale o per-conto) → invalida anche quella.
+  // Trend mensile/per-categoria dipendono da bankAccountScope (solo conti BANK):
+  // aggiungere/rimuovere una CC ne cambia il risultato → invalidali anche loro,
+  // altrimenti restano in cache col valore pre-modifica fino a 5 minuti (stdTTL),
+  // disallineati da getSummary/getCategoryStats (non cachate).
   onAccountMutated: (uid: string) => {
     delNetWorth(uid);
     delBudgetSuggestions(uid);
     delProjections(uid);
+    delMonthlyTrend(uid);
+    delCategoryTrend(uid);
   },
 
   // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati
