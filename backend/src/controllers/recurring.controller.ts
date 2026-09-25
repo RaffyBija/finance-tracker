@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateRecurringTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import { accountBelongsToUser } from '../utils/ownership';
 
 // ── Due date helpers ─────────────────────────────────────────────────────────
 
@@ -214,6 +215,13 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
       }
     }
 
+    if (accountId) {
+      const owned = await accountBelongsToUser(accountId, userId);
+      if (!owned) {
+        return res.status(404).json({ error: 'Conto non trovato' });
+      }
+    }
+
     const recurring = await prisma.recurringTransaction.create({
       data: {
         amount,
@@ -271,6 +279,13 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
       }
       if (category.type !== existing.type) {
         return res.status(400).json({ error: 'Il tipo della categoria non corrisponde' });
+      }
+    }
+
+    if (accountId) {
+      const owned = await accountBelongsToUser(accountId, userId);
+      if (!owned) {
+        return res.status(404).json({ error: 'Conto non trovato' });
       }
     }
 

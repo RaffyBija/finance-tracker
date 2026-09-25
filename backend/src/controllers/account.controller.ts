@@ -285,6 +285,19 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Il conto principale non può essere eliminato' });
     }
 
+    // Un conto coinvolto in un trasferimento non va eliminato: le transazioni
+    // collegate diventerebbero orfane (accountId → NULL via onDelete: SetNull) e
+    // l'importo trasferito sparirebbe silenziosamente dal patrimonio netto senza
+    // che la transazione gemella (sull'altro conto) venga corretta di conseguenza.
+    const transferLegsCount = await prisma.transaction.count({
+      where: { userId, accountId: id, transferId: { not: null } },
+    });
+    if (transferLegsCount > 0) {
+      return res.status(400).json({
+        error: 'Questo conto è coinvolto in uno o più trasferimenti: eliminali prima di eliminare il conto.',
+      });
+    }
+
     // Le transazioni collegate vengono impostate a NULL (onDelete: SetNull)
     await prisma.account.delete({ where: { id } });
 

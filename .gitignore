@@ -1,0 +1,30 @@
+node_modules
+dist
+.env*
+*.log
+.DS_Store
+.vscode
+package-lock.json
+.mcp.json
+CLAUDE.md
+PRODUCT.md
+DESIGN.md
+.TODO
+*.png
+.claude
+.impeccable
+.playwright-mcp
+ *.png
+# Test (solo sviluppo locale)
+backend/src/__tests__/
+backend/vitest.config.ts
+/graphify-out
+/Screen
+
+# Caveman rule files (locali, non condivise)
+.cursor/rules/caveman.mdc
+.windsurf/rules/caveman.md
+.clinerules/caveman.md
+.github/copilot-instructions.md
+.opencode/AGENTS.md
+AGENTS.md
