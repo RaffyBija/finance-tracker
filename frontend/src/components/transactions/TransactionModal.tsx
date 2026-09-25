@@ -16,6 +16,7 @@ import CharCount from '../shared/CharCount';
 import ConfirmModal from '../shared/ConfirmModal';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { useSuggestedCategory } from '../../hooks/useSuggestedCategory';
+import { isTransactionUnchanged } from '../../utils/transactionCompare';
 
 const DESCRIPTION_MAX = 200;
 
@@ -259,13 +260,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
     try {
       if (editingTransactionData) {
         const wasSplit = (editingTransactionData.items?.length ?? 0) > 0;
-        const unchanged =
-          !splitMode && !wasSplit &&
-          editingTransactionData.amount === formData.amount &&
-          editingTransactionData.type === formData.type &&
-          editingTransactionData.description === formData.description &&
-          editingTransactionData.date.split('T')[0] === formData.date &&
-          editingTransactionData.categoryId === formData.categoryId;
+        const unchanged = isTransactionUnchanged(editingTransactionData, formData, wasSplit, splitMode);
 
         if (unchanged) {
           toast.info('Nessuna modifica apportata');

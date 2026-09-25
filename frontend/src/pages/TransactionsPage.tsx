@@ -5,7 +5,7 @@ import { useCategories } from '../hooks/useCategories';
 import { useAccounts } from '../hooks/useAccounts';
 import type { Transaction, TransactionType } from '../types';
 import { Plus, TrendingUp, TrendingDown, ChevronRight, ArrowLeftRight } from 'lucide-react';
-import { formatDateShort } from '../utils/date';
+import { formatDateShort, formatDateFull } from '../utils/date';
 import { splitCategoriesLabel } from '../utils/transactionDisplay';
 import TransactionModal from '../components/transactions/TransactionModal';
 import TransferModal from '../components/transactions/TransferModal';
@@ -14,7 +14,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import FilterNav from '../components/layout/FilterNav';
 import { SkeletonPageHeader, SkeletonList } from '../components/shared/Skeleton';
 import { useToast } from '../contexts/ToastContext';
-import { useState, useMemo, useEffect } from 'react';
+import { Fragment, useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
@@ -283,7 +283,15 @@ export default function TransactionsPage() {
               )}
             </div>
           ) : (
-            displayItems.map((transaction) => {
+            displayItems.map((transaction, index) => {
+              // Etichetta separatore di giorno: una sola volta per ciascun giorno
+              // rappresentato, quando cambia rispetto all'elemento precedente.
+              // Preserva l'ordine ricevuto (già cronologico decrescente) invece di
+              // raggruppare, così resta corretta con paginazione incrementale.
+              const dayKey = transaction.date.split('T')[0];
+              const prevDayKey = index > 0 ? displayItems[index - 1].date.split('T')[0] : null;
+              const showDaySeparator = dayKey !== prevDayKey;
+
               const isTransfer = !!transaction.transferId;
               const peerName = transaction.transferPeer?.name ?? '—';
               // Ruoli origine/destinazione derivati dal tipo della gamba: EXPENSE è
@@ -303,8 +311,13 @@ export default function TransactionsPage() {
                 }
               }
               return (
+                <Fragment key={transaction.id}>
+                  {showDaySeparator && (
+                    <div className="transaction-day-separator">
+                      {formatDateFull(transaction.date)}
+                    </div>
+                  )}
                 <div
-                  key={transaction.id}
                   className="transaction-card-wrap"
                   role="button"
                   tabIndex={0}
@@ -367,6 +380,7 @@ export default function TransactionsPage() {
                     </div>
                   </div>
                 </div>
+                </Fragment>
               );
             })
           )}

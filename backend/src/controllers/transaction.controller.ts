@@ -115,9 +115,10 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     const transactions = await prisma.transaction.findMany({
       where,
       include: txInclude,
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
       take: parsedLimit,
       skip: offset ? parseInt(offset as string) : 0,
     });

@@ -102,7 +102,10 @@ export const getRecentTransactions = async (req: AuthRequest, res: Response) => 
       where: { userId, transferId: null },
       // `items` serve a TransactionRow per mostrare la ripartizione (categoria + importo).
       include: { category: true, items: { select: { id: true, amount: true, category: { select: { name: true, icon: true } } } } },
-      orderBy: { date: 'desc' },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
       take: limit,
     });
 

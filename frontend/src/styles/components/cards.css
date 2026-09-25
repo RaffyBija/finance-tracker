@@ -931,6 +931,21 @@
   background: #fafaf9;
 }
 
+/* Etichetta separatore di giorno: un'occorrenza per ogni giorno rappresentato
+   nella lista, non ripetuta per transazione. Stile "leggero" coerente con le
+   altre section-label dell'app (.cal-summary-label, .customize-section-label). */
+.transaction-day-separator {
+  padding: 0.75rem 1.25rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a8a29e;
+}
+.transaction-day-separator:first-child {
+  padding-top: 0.625rem;
+}
+
 /* Riga transazione cliccabile → apre il modal di dettaglio. */
 .transaction-card.is-clickable { cursor: pointer; }
 .transaction-card-go-chevron {
@@ -1018,6 +1033,7 @@
 .dark .transaction-card-wrap:hover { background: #292524; }
 .dark .transaction-card-meta-sep { color: #57534e; }
 .dark .transaction-card-meta-date { color: #78716c; }
+.dark .transaction-day-separator { color: #78716c; }
 /* tx-list-icon: lo sfondo segue gli override dark di bg-success/danger-100
    (l'@apply nel layer bake-rebbe il valore light, vedi feedback-dark-mode). */
 .dark .tx-list-icon-income { background-color: #064e3b; }
