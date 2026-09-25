@@ -428,6 +428,13 @@
 .dark .btn-ghost-danger { color: #f87171; }
 .dark .btn-ghost-danger:hover { background-color: #450a0a; }
 
+.dark .btn-danger-outline {
+  background-color: transparent;
+  border-color: #7f1d1d;
+  color: #f87171;
+}
+.dark .btn-danger-outline:hover { background-color: #450a0a; }
+
 .dark .btn-outline {
   background-color: #292524;
   border-color: #57534e;
@@ -471,6 +478,8 @@
 .dark .btn-icon-neutral { color: #a8a29e; }
 .dark .btn-icon-neutral:hover { background-color: #44403c; }
 .dark .btn-icon-primary:hover { background-color: #0d2d2a; }
+.dark .btn-icon-success:hover { background-color: #064e3b; }
+.dark .btn-icon-danger:hover  { background-color: #450a0a; }
 
 /* ============================================================
    TOUCH TARGETS
