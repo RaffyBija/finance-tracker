@@ -4,6 +4,7 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreateTransactionDTO, TransactionItemDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+import { accountBelongsToUser } from '../utils/ownership';
 
 // Include standard per restituire una transazione completa di righe split.
 const txInclude = {
@@ -254,6 +255,13 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Tipo non valido (INCOME o EXPENSE)' });
     }
 
+    if (accountId) {
+      const owned = await accountBelongsToUser(accountId, userId);
+      if (!owned) {
+        return res.status(404).json({ error: 'Conto non trovato' });
+      }
+    }
+
     const isSplit = Array.isArray(items) && items.length > 0;
     let preparedItems: PreparedItem[] = [];
 
@@ -339,6 +347,22 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
 
     if (!existingTransaction) {
       return res.status(404).json({ error: 'Transazione non trovata' });
+    }
+
+    // Una gamba di un trasferimento non va toccata dalla route generica: le due
+    // transazioni linkate da transferId vanno mantenute in sincronia, cosa che
+    // solo l'endpoint dedicato (updateTransfer) garantisce.
+    if (existingTransaction.transferId) {
+      return res.status(400).json({
+        error: 'Questa transazione fa parte di un trasferimento: usa la funzione di modifica trasferimento.',
+      });
+    }
+
+    if (accountId) {
+      const owned = await accountBelongsToUser(accountId, userId);
+      if (!owned) {
+        return res.status(404).json({ error: 'Conto non trovato' });
+      }
     }
 
     // Validazione amount se fornito
@@ -466,6 +490,12 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
 
     if (!transaction) {
       return res.status(404).json({ error: 'Transazione non trovata' });
+    }
+
+    if (transaction.transferId) {
+      return res.status(400).json({
+        error: 'Questa transazione fa parte di un trasferimento: usa la funzione di eliminazione trasferimento.',
+      });
     }
 
     await prisma.transaction.delete({

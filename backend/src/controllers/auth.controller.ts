@@ -82,6 +82,10 @@ export const verifyEmail = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
 
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: "Token non valido o scaduto" });
+    }
+
     const user = await prisma.user.findFirst({
       where: {
         emailVerifyToken: token,
@@ -146,6 +150,10 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: "Token non valido o scaduto" });
+    }
 
     if (!newPassword || newPassword.length < 6) {
       return res

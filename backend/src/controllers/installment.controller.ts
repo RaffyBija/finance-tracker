@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateInstallmentPlanDTO, PayInstallmentsDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import { accountBelongsToUser } from '../utils/ownership';
 
 // La direzione del piano determina il tipo delle rate:
 // DEBT → EXPENSE (uscite future), CREDIT → INCOME (entrate attese).
@@ -176,6 +177,13 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
       if (!check.ok) return res.status(check.status).json({ error: check.error });
     }
 
+    if (accountId && !(await accountBelongsToUser(accountId, userId))) {
+      return res.status(404).json({ error: 'Conto non trovato' });
+    }
+    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
+      return res.status(404).json({ error: 'Carta di credito non trovata' });
+    }
+
     const cleanTitle = title.trim();
     const total = installments.length;
     const totalAmount = installments.reduce((s, r) => s + Number(r.amount), 0);
@@ -247,6 +255,13 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
     if (categoryId) {
       const check = await assertCategory(categoryId, userId, type);
       if (!check.ok) return res.status(check.status).json({ error: check.error });
+    }
+
+    if (accountId && !(await accountBelongsToUser(accountId, userId))) {
+      return res.status(404).json({ error: 'Conto non trovato' });
+    }
+    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
+      return res.status(404).json({ error: 'Carta di credito non trovata' });
     }
 
     // Se vengono passate nuove rate, validale prima di toccare il DB.
@@ -381,6 +396,10 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
     const plan = await prisma.installmentPlan.findFirst({ where: { id: planId, userId } });
     if (!plan) {
       return res.status(404).json({ error: 'Piano a rate non trovato' });
+    }
+
+    if (accountId && !(await accountBelongsToUser(accountId, userId))) {
+      return res.status(404).json({ error: 'Conto non trovato' });
     }
 
     const type = rate[0].type;
