@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Placeholder: prisma generate legge lo schema e richiede che la env
+      # var sia definita, ma non si connette al DB (nessuna migrazione qui).
+      DATABASE_URL: postgresql://user:password@localhost:5432/finance_tracker_ci
+      JWT_SECRET: ci-placeholder-secret-non-usato-in-produzione
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Nessun lockfile tracciato nel repo (package-lock.json è gitignored):
+      # npm ci non è utilizzabile, si usa npm install come in sviluppo locale.
+      - run: npm install
+      - run: npm run build
+      - run: npm test -- --run
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run build
+      - run: npm test -- --run
+      # Lint ha debito pregresso noto (126 problemi, audit/REPORT.md): visibile
+      # in CI ma non bloccante finché non viene risanato in una sessione dedicata.
+      - run: npm run lint
+        continue-on-error: true

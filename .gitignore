@@ -15,9 +15,6 @@ DESIGN.md
 .impeccable
 .playwright-mcp
  *.png
-# Test (solo sviluppo locale)
-backend/src/__tests__/
-backend/vitest.config.ts
 /graphify-out
 /Screen
 
