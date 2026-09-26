@@ -112,8 +112,9 @@ export interface CreateInstallmentPlanDTO {
   title: string;
   notes?: string;
   categoryId?: string;
+  // Rate su carta: si sceglie la CC come accountId (entrano nel ciclo come un
+  // acquisto). ccAccountId è riservato alla pianificata di addebito del ciclo CC.
   accountId?: string;
-  ccAccountId?: string;
   installments: InstallmentInputDTO[];
 }
 

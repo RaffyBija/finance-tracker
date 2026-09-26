@@ -27,6 +27,9 @@ export interface DueEntry {
   planId?: string;
 }
 
+/** Giorni di ritardo entro cui una scadenza parte già selezionata nel popup. */
+export const RECENT_DAYS = 7;
+
 export const DUE_GROUPS: { kind: DueKind; label: string }[] = [
   { kind: 'cc', label: 'Addebiti carta' },
   { kind: 'recurring', label: 'Ricorrenti' },

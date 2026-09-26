@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import Navbar from './Navbar';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import { CookieBanner } from '../CookieConsent';
-import DueTodayGuard from '../due/DueTodayGuard';
+import DueReviewProvider from '../due/DueReviewProvider';
 import Tour from '../tour/Tour';
 import { TourProvider } from '../../contexts/TourContext';
 import { TOUR_STEPS } from '../tour/tourSteps';
@@ -17,6 +17,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <TourProvider total={TOUR_STEPS.length}>
       <PendingProvider>
+        <DueReviewProvider>
         <div className="app-shell">
           <Navbar />
           <main className="layout-main">
@@ -25,9 +26,9 @@ export default function Layout({ children }: LayoutProps) {
             </ErrorBoundary>
           </main>
           <CookieBanner />
-          <DueTodayGuard />
           <Tour />
         </div>
+        </DueReviewProvider>
       </PendingProvider>
     </TourProvider>
   );

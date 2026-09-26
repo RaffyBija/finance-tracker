@@ -5,7 +5,6 @@ import {
   useUpdateAccount,
   useDeleteAccount,
   useSetDefaultAccount,
-  useSettleAccount,
   useCloseBillingCycle,
 } from '../../hooks/useAccounts';
 import { createTestQueryClient, createWrapper, createInvalidateSpy } from '../helpers';
@@ -17,7 +16,6 @@ vi.mock('../../api/accounts', () => ({
     update:             vi.fn().mockResolvedValue({ id: 'acc-1' }),
     delete:             vi.fn().mockResolvedValue({}),
     setDefault:         vi.fn().mockResolvedValue({}),
-    settle:             vi.fn().mockResolvedValue({ settledAmount: 100 }),
     closeBillingCycle:  vi.fn().mockResolvedValue({ cycled: true, debtAmount: 100 }),
   },
 }));
@@ -86,22 +84,6 @@ describe('useSetDefaultAccount', () => {
 
     const keys = spy.mock.calls.map((c) => (c[0] as any)?.queryKey);
     expect(keys).toContainEqual(['accounts']);
-  });
-});
-
-describe('useSettleAccount', () => {
-  it('invalida accounts, transactions, dashboard, planned, recurring e calendar', async () => {
-    const qc = createTestQueryClient();
-    const spy = createInvalidateSpy(qc);
-    const { result } = renderHook(() => useSettleAccount(), { wrapper: createWrapper(qc) });
-
-    await act(async () => { await result.current.mutateAsync({ id: 'acc-1' }); });
-
-    const keys = spy.mock.calls.map((c) => (c[0] as any)?.queryKey);
-    expect(keys).toContainEqual(['accounts']);
-    expect(keys).toContainEqual(['transactions']);
-    expect(keys).toContainEqual(['dashboard']);
-    expect(keys).toContainEqual(['calendar']);
   });
 });
 

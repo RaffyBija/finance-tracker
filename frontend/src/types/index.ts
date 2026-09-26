@@ -467,7 +467,6 @@ export interface CreateInstallmentPlanDTO {
   notes?: string;
   categoryId?: string;
   accountId?: string;
-  ccAccountId?: string;
   installments: InstallmentInput[];
 }
 
@@ -476,7 +475,6 @@ export interface UpdateInstallmentPlanDTO {
   notes?: string;
   categoryId?: string;
   accountId?: string;
-  ccAccountId?: string;
   installments?: InstallmentInput[];
 }
 

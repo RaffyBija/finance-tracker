@@ -189,6 +189,12 @@ export const updatePlannedTransaction = async (req: AuthRequest, res: Response) 
       return res.status(404).json({ error: 'Transazione pianificata non trovata' });
     }
 
+    // Le rate di un piano si gestiscono solo dal piano: lì si mantengono totale,
+    // avanzamento e stato (COMPLETED). Toccarle da qui li desincronizzerebbe.
+    if (existing.planId) {
+      return res.status(400).json({ error: 'Questa scadenza è una rata: gestiscila dal piano a rate' });
+    }
+
     if (amount !== undefined && amount <= 0) {
       return res.status(400).json({ error: 'Importo non valido' });
     }
@@ -251,6 +257,12 @@ export const deletePlannedTransaction = async (req: AuthRequest, res: Response) 
       return res.status(404).json({ error: 'Transazione pianificata non trovata' });
     }
 
+    // Le rate di un piano si gestiscono solo dal piano: lì si mantengono totale,
+    // avanzamento e stato (COMPLETED). Toccarle da qui li desincronizzerebbe.
+    if (planned.planId) {
+      return res.status(400).json({ error: 'Questa scadenza è una rata: gestiscila dal piano a rate' });
+    }
+
     await prisma.plannedTransaction.delete({ where: { id } });
 
     analyticsCache.onPlannedMutated(userId);
@@ -274,6 +286,12 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
 
     if (!planned) {
       return res.status(404).json({ error: 'Transazione pianificata non trovata' });
+    }
+
+    // Le rate di un piano si gestiscono solo dal piano: lì si mantengono totale,
+    // avanzamento e stato (COMPLETED). Toccarle da qui li desincronizzerebbe.
+    if (planned.planId) {
+      return res.status(400).json({ error: 'Questa scadenza è una rata: gestiscila dal piano a rate' });
     }
 
     // Un Sospeso (plannedDate null) non ha una data da cui derivare quella della

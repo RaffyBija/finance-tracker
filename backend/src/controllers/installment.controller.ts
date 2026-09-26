@@ -154,7 +154,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
       notes,
       categoryId,
       accountId,
-      ccAccountId,
       installments,
     }: CreateInstallmentPlanDTO = req.body;
 
@@ -183,10 +182,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
     if (accountId && !(await accountBelongsToUser(accountId, userId))) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
-    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
-      return res.status(404).json({ error: 'Carta di credito non trovata' });
-    }
-
     const cleanTitle = title.trim();
     const total = installments.length;
     const totalAmount = installments.reduce((s, r) => s + Number(r.amount), 0);
@@ -201,7 +196,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
           notes: notes ?? null,
           categoryId: categoryId ?? null,
           accountId: accountId ?? null,
-          ccAccountId: ccAccountId ?? null,
         },
       });
 
@@ -215,7 +209,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
           notes: r.notes ?? null,
           userId,
           accountId: accountId ?? null,
-          ccAccountId: ccAccountId ?? null,
           planId: plan.id,
           counterparty: r.counterparty ?? null,
         })),
@@ -243,7 +236,7 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { title, notes, categoryId, accountId, ccAccountId, installments } = req.body;
+    const { title, notes, categoryId, accountId, installments } = req.body;
 
     const existing = await prisma.installmentPlan.findFirst({
       where: { id, userId },
@@ -263,10 +256,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
     if (accountId && !(await accountBelongsToUser(accountId, userId))) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
-    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
-      return res.status(404).json({ error: 'Carta di credito non trovata' });
-    }
-
     // Se vengono passate nuove rate, validale prima di toccare il DB.
     if (installments !== undefined) {
       if (!Array.isArray(installments) || installments.length === 0) {
@@ -290,7 +279,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
           ...(notes !== undefined && { notes: notes ?? null }),
           ...(categoryId !== undefined && { categoryId: categoryId || null }),
           ...(accountId !== undefined && { accountId: accountId || null }),
-          ...(ccAccountId !== undefined && { ccAccountId: ccAccountId || null }),
         },
       });
 
@@ -309,7 +297,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
             notes: r.notes ?? null,
             userId,
             accountId: accountId !== undefined ? (accountId || null) : existing.accountId,
-            ccAccountId: ccAccountId !== undefined ? (ccAccountId || null) : existing.ccAccountId,
             planId: id,
             counterparty: r.counterparty ?? null,
           })),
@@ -319,7 +306,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
         const propagate: Record<string, unknown> = {};
         if (categoryId !== undefined) propagate.categoryId = categoryId || null;
         if (accountId !== undefined) propagate.accountId = accountId || null;
-        if (ccAccountId !== undefined) propagate.ccAccountId = ccAccountId || null;
         if (Object.keys(propagate).length > 0) {
           await tx.plannedTransaction.updateMany({ where: { planId: id, isPaid: false }, data: propagate });
         }

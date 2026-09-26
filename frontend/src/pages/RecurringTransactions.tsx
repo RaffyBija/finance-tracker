@@ -15,7 +15,7 @@ import {
   SkeletonList,
 } from "../components/shared/Skeleton";
 import RecurringList from "../components/recurring/RecurringList";
-import RecurringDueSection from "../components/recurring/RecurringDueSection";
+import DueBanner from "../components/due/DueBanner";
 import RecurringExecuteModal from "../components/recurring/RecurringExecuteModal";
 import RecurringFormModal from "../components/recurring/RecurringFormModal";
 import ConfirmModal from "../components/shared/ConfirmModal";
@@ -85,7 +85,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
       ) : (
         <>
           {!embedded && <PageHeader title="Ricorrenti" />}
-          <RecurringDueSection />
+          <DueBanner kinds={['recurring']} noun={['ricorrente', 'ricorrenti']} />
           <RecurringList
             recurring={recurring}
             dueItems={dueItems}

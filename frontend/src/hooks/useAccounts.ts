@@ -79,16 +79,6 @@ export const useSetDefaultAccount = () => {
   });
 };
 
-export const useSettleAccount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, categoryId }: { id: string; categoryId?: string }) =>
-      accountsAPI.settle(id, categoryId),
-    // + pending-planned: l'addebito saldato esce dal badge e dal promemoria CC.
-    onSuccess: () => invalidateAccounts(queryClient, [...ACCOUNT_DELETE_KEYS, 'pending-planned']),
-  });
-};
-
 export const useCloseBillingCycle = () => {
   const queryClient = useQueryClient();
   return useMutation({

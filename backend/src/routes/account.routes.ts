@@ -6,7 +6,6 @@ import {
   updateAccount,
   deleteAccount,
   setDefaultAccount,
-  settleAccount,
   closeBillingCycle,
   getBillingCycles,
 } from '../controllers/account.controller';
@@ -22,7 +21,6 @@ router.post('/', createAccount);
 router.put('/:id', updateAccount);
 router.delete('/:id', deleteAccount);
 router.patch('/:id/default', setDefaultAccount);
-router.post('/:id/settle', settleAccount);
 router.post('/:id/close-billing-cycle', closeBillingCycle);
 router.get('/:id/cycles', getBillingCycles);
 

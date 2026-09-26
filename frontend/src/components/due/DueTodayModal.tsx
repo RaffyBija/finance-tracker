@@ -8,16 +8,22 @@ import { usePayInstallments } from '../../hooks/useInstallmentPlans';
 import { useToast } from '../../contexts/ToastContext';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { formatDayMonth } from '../../utils/date';
-import { DUE_GROUPS, groupInstallments, type DueEntry } from './dueEntries';
+import { DUE_GROUPS, RECENT_DAYS, groupInstallments, type DueEntry } from './dueEntries';
 
 interface DueTodayModalProps {
   entries: DueEntry[];
   /** "Salta oggi" o registrazione completata: chiude il popup per la giornata. */
   onDismiss: () => void;
+  /** Aperto a mano da un banner: il secondario è "Chiudi", non "Salta oggi". */
+  manual?: boolean;
 }
 
-export default function DueTodayModal({ entries, onDismiss }: DueTodayModalProps) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(entries.map((e) => e.key)));
+export default function DueTodayModal({ entries, onDismiss, manual = false }: DueTodayModalProps) {
+  // Preselezionate solo le scadenze recenti: gli arretrati vecchi vanno spuntati a
+  // mano, così un "Registra" distratto non registra movimenti forse mai avvenuti.
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(entries.filter((e) => e.daysOverdue <= RECENT_DAYS).map((e) => e.key)),
+  );
   // Data effettiva scelta dall'utente (solo se diversa da quella prevista).
   const [dates, setDates] = useState<Record<string, string>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -115,6 +121,9 @@ export default function DueTodayModal({ entries, onDismiss }: DueTodayModalProps
           Questi movimenti erano in programma. Se sono già avvenuti (es. addebito diretto sul
           conto) registrali qui, senza inserirli a mano. Se un pagamento è arrivato in un altro
           giorno, tocca la data per correggerla.
+          {entries.some((e) => e.daysOverdue > RECENT_DAYS) && (
+            <> Le scadenze più vecchie di una settimana non sono selezionate: spuntale solo se le hai pagate.</>
+          )}
         </p>
 
         <div className="due-modal-list">
@@ -213,7 +222,7 @@ export default function DueTodayModal({ entries, onDismiss }: DueTodayModalProps
 
         <div className="form-actions">
           <button type="button" onClick={onDismiss} className="btn btn-ghost btn-md" disabled={submitting}>
-            Salta oggi
+            {manual ? 'Chiudi' : 'Salta oggi'}
           </button>
           <button
             type="button"

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import prisma from '../../utils/prisma';
 import { reconcileCcChanges } from '../../utils/billingCycle';
-import { markAsPaid } from '../../controllers/planned.controller';
+import { markAsPaid, deletePlannedTransaction, updatePlannedTransaction } from '../../controllers/planned.controller';
 import { executeRecurring } from '../../controllers/recurring.controller';
 
 // Registrazione delle scadenze dal popup "Scadenze da registrare":
 // pianificate (markAsPaid) e ricorrenti (executeRecurring) con data effettiva.
 vi.mock('../../utils/prisma', () => {
   const client: any = {
-    plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
+    plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), delete: vi.fn() },
     recurringTransaction: { findMany: vi.fn(), update: vi.fn() },
     transaction: { create: vi.fn() },
     $transaction: vi.fn(),
@@ -105,5 +105,23 @@ describe('executeRecurring', () => {
     await executeRecurring({ userId: 'u1', body: { ids: ['r1'], dates: { r1: 'boh' } } } as any, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('/planned/:id sulle rate di un piano (guard planId)', () => {
+  const rata = { id: 'r1', userId: 'u1', planId: 'plan1', amount: 50, type: 'EXPENSE', plannedDate: new Date(), isPaid: false };
+
+  it.each([
+    ['markAsPaid', markAsPaid, {}],
+    ['delete', deletePlannedTransaction, {}],
+    ['update', updatePlannedTransaction, { amount: 99 }],
+  ])('%s → 400 senza toccare il DB', async (_name, handler: any, body) => {
+    p.plannedTransaction.findFirst.mockResolvedValue(rata);
+    const res = mockRes();
+    await handler({ userId: 'u1', params: { id: 'r1' }, body } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+    expect(p.plannedTransaction.update).not.toHaveBeenCalled();
+    expect(p.plannedTransaction.delete).not.toHaveBeenCalled();
   });
 });

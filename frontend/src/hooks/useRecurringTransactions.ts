@@ -4,7 +4,7 @@ import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateRecurringTransactionDTO } from '../types';
 
-const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'recurring-due', 'pending-recurring', 'calendar', 'accounts'];
+const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'pending-recurring', 'calendar', 'accounts'];
 const RECURRING_CRUD_KEYS    = ['recurring', 'dashboard', 'pending-recurring', 'calendar'];
 
 const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {

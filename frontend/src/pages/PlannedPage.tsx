@@ -9,6 +9,7 @@ import {
 import { useCategories } from "../hooks/useCategories";
 import { useFormModal } from "../hooks/useFormModal";
 import PageHeader from "../components/shared/PageHeader";
+import DueBanner from "../components/due/DueBanner";
 import {
   SkeletonPageHeader,
   SkeletonList,
@@ -66,6 +67,7 @@ export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean }
       ) : (
         <>
           {!embedded && <PageHeader title="Pianificati" />}
+          <DueBanner kinds={['planned', 'cc']} noun={['pianificata', 'pianificate']} />
           <PlannedFilters
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}

@@ -9,6 +9,7 @@ import { useFormModal } from '../../hooks/useFormModal';
 import { useToast } from '../../contexts/ToastContext';
 import { SkeletonList } from '../shared/Skeleton';
 import EmptyState from '../shared/EmptyState';
+import DueBanner from '../due/DueBanner';
 import ConfirmModal from '../shared/ConfirmModal';
 import InstallmentPlanCard from './InstallmentPlanCard';
 import InstallmentPlanDetailModal from './InstallmentPlanDetailModal';
@@ -82,6 +83,7 @@ export default function InstallmentPlansSection() {
 
   return (
     <div className="scadenzario-section">
+      <DueBanner kinds={['installment']} noun={['rata', 'rate']} />
       {isLoading ? (
         <SkeletonList rows={4} />
       ) : isError ? (

@@ -97,7 +97,7 @@ describe('useToggleRecurring', () => {
 });
 
 describe('useExecuteRecurring', () => {
-  it('invalida transactions, dashboard, recurring, recurring-due, pending-recurring, calendar e accounts', async () => {
+  it('invalida transactions, dashboard, recurring, pending-recurring, calendar e accounts', async () => {
     const qc = createTestQueryClient();
     const spy = createInvalidateSpy(qc);
     const { result } = renderHook(() => useExecuteRecurring(), { wrapper: createWrapper(qc) });
@@ -108,7 +108,6 @@ describe('useExecuteRecurring', () => {
     expect(keys).toContainEqual(['transactions']);
     expect(keys).toContainEqual(['dashboard']);
     expect(keys).toContainEqual(['recurring']);
-    expect(keys).toContainEqual(['recurring-due']);
     expect(keys).toContainEqual(['pending-recurring']);
     expect(keys).toContainEqual(['calendar']);
     expect(keys).toContainEqual(['accounts']);
