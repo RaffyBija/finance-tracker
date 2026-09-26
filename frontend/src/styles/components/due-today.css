@@ -141,6 +141,16 @@
   opacity: 0.7;
 }
 
+/* Conto di pagamento per i piani a rate senza conto fisso (sotto la riga) */
+.due-account-row {
+  margin: 0.25rem 0 0.25rem 1.75rem;
+  padding: 0.5rem 0.75rem 0.25rem;
+  border-radius: 10px;
+  background: #f5f5f4;
+}
+
+.due-account-row .form-group { margin-bottom: 0.25rem; }
+
 /* Editor data effettiva (sotto la riga) */
 .due-date-editor {
   display: flex;
@@ -195,7 +205,8 @@
 
 @media (max-width: 540px) {
   .due-modal-list { max-height: 50vh; }
-  .due-date-editor { margin-left: 0; }
+  .due-date-editor,
+  .due-account-row { margin-left: 0; }
 }
 
 /* ── Dark mode (Stone caldo) ── */
@@ -209,7 +220,8 @@
 .dark .due-item-date { background: rgba(13, 148, 136, 0.18); color: #5eead4; }
 .dark .due-item-date.is-overdue { background: rgba(217, 119, 6, 0.18); color: #fbbf24; }
 .dark .due-item-date.is-custom { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
-.dark .due-date-editor { background: #1c1917; }
+.dark .due-date-editor,
+.dark .due-account-row { background: #1c1917; }
 .dark .due-date-editor-label { color: #a8a29e; }
 .dark .due-date-chip { background: #292524; border-color: #44403c; color: #d6d3d1; }
 .dark .due-date-chip.is-active { background: rgba(13, 148, 136, 0.18); border-color: #0d9488; color: #5eead4; }

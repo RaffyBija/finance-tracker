@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDueEntries, groupInstallments, type DueEntry } from '../../components/due/dueEntries';
+import { buildDueEntries, groupInstallments, plannedToEntry, rataToEntry, type DueEntry } from '../../components/due/dueEntries';
 
 const TODAY = '2026-09-26';
 
@@ -35,7 +35,7 @@ describe('buildDueEntries', () => {
       today: TODAY,
     });
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ key: 'i:i1', kind: 'installment', title: 'F24 — rata 1/5', planId: 'plan1', subtitle: 'Piano a rate · Mario' });
+    expect(entries[0]).toMatchObject({ key: 'i:i1', kind: 'installment', title: 'F24 — rata 1/5', planId: 'plan1', subtitle: 'Piano a rate · Mario', needsAccount: true });
   });
 });
 
@@ -55,6 +55,42 @@ describe('groupInstallments', () => {
       { planId: 'P1', date: '2026-09-20', ids: ['a', 'b'] },
       { planId: 'P1', date: '2026-09-25', ids: ['c'] },
       { planId: 'P2', date: '2026-09-20', ids: ['d'] },
+    ]);
+  });
+});
+
+describe('conversioni per il click sulle card', () => {
+  it('Sospeso: data proposta oggi, senza data prevista', () => {
+    const e = plannedToEntry({ ...base, id: 's1', description: 'Rimborso', plannedDate: null } as any, [], TODAY);
+    expect(e).toMatchObject({ scheduledDate: TODAY, daysOverdue: 0, undated: true });
+  });
+
+  it('pianificata futura: ritardo negativo (registrazione anticipata)', () => {
+    const e = plannedToEntry({ ...base, id: 'f1', description: 'Bollo', plannedDate: '2026-10-01T00:00:00.000Z' } as any, [], TODAY);
+    expect(e.daysOverdue).toBe(-5);
+    expect(e.undated).toBeUndefined();
+  });
+
+  it('rata di un piano con conto fisso (addebito diretto): nessun conto da chiedere', () => {
+    const e = rataToEntry({ ...base, id: 'r1', description: 'Auto — rata 3/48', plannedDate: '2026-09-20T00:00:00.000Z' } as any,
+      { id: 'P', title: 'Auto', accountId: 'acc1' }, TODAY);
+    expect(e.needsAccount).toBeUndefined();
+    expect(e.planId).toBe('P');
+  });
+});
+
+describe('groupInstallments — conto scelto', () => {
+  const rata = (id: string): DueEntry => ({
+    key: `i:${id}`, kind: 'installment', id, title: '', subtitle: '', amount: 1, type: 'EXPENSE',
+    scheduledDate: '2026-09-20', daysOverdue: 6, planId: 'P', needsAccount: true,
+  });
+
+  it('rate stesso piano e data ma conti diversi → transazioni separate', () => {
+    const acc: Record<string, string> = { 'i:a': 'bank1', 'i:b': 'bank1', 'i:c': 'poste' };
+    const groups = groupInstallments([rata('a'), rata('b'), rata('c')], (e) => e.scheduledDate, (e) => acc[e.key]);
+    expect(groups).toEqual([
+      { planId: 'P', date: '2026-09-20', accountId: 'bank1', ids: ['a', 'b'] },
+      { planId: 'P', date: '2026-09-20', accountId: 'poste', ids: ['c'] },
     ]);
   });
 });

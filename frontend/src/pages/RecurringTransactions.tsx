@@ -4,7 +4,6 @@ import {
   useRecurringTransactions,
   useDeleteRecurring,
   useToggleRecurring,
-  useExecuteRecurring,
   useExecuteRecurringNow,
 } from "../hooks/useRecurringTransactions";
 import { useFormModal } from "../hooks/useFormModal";
@@ -16,6 +15,8 @@ import {
 } from "../components/shared/Skeleton";
 import RecurringList from "../components/recurring/RecurringList";
 import DueBanner from "../components/due/DueBanner";
+import { useDueReview } from "../components/due/DueReviewProvider";
+import { recurringToEntry, todayLocal } from "../components/due/dueEntries";
 import RecurringExecuteModal from "../components/recurring/RecurringExecuteModal";
 import RecurringFormModal from "../components/recurring/RecurringFormModal";
 import ConfirmModal from "../components/shared/ConfirmModal";
@@ -27,7 +28,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
   const { recurringDueData } = usePending();
   const deleteMutation = useDeleteRecurring();
   const toggleMutation = useToggleRecurring();
-  const executeMutation = useExecuteRecurring();
+  const { openDueEntries } = useDueReview();
   const executeNowMutation = useExecuteRecurringNow();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<RecurringTransaction>();
@@ -63,11 +64,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
   const handleConfirmExecute = async () => {
     if (!executingItem) return;
     try {
-      if (executingItem.daysOverdue === -1) {
-        await executeNowMutation.mutateAsync(executingItem.id);
-      } else {
-        await executeMutation.mutateAsync({ ids: [executingItem.id] });
-      }
+      await executeNowMutation.mutateAsync(executingItem.id);
       toast.success("Transazione registrata con successo");
       setExecutingItem(null);
     } catch {
@@ -92,7 +89,13 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
             onEdit={openEditModal}
             onDelete={setDeletingId}
             onToggle={handleToggle}
-            onRequestExecute={setExecutingItem}
+            onRequestExecute={(item) =>
+              // In scadenza → popup unico (data prevista correggibile);
+              // anticipata (daysOverdue -1) → modal dedicato: registra oggi e salta la prossima.
+              item.daysOverdue >= 0
+                ? openDueEntries([recurringToEntry(item, todayLocal())])
+                : setExecutingItem(item)
+            }
             onOpenModal={openModal}
           />
         </>
@@ -116,7 +119,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
 
       <RecurringExecuteModal
         item={executingItem}
-        isPending={executeMutation.isPending || executeNowMutation.isPending}
+        isPending={executeNowMutation.isPending}
         onConfirm={handleConfirmExecute}
         onClose={() => setExecutingItem(null)}
       />
