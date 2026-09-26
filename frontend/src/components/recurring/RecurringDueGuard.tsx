@@ -15,5 +15,7 @@ export default function RecurringDueGuard() {
     }
   }, [isError]);
 
-  return <RecurringDueModal isOpen={isOpen} data={data} onDismiss={dismiss} />;
+  // key: il modal si rimonta all'apertura, così la selezione iniziale (tutte le
+  // voci) è calcolata sui dati arrivati e non sul primo render con data=null.
+  return <RecurringDueModal key={isOpen ? 'open' : 'closed'} isOpen={isOpen} data={data} onDismiss={dismiss} />;
 }

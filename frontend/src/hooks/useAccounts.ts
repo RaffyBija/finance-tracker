@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { accountsAPI } from '../api/accounts';
 import { broadcastInvalidation } from '../utils/syncChannel';
-import type { Account, CreateAccountDTO, UpdateAccountDTO } from '../types';
+import { usePending } from '../contexts/PendingContext';
+import { useDailyGate } from './useDailyGate';
+import type { CreateAccountDTO, UpdateAccountDTO } from '../types';
 
 const ACCOUNT_KEYS = ['accounts'];
 const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles'];
@@ -85,7 +87,8 @@ export const useSettleAccount = () => {
   return useMutation({
     mutationFn: ({ id, categoryId }: { id: string; categoryId?: string }) =>
       accountsAPI.settle(id, categoryId),
-    onSuccess: () => invalidateAccounts(queryClient, ACCOUNT_DELETE_KEYS),
+    // + pending-planned: l'addebito saldato esce dal badge e dal promemoria CC.
+    onSuccess: () => invalidateAccounts(queryClient, [...ACCOUNT_DELETE_KEYS, 'pending-planned']),
   });
 };
 
@@ -106,50 +109,23 @@ export const useCloseBillingCycle = () => {
 
 const CC_BILLING_KEY  = 'ccBillingCheck';
 
-// La chiusura ciclo è ora responsabilità del backend (closeConcludedCycles, invocata
-// da GET /accounts): si auto-ripara a ogni caricamento conti, a prescindere dal
-// giorno esatto di chiusura e dai mesi più corti del closingDay "Fine mese". Qui
-// resta solo il promemoria di pagamento al billingDay.
+// La chiusura ciclo è responsabilità del backend (closeConcludedCycles, invocata
+// da GET /accounts). Qui resta solo il promemoria di pagamento.
+//
+// Una CC è "da addebitare" se ha una pianificata di settlement (ccAccountId) non
+// pagata con data ≤ oggi — la stessa regola di settleAccount lato server. Non si
+// usa balance (è il saldo del ciclo APERTO, non l'addebito dovuto) né il giorno
+// esatto di billingDay: un addebito saltato resta segnalato finché non è saldato.
 export function useCCBillingDue() {
-  const today    = new Date().toISOString().split('T')[0];
-  const todayDay = new Date().getDate();
-
-  // Gate per il billing day (modal di pagamento)
-  const [billingEnabled] = useState(() => localStorage.getItem(CC_BILLING_KEY) !== today);
-
-  const [isOpen, setIsOpen]       = useState(false);
-  const [dueAccount, setDueAccount] = useState<Account | null>(null);
-
+  const { isDismissed, dismiss } = useDailyGate(CC_BILLING_KEY);
   const { data: accounts = [] } = useAccounts();
+  const { plannedDueData } = usePending();
 
-  useEffect(() => {
-    if (accounts.length === 0 || !billingEnabled) return;
+  const dueAccount = useMemo(() => {
+    if (isDismissed) return null;
+    const dueCcIds = new Set(plannedDueData.map((p) => p.ccAccountId).filter(Boolean));
+    return accounts.find((a) => a.type === 'CREDIT_CARD' && dueCcIds.has(a.id)) ?? null;
+  }, [isDismissed, accounts, plannedDueData]);
 
-    // Modal di pagamento: mostra il promemoria se una CC è dovuta oggi (billingDay,
-    // con clamping ai mesi corti) e ha debito.
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const due = accounts.find(
-      (a) =>
-        a.type === 'CREDIT_CARD' &&
-        a.balance < 0 &&
-        a.billingDay != null &&
-        Math.min(a.billingDay, daysInMonth) === todayDay,
-    ) ?? null;
-
-    if (due) {
-      setDueAccount(due);
-      setIsOpen(true);
-    } else {
-      localStorage.setItem(CC_BILLING_KEY, today);
-    }
-  }, [accounts, billingEnabled, today, todayDay]);
-
-  const dismiss = () => {
-    localStorage.setItem(CC_BILLING_KEY, today);
-    setIsOpen(false);
-    setDueAccount(null);
-  };
-
-  return { dueAccount, isOpen, dismiss };
+  return { dueAccount, isOpen: dueAccount != null, dismiss };
 }

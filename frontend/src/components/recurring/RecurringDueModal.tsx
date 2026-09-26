@@ -21,6 +21,10 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
 
   if (!isOpen || allItems.length === 0) return null;
 
+  // Un refetch a popup aperto può togliere voci già registrate altrove: si
+  // considerano solo gli id selezionati ancora presenti nella lista.
+  const selectedIds = allItems.filter((i) => selected.has(i.id)).map((i) => i.id);
+
   const toggle = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -31,8 +35,7 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
 
   const handleCreate = async () => {
     try {
-      const ids = Array.from(selected);
-      const result = await executeMutation.mutateAsync(ids);
+      const result = await executeMutation.mutateAsync(selectedIds);
       const n = result.count;
       toast.success(`${n} transazion${n === 1 ? 'e creata' : 'i create'} con successo`);
       onDismiss();
@@ -92,12 +95,12 @@ export default function RecurringDueModal({ isOpen, data, onDismiss }: Recurring
           <button
             type="button"
             onClick={handleCreate}
-            disabled={selected.size === 0 || executeMutation.isPending}
+            disabled={selectedIds.length === 0 || executeMutation.isPending}
             className="btn btn-primary btn-md"
           >
             {executeMutation.isPending
               ? 'Creazione...'
-              : `Crea selezionate (${selected.size})`}
+              : `Crea selezionate (${selectedIds.length})`}
           </button>
         </div>
       </div>

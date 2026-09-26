@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { CreditCard, Landmark, ArrowRight } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { useSettleAccount, useBillingCycles } from '../../hooks/useAccounts';
-import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { formatDayMonthLong } from '../../utils/date';
@@ -23,9 +21,7 @@ export default function AccountBillingModal({
 }: AccountBillingModalProps) {
   const settleMutation = useSettleAccount();
   const toast = useToast();
-  const { data: categories = [] } = useCategories('EXPENSE');
   const { data: cycles = [], isError: cyclesError } = useBillingCycles(account?.id ?? null, isOpen);
-  const [categoryId, setCategoryId] = useState('');
   const { formatCurrency } = useFormatCurrency();
 
   if (!isOpen || !account) return null;
@@ -44,7 +40,7 @@ export default function AccountBillingModal({
 
   const handleSettle = async () => {
     try {
-      const result = await settleMutation.mutateAsync({ id: account.id, categoryId: categoryId || undefined });
+      const result = await settleMutation.mutateAsync({ id: account.id });
       toast.success(`Addebito di ${formatCurrency(result.settledAmount)} registrato`);
       onDismiss();
     } catch (err: any) {
@@ -56,7 +52,7 @@ export default function AccountBillingModal({
     <BaseModal isOpen={isOpen} title="Addebito carta di credito" onClose={onDismiss}>
       <div className="modal-form">
         <p className="recurring-due-subtitle" style={{ fontSize: '0.9375rem' }}>
-          Oggi è il giorno di addebito della tua carta. Vuoi registrare il pagamento?
+          L'addebito della tua carta è arrivato a scadenza. Vuoi registrare il pagamento?
         </p>
 
         {cyclesError && (
@@ -127,21 +123,6 @@ export default function AccountBillingModal({
             </span>
             <span style={{ fontSize: '0.875rem', color: '#475569' }}>oggi, {today}</span>
           </div>
-        </div>
-
-        {/* Categoria per la transazione sul conto bancario */}
-        <div className="form-group">
-          <label className="form-label">Categoria addebito</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="form-select"
-          >
-            <option value="">-- Seleziona categoria --</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
         </div>
 
         <div className="form-actions">

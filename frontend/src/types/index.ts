@@ -398,6 +398,8 @@ export interface PlannedTransaction {
   // è una scadenza di un debito/credito dilazionato.
   planId?: string | null;
   counterparty?: string | null;
+  // Pianificata di addebito di un ciclo CC: id della carta da saldare.
+  ccAccountId?: string | null;
 }
 
 export interface CreatePlannedTransactionDTO {
