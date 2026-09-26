@@ -39,18 +39,18 @@ export function useBudgetHistory(id: string | null, periods?: number) {
 
 // Suggerimenti budget automatico. `savingRate` (override slider) entra nella queryKey
 // così cambiare lo slider rifà la query; `enabled` per caricare solo quando serve.
-// `monthOffset` (0 corrente / 1 prossimo) e `accountIds` (conti BANK inclusi) entrano
-// anch'essi nella key: cambiarli rifà la query e colpisce una variante cache distinta.
+// `period` (periodo di paga / mese), `offset` (0 corrente / 1 successivo) e
+// `accountIds` (conti BANK inclusi) entrano anch'essi nella key.
 export function useBudgetSuggestions(
   savingRate: number | undefined,
   enabled: boolean,
-  monthOffset = 0,
-  accountIds?: string[],
+  opts: { period?: 'pay' | 'month'; offset?: number; accountIds?: string[] } = {},
 ) {
+  const { period = 'pay', offset = 0, accountIds } = opts;
   const acctKey = accountIds && accountIds.length > 0 ? [...accountIds].sort().join('-') : 'all';
   return useQuery({
-    queryKey: ['budget-suggestions', savingRate ?? 'profile', monthOffset, acctKey],
-    queryFn: () => budgetApi.getSuggestions(savingRate, monthOffset, accountIds),
+    queryKey: ['budget-suggestions', savingRate ?? 'profile', period, offset, acctKey],
+    queryFn: () => budgetApi.getSuggestions(savingRate, { period, offset, accountIds }),
     enabled,
     staleTime: 60 * 1000,
   });
@@ -89,8 +89,8 @@ export function useUpdateBudget() {
 export function useApplySuggestions() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (items: Array<{ categoryId: string; amount: number }>) =>
-      budgetApi.applySuggestions(items),
+    mutationFn: ({ items, period }: { items: Array<{ categoryId: string; amount: number }>; period: 'PAY_PERIOD' | 'MONTHLY' }) =>
+      budgetApi.applySuggestions(items, period),
     onSuccess: () => invalidateBudgets(queryClient),
   });
 }

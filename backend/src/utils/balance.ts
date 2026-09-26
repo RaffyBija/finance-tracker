@@ -137,38 +137,6 @@ export async function bankAccountScope(userId: string): Promise<{ accountId?: { 
   return { accountId: { in: bankIds } };
 }
 
-// Debiti dei cicli CC ancora aperti, proiettati come uscite future alla prossima
-// data di addebito. Una volta che il ciclo viene chiuso (closeBillingCycle) il
-// saldo CC torna a 0 e il debito diventa una pianificata: i due meccanismi sono
-// mutuamente esclusivi, quindi non c'è doppio conteggio.
-//
-//   Conta solo le CC con saldo negativo la cui prossima data di addebito cade
-//   in [rangeStart, rangeEnd]. Usato dalle proposte di budget (budget.controller):
-//   la proiezione/previsione usano invece projectCcCharges, che tiene conto anche
-//   delle spese future su CC, non solo del debito già maturato.
-export function openCCObligations(
-  accounts: AccountBalance[],
-  rangeStart: Date,
-  rangeEnd: Date,
-  now: Date = new Date(),
-): { total: number; count: number } {
-  let total = 0;
-  let count = 0;
-
-  for (const cc of accounts) {
-    if (cc.type !== 'CREDIT_CARD' || cc.balance >= 0) continue;
-    const debt = Math.abs(cc.balance);
-    const billingDay = cc.billingDay ?? 1;
-    const dueDate = nextBillingDate(billingDay, now);
-    if (dueDate >= rangeStart && dueDate <= rangeEnd) {
-      total += debt;
-      count += 1;
-    }
-  }
-
-  return { total, count };
-}
-
 // Una spesa futura addebitata su una carta di credito (ricorrente o pianificata).
 //   signed > 0  → EXPENSE (aumenta il debito del ciclo)
 //   signed < 0  → INCOME/rimborso (riduce il debito del ciclo). Se il netto del ciclo

@@ -35,13 +35,13 @@ export const budgetApi = {
 
   getSuggestions: async (
     savingRate?: number,
-    monthOffset?: number,
-    accountIds?: string[],
+    opts: { period?: 'pay' | 'month'; offset?: number; accountIds?: string[] } = {},
   ): Promise<BudgetSuggestions> => {
     const params: Record<string, string | number> = {};
     if (savingRate !== undefined) params.savingRate = savingRate;
-    if (monthOffset) params.monthOffset = monthOffset;
-    if (accountIds && accountIds.length > 0) params.accountIds = accountIds.join(',');
+    if (opts.period) params.period = opts.period;
+    if (opts.offset) params.offset = opts.offset;
+    if (opts.accountIds && opts.accountIds.length > 0) params.accountIds = opts.accountIds.join(',');
     const response = await apiClient.get<BudgetSuggestions>('/budgets/suggestions', {
       params: Object.keys(params).length > 0 ? params : undefined,
     });
@@ -50,9 +50,11 @@ export const budgetApi = {
 
   applySuggestions: async (
     items: Array<{ categoryId: string; amount: number }>,
+    period: 'PAY_PERIOD' | 'MONTHLY',
   ): Promise<{ applied: number }> => {
     const response = await apiClient.post<{ applied: number }>('/budgets/apply-suggestions', {
       items,
+      period,
     });
     return response.data;
   },

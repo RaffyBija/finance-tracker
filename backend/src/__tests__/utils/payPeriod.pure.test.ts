@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolvePayPeriod, clusterPaydays, serializePayPeriod, type PayPeriodInput } from '../../utils/payPeriod';
+import { resolvePayPeriod, clusterPaydays, serializePayPeriod, buildPayBoundaries, type PayPeriodInput } from '../../utils/payPeriod';
 
 // now = 26 set 2026. Stipendio reale il 24 set, prossimo pianificato il 23 ott.
 const NOW = new Date(2026, 8, 26, 10, 0, 0);
@@ -97,5 +97,34 @@ describe('resolvePayPeriod', () => {
     const p = resolvePayPeriod(base({ salaryDates: [d(2026, 9, 24)], plannedSalaryDates: [d(2026, 10, 23)] }));
     const s = serializePayPeriod(p, NOW);
     expect(s).toMatchObject({ start: '2026-09-24', nextPayday: '2026-10-23', daysElapsed: 3, daysTotal: 29, daysToPayday: 27 });
+  });
+});
+
+describe('buildPayBoundaries', () => {
+  it('accrediti reali + prossimo, estesi a ritroso e in avanti col giorno di paga', () => {
+    const b = buildPayBoundaries({
+      paydays: [d(2026, 8, 24), d(2026, 9, 24)],
+      nextPayday: d(2026, 10, 23),
+      payDay: 23,
+      from: d(2026, 7, 1),
+      to: d(2026, 11, 1),
+    });
+    expect(b.map(iso)).toEqual(['2026-06-23', '2026-07-23', '2026-08-24', '2026-09-24', '2026-10-23', '2026-11-23']);
+  });
+
+  it('riempie un buco nello storico con periodi mensili', () => {
+    const b = buildPayBoundaries({
+      paydays: [d(2026, 3, 23), d(2026, 7, 23)],
+      nextPayday: d(2026, 8, 23),
+      payDay: 23,
+      from: d(2026, 3, 23),
+      to: d(2026, 8, 1),
+    });
+    expect(b.map(iso)).toEqual(['2026-03-23', '2026-04-23', '2026-05-23', '2026-06-23', '2026-07-23', '2026-08-23']);
+  });
+
+  it('senza giorno di paga avanza di un mese dallo stesso giorno', () => {
+    const b = buildPayBoundaries({ paydays: [], nextPayday: d(2026, 10, 27), payDay: null, from: d(2026, 9, 1), to: d(2026, 10, 30) });
+    expect(b.map(iso)).toEqual(['2026-08-27', '2026-09-27', '2026-10-27', '2026-11-27']);
   });
 });

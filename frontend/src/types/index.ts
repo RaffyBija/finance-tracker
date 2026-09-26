@@ -290,7 +290,7 @@ export interface NetWorthByAccountSeries {
   }[];
 }
 
-export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+export type BudgetPeriod = 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'PAY_PERIOD';
 export type BudgetRollover = 'NONE' | 'SURPLUS' | 'FULL';
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
@@ -354,34 +354,45 @@ export interface CreateBudgetDTO {
   endDate?: string;
 }
 
-// ── Budget automatico (suggerimenti) ──
+// ── Budget automatico (proposte intelligenti) ──
 export interface BudgetSuggestionItem {
   categoryId: string;
   name: string;
   icon: string | null;
   color: string | null;
-  avgMonthly: number;
+  avgPerPeriod: number;          // media della spesa VARIABILE per periodo
   suggestedCap: number;
   currentBudgetId: string | null;
   currentAmount: number | null;
+  currentPeriod: BudgetPeriod | null;
 }
 
+export interface BudgetPlanFlows {
+  income: number;
+  fixed: number;
+  variable: number;
+}
+
+// Piano del periodo (per competenza, vedi backend utils/budgetPlan.ts).
 export interface BudgetSuggestions {
-  expectedIncome: number;
-  fixedCommitments: number;
-  cushion: number;
-  // liquidity = saldo dei conti selezionati (niente proiezione); ccDueThisMonth = quota
-  // di fixedCommitments dovuta all'addebito CC del mese. Per il mese prossimo
-  // cushion − liquidity = proiezione dei flussi residui del mese corrente.
-  liquidity: number;
-  ccDueThisMonth: number;
-  // Spese ricorrenti su carta del mese: non pesano sullo spendibile (vanno nell'addebito
-  // di un ciclo futuro), esposte per avvisare l'utente.
-  deferredCcMonthly: number;
+  mode: 'pay' | 'month';
+  payPeriodConfigured: boolean;
+  budgetPeriod: 'PAY_PERIOD' | 'MONTHLY';
+  offset: 0 | 1;
+  window: { start: string; end: string; label: string; days: number; elapsedDays: number };
+  liquidity: number;          // liquidità dei conti del perimetro, oggi
+  ccDebt: number;             // debito carte del perimetro (ciclo aperto + addebiti da registrare)
+  netNow: number;             // liquidity − ccDebt
+  netStart: number;           // disponibilità netta a inizio periodo
+  expectedIncome: number;     // entrate dell'intero periodo
+  fixedCommitments: number;   // fisse + programmate dell'intero periodo
+  disposable: number;         // netStart + entrate − impegni
+  variableSpent: number;      // spesa variabile già fatta nel periodo in corso
+  actual: BudgetPlanFlows | null;
+  gap: BudgetPlanFlows | null;
   savingRate: number;
   savingTarget: number;
   spendable: number;
-  monthOffset: number;
   perCategory: BudgetSuggestionItem[];
 }
 
