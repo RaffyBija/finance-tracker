@@ -36,8 +36,9 @@ export const recurringApi = {
     return response.data;
   },
 
-  execute: async (ids: string[]): Promise<ExecuteRecurringResult> => {
-    const response = await apiClient.post<ExecuteRecurringResult>('/recurring/execute', { ids });
+  // dates: { [id]: 'YYYY-MM-DD' } per registrare una data effettiva diversa da quella prevista.
+  execute: async (ids: string[], dates?: Record<string, string>): Promise<ExecuteRecurringResult> => {
+    const response = await apiClient.post<ExecuteRecurringResult>('/recurring/execute', dates ? { ids, dates } : { ids });
     return response.data;
   },
 

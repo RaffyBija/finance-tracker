@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreateRecurringTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser } from '../utils/ownership';
+import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 
 // ── Due date helpers ─────────────────────────────────────────────────────────
 
@@ -395,10 +396,18 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
 export const executeRecurring = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { ids } = req.body as { ids: string[] };
+    // dates (opzionale): { [id]: 'YYYY-MM-DD' } — data EFFETTIVA del movimento se
+    // diversa da quella prevista (es. addebito arrivato in ritardo). La scadenza
+    // eseguita (lastExecutedDate) resta quella prevista, così il calendario della
+    // ricorrente non slitta.
+    const { ids, dates } = req.body as { ids: string[]; dates?: Record<string, string> };
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'IDs non validi' });
+    }
+    if (dates !== undefined && (typeof dates !== 'object' || dates === null
+      || Object.values(dates).some((d) => typeof d !== 'string' || isNaN(new Date(d).getTime())))) {
+      return res.status(400).json({ error: 'Data non valida' });
     }
 
     const recurring = await prisma.recurringTransaction.findMany({
@@ -415,6 +424,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
     for (const r of recurring) {
       const dueDate = computeNextDueDate(r, today);
       if (!dueDate) continue;
+      const txDate = dates?.[r.id] ? new Date(dates[r.id]) : dueDate;
 
       const transaction = await prisma.transaction.create({
         data: {
@@ -422,7 +432,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
           type: r.type,
           description: r.description,
           categoryId: r.categoryId,
-          date: dueDate,
+          date: txDate,
           userId,
           fromRecurringId: r.id,
           ...(r.accountId && { accountId: r.accountId }),
@@ -437,6 +447,15 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
 
       created.push({ ...transaction, amount: Number(transaction.amount) });
     }
+
+    // Una ricorrente su CC datata in un ciclo già chiuso deve aggiornarne l'addebito
+    // (stessa regola della creazione manuale di una transazione).
+    const ccTouched = await reconcileCcChanges(userId, created.map((t) => ({
+      accountId: t.accountId ?? null,
+      date: t.date,
+      signed: debtContribution(t.type, t.amount),
+    })));
+    if (ccTouched) analyticsCache.onPlannedMutated(userId);
 
     analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ created, count: created.length });

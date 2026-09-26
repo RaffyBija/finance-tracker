@@ -3,6 +3,9 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreatePlannedTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser } from '../utils/ownership';
+import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+
+class AlreadyPaidError extends Error {}
 
 // Ottieni pianificate scadute non pagate (data <= oggi)
 export const getPlannedDue = async (req: AuthRequest, res: Response) => {
@@ -285,24 +288,42 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
 
     // Crea la transazione reale, propagando il conto della pianificata.
     // Per le pianificate normali il comportamento resta invariato: data = oggi.
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: planned.amount,
-        type: planned.type,
-        description: planned.description,
-        categoryId: planned.categoryId,
-        date: date ? new Date(date) : new Date(),
-        userId,
-        ...(planned.accountId && { accountId: planned.accountId }),
-      },
+    // Transazione reale + pianificata pagata in un'unica operazione atomica: mai
+    // una transazione registrata con la pianificata ancora "da pagare" (o viceversa).
+    // Il guard isPaid:false nell'update impedisce il doppio pagamento concorrente.
+    const [transaction, updated] = await prisma.$transaction(async (tx) => {
+      const created = await tx.transaction.create({
+        data: {
+          amount: planned.amount,
+          type: planned.type,
+          description: planned.description,
+          categoryId: planned.categoryId,
+          date: date ? new Date(date) : new Date(),
+          userId,
+          ...(planned.accountId && { accountId: planned.accountId }),
+        },
+      });
+      const marked = await tx.plannedTransaction.updateMany({
+        where: { id, isPaid: false },
+        data: { isPaid: true },
+      });
+      if (marked.count === 0) throw new AlreadyPaidError();
+      const paid = await tx.plannedTransaction.findUniqueOrThrow({
+        where: { id },
+        include: { category: true },
+      });
+      return [created, paid] as const;
     });
 
-    // Marca come pagato
-    const updated = await prisma.plannedTransaction.update({
-      where: { id },
-      data: { isPaid: true },
-      include: { category: true },
-    });
+    // Pianificata su CC datata in un ciclo già chiuso → aggiorna l'addebito del ciclo.
+    if (transaction.accountId) {
+      const ccTouched = await reconcileCcChanges(userId, [{
+        accountId: transaction.accountId,
+        date: transaction.date,
+        signed: debtContribution(transaction.type, Number(transaction.amount)),
+      }]);
+      if (ccTouched) analyticsCache.onPlannedMutated(userId);
+    }
 
     // Nota: per le pianificate CC (ccAccountId valorizzato), il saldo della CC viene azzerato
     // al giorno di chiusura ciclo (closeBillingCycle), NON qui. Qui addebitiamo solo il conto bancario.
@@ -314,6 +335,9 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       message: 'Transazione creata e spesa pianificata marcata come pagata'
     });
   } catch (error) {
+    if (error instanceof AlreadyPaidError) {
+      return res.status(409).json({ error: 'Transazione pianificata già pagata' });
+    }
     console.error('Mark as paid error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }

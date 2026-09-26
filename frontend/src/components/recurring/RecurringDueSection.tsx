@@ -17,7 +17,7 @@ export default function RecurringDueSection() {
 
   const handleExecuteAll = async () => {
     try {
-      const result = await executeMutation.mutateAsync(allIds);
+      const result = await executeMutation.mutateAsync({ ids: allIds });
       const n = result.count;
       toast.success(`${n} transazion${n === 1 ? 'e creata' : 'i create'} con successo`);
     } catch {

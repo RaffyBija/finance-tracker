@@ -66,7 +66,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
       if (executingItem.daysOverdue === -1) {
         await executeNowMutation.mutateAsync(executingItem.id);
       } else {
-        await executeMutation.mutateAsync([executingItem.id]);
+        await executeMutation.mutateAsync({ ids: [executingItem.id] });
       }
       toast.success("Transazione registrata con successo");
       setExecutingItem(null);

@@ -2,8 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import Navbar from './Navbar';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import { CookieBanner } from '../CookieConsent';
-import RecurringDueGuard from '../recurring/RecurringDueGuard';
-import CCBillingGuard from '../accounts/CCBillingGuard';
+import DueTodayGuard from '../due/DueTodayGuard';
 import Tour from '../tour/Tour';
 import { TourProvider } from '../../contexts/TourContext';
 import { TOUR_STEPS } from '../tour/tourSteps';
@@ -26,8 +25,7 @@ export default function Layout({ children }: LayoutProps) {
             </ErrorBoundary>
           </main>
           <CookieBanner />
-          <RecurringDueGuard />
-          <CCBillingGuard />
+          <DueTodayGuard />
           <Tour />
         </div>
       </PendingProvider>

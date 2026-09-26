@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import prisma from '../../utils/prisma';
+import { reconcileCcChanges } from '../../utils/billingCycle';
 import {
   createInstallmentPlan,
   getInstallmentPlans,
@@ -33,6 +34,11 @@ vi.mock('../../utils/prisma', () => {
   return { default: client };
 });
 
+vi.mock('../../utils/billingCycle', () => ({
+  reconcileCcChanges: vi.fn().mockResolvedValue(false),
+  debtContribution: (type: string, amount: number) => (type === 'EXPENSE' ? amount : -amount),
+}));
+
 vi.mock('../../utils/analyticsCache', () => ({
   analyticsCache: { onPlannedMutated: vi.fn(), onPlannedPaid: vi.fn() },
 }));
@@ -53,6 +59,7 @@ beforeEach(() => {
   p.installmentPlan.create.mockResolvedValue({ id: 'plan1' });
   p.installmentPlan.findUnique.mockResolvedValue({ id: 'plan1', title: 'X', installments: [] });
   p.plannedTransaction.createMany.mockResolvedValue({ count: 0 });
+  p.plannedTransaction.updateMany.mockImplementation(async ({ where }: any) => ({ count: where.id.in.length }));
 });
 
 describe('createInstallmentPlan', () => {
@@ -178,7 +185,7 @@ describe('payInstallments — pagamento multiplo → 1 transazione', () => {
     expect(txData.type).toBe('EXPENSE');
     // entrambe le rate marcate pagate
     expect(p.plannedTransaction.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['r1', 'r2'] } },
+      where: { id: { in: ['r1', 'r2'] }, isPaid: false },
       data: { isPaid: true },
     });
     // piano completato
@@ -232,5 +239,37 @@ describe('deleteInstallmentPlan', () => {
     await deleteInstallmentPlan(req, res);
     expect(res.status).toHaveBeenCalledWith(404);
     expect(p.installmentPlan.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('payInstallments — guard e cicli CC', () => {
+  const rate = [
+    { id: 'r1', planId: 'plan1', type: 'EXPENSE', amount: 50, accountId: 'cc1', categoryId: null },
+  ];
+
+  it('409 se le rate sono state pagate nel frattempo (nessuna risposta di successo)', async () => {
+    p.plannedTransaction.findMany.mockResolvedValue(rate);
+    p.installmentPlan.findFirst.mockResolvedValue({ id: 'plan1', title: 'X', accountId: 'cc1', categoryId: null });
+    p.transaction.create.mockResolvedValue({ id: 'tx1', accountId: 'cc1', date: new Date(), type: 'EXPENSE', amount: 50 });
+    p.plannedTransaction.updateMany.mockResolvedValue({ count: 0 });
+
+    const res = mockRes();
+    await payInstallments({ userId: 'u1', body: { plannedIds: ['r1'] } } as any, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(reconcileCcChanges).not.toHaveBeenCalled();
+  });
+
+  it('riconcilia il ciclo CC con la data effettiva della transazione', async () => {
+    p.plannedTransaction.findMany.mockResolvedValue(rate);
+    p.installmentPlan.findFirst.mockResolvedValue({ id: 'plan1', title: 'X', accountId: 'cc1', categoryId: null });
+    p.plannedTransaction.count.mockResolvedValue(1);
+    const date = new Date('2026-09-20');
+    p.transaction.create.mockResolvedValue({ id: 'tx1', accountId: 'cc1', date, type: 'EXPENSE', amount: 50 });
+
+    const res = mockRes();
+    await payInstallments({ userId: 'u1', body: { plannedIds: ['r1'], date: '2026-09-20' } } as any, res);
+
+    expect(reconcileCcChanges).toHaveBeenCalledWith('u1', [{ accountId: 'cc1', date, signed: 50 }]);
   });
 });

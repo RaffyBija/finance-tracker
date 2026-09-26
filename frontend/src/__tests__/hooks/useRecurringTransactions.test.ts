@@ -102,7 +102,7 @@ describe('useExecuteRecurring', () => {
     const spy = createInvalidateSpy(qc);
     const { result } = renderHook(() => useExecuteRecurring(), { wrapper: createWrapper(qc) });
 
-    await act(async () => { await result.current.mutateAsync(['r-1', 'r-2']); });
+    await act(async () => { await result.current.mutateAsync({ ids: ['r-1', 'r-2'] }); });
 
     const keys = spy.mock.calls.map((c) => (c[0] as any)?.queryKey);
     expect(keys).toContainEqual(['transactions']);

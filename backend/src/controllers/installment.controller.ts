@@ -3,6 +3,9 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreateInstallmentPlanDTO, PayInstallmentsDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser } from '../utils/ownership';
+import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+
+class AlreadyPaidError extends Error {}
 
 // La direzione del piano determina il tipo delle rate:
 // DEBT → EXPENSE (uscite future), CREDIT → INCOME (entrate attese).
@@ -423,10 +426,13 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      await tx.plannedTransaction.updateMany({
-        where: { id: { in: plannedIds } },
+      // Guard isPaid:false: un pagamento concorrente delle stesse rate annulla
+      // l'intera operazione (niente seconda transazione per rate già pagate).
+      const marked = await tx.plannedTransaction.updateMany({
+        where: { id: { in: plannedIds }, isPaid: false },
         data: { isPaid: true },
       });
+      if (marked.count !== plannedIds.length) throw new AlreadyPaidError();
 
       const remaining = await tx.plannedTransaction.count({ where: { planId, isPaid: false } });
       if (remaining === 0) {
@@ -435,6 +441,16 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
 
       return created;
     });
+
+    // Rate su CC datate in un ciclo già chiuso → aggiorna l'addebito del ciclo.
+    if (transaction.accountId) {
+      const ccTouched = await reconcileCcChanges(userId, [{
+        accountId: transaction.accountId,
+        date: transaction.date,
+        signed: debtContribution(transaction.type, Number(transaction.amount)),
+      }]);
+      if (ccTouched) analyticsCache.onPlannedMutated(userId);
+    }
 
     analyticsCache.onPlannedPaid(userId);
     res.json({
@@ -446,6 +462,9 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
           : `${rate.length} rate pagate in un'unica transazione`,
     });
   } catch (error) {
+    if (error instanceof AlreadyPaidError) {
+      return res.status(409).json({ error: 'Alcune rate risultano già pagate' });
+    }
     console.error('Pay installments error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }

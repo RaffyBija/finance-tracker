@@ -13,6 +13,7 @@
 @import './components/dashboard-widgets.css';
 @import './components/patrimonio.css';
 @import './components/installments.css';
+@import './components/due-today.css';
 @import './components/privacy.css';
 
 @import './utilities/utilities.css';
