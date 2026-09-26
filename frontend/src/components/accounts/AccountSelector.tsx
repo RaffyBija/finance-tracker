@@ -35,6 +35,8 @@ export default function AccountSelector({
           className="form-select"
         >
           {allowEmpty && <option value="">{emptyLabel}</option>}
+          {/* Movimento storico su un conto archiviato: resta selezionato e visibile. */}
+          {value && !selected && <option value={value}>Conto archiviato</option>}
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}{a.isDefault ? ' (principale)' : ''}

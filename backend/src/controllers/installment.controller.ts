@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateInstallmentPlanDTO, PayInstallmentsDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { accountBelongsToUser } from '../utils/ownership';
+import { accountBelongsToUser, userHasAccounts } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 
 class AlreadyPaidError extends Error {}
@@ -396,6 +396,9 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
     // Conto dell'addebito/accredito: quello passato, altrimenti il conto del piano,
     // altrimenti quello della prima rata.
     const targetAccountId = accountId ?? plan.accountId ?? rate[0].accountId ?? undefined;
+    if (!targetAccountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: 'Indica il conto su cui registrare le rate' });
+    }
     const txDate = date ? new Date(date) : new Date();
     const rateWord = rate.length === 1 ? '1 rata' : `${rate.length} rate`;
 
@@ -408,6 +411,9 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
           categoryId: plan.categoryId ?? rate[0].categoryId ?? null,
           date: txDate,
           userId,
+          // Una transazione per più rate: basta la prima come marcatore di "impegno
+          // programmato" (esclude la transazione dal ritmo quotidiano).
+          fromPlannedId: rate[0].id,
           ...(targetAccountId && { accountId: targetAccountId }),
         },
       });

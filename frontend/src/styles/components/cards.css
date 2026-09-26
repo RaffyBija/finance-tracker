@@ -1551,6 +1551,146 @@
 
 .forecast-wf-row.is-total .forecast-wf-amount { color: #0d9488; }
 
+/* Stima per periodo di paga: stati, fascia, indicatori, minimo per conto */
+.forecast-empty {
+  text-align: center;
+  padding: 1.5rem 0;
+  font-size: 0.875rem;
+  color: #a8a29e;
+}
+
+.forecast-setup-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: -0.5rem 0 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0d9488;
+}
+.forecast-setup-link:hover { text-decoration: underline; }
+
+.forecast-result-range {
+  font-size: 0.8125rem;
+  color: #78716c;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-result-sub {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: #a8a29e;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-wf-hint {
+  font-size: 0.75rem;
+  color: #a8a29e;
+}
+
+.forecast-note {
+  font-size: 0.75rem;
+  color: #a8a29e;
+  margin: -0.5rem 0 1rem;
+}
+
+.forecast-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.forecast-insight {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  row-gap: 0.125rem;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #fafaf9;
+  border: 1px solid #f5f5f4;
+}
+.forecast-insight-icon {
+  grid-row: span 3;
+  align-self: start;
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #f0fdfa;
+  color: #0d9488;
+}
+.forecast-insight-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a8a29e;
+}
+.forecast-insight-value {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #292524;
+}
+.forecast-insight-meta {
+  font-size: 0.75rem;
+  color: #78716c;
+}
+.forecast-insight.is-danger { background: #fef2f2; border-color: #fecaca; }
+.forecast-insight.is-danger .forecast-insight-icon { background: #fee2e2; color: #dc2626; }
+.forecast-insight.is-danger .forecast-insight-value { color: #dc2626; }
+.forecast-insight.is-warning .forecast-insight-icon { background: #fffbeb; color: #d97706; }
+
+.forecast-accounts { margin-bottom: 1.25rem; }
+.forecast-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.forecast-account-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #44403c;
+}
+.forecast-account-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.forecast-account-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.forecast-account-date {
+  font-size: 0.75rem;
+  color: #a8a29e;
+  flex-shrink: 0;
+}
+.forecast-account-value {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.forecast-account-item.is-danger .forecast-account-value { color: #dc2626; }
+
+.projection-chart-tip-rhythm { color: #d97706; margin-top: 0.375rem; }
+
 /* Spese più frequenti */
 .forecast-frequent-header {
   display: flex;
@@ -1809,6 +1949,118 @@
 
 .projection-meta-income { color: #059669; }
 .projection-meta-expense { color: #dc2626; }
+
+/* ── Proiezione: ritmo quotidiano, indicatori, legenda ── */
+.projection-meta-rhythm-icon { color: #d97706; }
+
+.projection-flow-rhythm {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection-inline-link {
+  font-weight: 600;
+  color: #0d9488;
+}
+.projection-inline-link:hover { text-decoration: underline; }
+
+.projection-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: -0.25rem 0 1rem;
+  font-size: 0.75rem;
+  color: #78716c;
+}
+.projection-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.projection-legend-swatch {
+  display: inline-block;
+  width: 1rem;
+  height: 0;
+  border-top: 2px solid #d97706;
+}
+.projection-legend-swatch.is-standard { border-top: 2px dotted #0d9488; }
+.projection-legend-swatch.is-band {
+  height: 0.5rem;
+  border: none;
+  border-radius: 2px;
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.projection-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.projection-insight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #f5f5f4;
+}
+.projection-insight-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a8a29e;
+}
+.projection-insight-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  color: #1c1917;
+}
+.projection-insight-value.is-negative { color: #dc2626; }
+.projection-insight-rhythm {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+}
+.projection-insight-rhythm.is-negative { color: #dc2626; }
+
+.projection-rhythm-lead {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #57534e;
+  margin: 0.5rem 0 1rem;
+}
+.projection-rhythm-periods {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+.projection-rhythm-period {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: #57534e;
+  border-bottom: 1px dashed #f5f5f4;
+}
+.projection-rhythm-period.is-current { color: #a8a29e; border-bottom: none; }
+.projection-rhythm-period-spent,
+.projection-rhythm-period-rate {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.projection-rhythm-period-rate { min-width: 4.5rem; font-weight: 600; }
+
+.projection-detail-item.is-rhythm .projection-detail-icon { background: #fffbeb; color: #d97706; }
 
 /* ── Grafico andamento saldo (ProjectionChart) ── */
 .projection-chart {
@@ -2748,3 +3000,41 @@
 .dark .cycle-history-meta { color: #78716c; }
 .dark .cycle-history-intro { color: #a8a29e; }
 .dark .cycle-history-state { color: #78716c; }
+
+/* Stima per periodo di paga — dark */
+.dark .forecast-empty { color: #78716c; }
+.dark .forecast-setup-link { color: #2dd4bf; }
+.dark .forecast-result-range { color: #a8a29e; }
+.dark .forecast-result-sub,
+.dark .forecast-wf-hint,
+.dark .forecast-note { color: #78716c; }
+.dark .forecast-insight { background: #1c1917; border-color: #44403c; }
+.dark .forecast-insight-icon { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; }
+.dark .forecast-insight-label { color: #78716c; }
+.dark .forecast-insight-value { color: #f5f5f4; }
+.dark .forecast-insight-meta { color: #a8a29e; }
+.dark .forecast-insight.is-danger { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+.dark .forecast-insight.is-danger .forecast-insight-icon { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.dark .forecast-insight.is-danger .forecast-insight-value { color: #f87171; }
+.dark .forecast-insight.is-warning .forecast-insight-icon { background: rgba(217, 119, 6, 0.15); color: #fbbf24; }
+.dark .forecast-account-item { color: #e7e5e4; }
+.dark .forecast-account-date { color: #78716c; }
+.dark .forecast-account-item.is-danger .forecast-account-value { color: #f87171; }
+.dark .projection-chart-tip-rhythm { color: #fbbf24; }
+
+/* Proiezione: ritmo quotidiano — dark */
+.dark .projection-meta-rhythm-icon { color: #fbbf24; }
+.dark .projection-flow-rhythm,
+.dark .projection-insight-rhythm { color: #fbbf24; }
+.dark .projection-insight-rhythm.is-negative,
+.dark .projection-insight-value.is-negative { color: #f87171; }
+.dark .projection-inline-link { color: #2dd4bf; }
+.dark .projection-legend { color: #a8a29e; }
+.dark .projection-legend-swatch.is-standard { border-top-color: #2dd4bf; }
+.dark .projection-insight { border-color: #44403c; }
+.dark .projection-insight-label { color: #78716c; }
+.dark .projection-insight-value { color: #f5f5f4; }
+.dark .projection-rhythm-lead { color: #a8a29e; }
+.dark .projection-rhythm-period { color: #d6d3d1; border-bottom-color: #44403c; }
+.dark .projection-rhythm-period.is-current { color: #78716c; }
+.dark .projection-detail-item.is-rhythm .projection-detail-icon { background: rgba(217, 119, 6, 0.15); color: #fbbf24; }

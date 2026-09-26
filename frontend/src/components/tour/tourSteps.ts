@@ -28,7 +28,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'navigation',
     target: '[data-tour="mobile-nav"]',
     title: 'Navigazione',
-    content: 'Dashboard, Transazioni, Conti e Calendario sono le sezioni principali. Nel "Menu" trovi le sezioni Analisi (Patrimonio, Proiezione) e Gestione (Budget, Categorie, Ricorrenti, Pianificati).',
+    content: 'Dashboard, Transazioni, Conti e Calendario sono le sezioni principali. Nel "Menu" trovi le sezioni Analisi (Analisi spese e patrimonio, Proiezione) e Gestione (Budget, Categorie, Ricorrenti, Pianificati).',
     position: 'top',
   },
   {

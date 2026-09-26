@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { analyticsCache } from "../utils/analyticsCache";
 import prisma from "../utils/prisma";
 import { RegisterDTO, LoginDTO, AuthResponse } from "../types";
 import crypto from "crypto";
@@ -250,6 +251,8 @@ export const login = async (req: Request, res: Response) => {
         tourCompleted: user.tourCompleted,
         currency: user.currency,
         savingRate: user.savingRate,
+        salaryCategoryId: user.salaryCategoryId,
+        payDay: user.payDay,
       },
     };
 
@@ -275,6 +278,8 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         tourCompleted: true,
         currency: true,
         savingRate: true,
+        salaryCategoryId: true,
+        payDay: true,
         createdAt: true,
       },
     });
@@ -294,10 +299,24 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, email, currency, savingRate } = req.body;
+    const { name, email, currency, savingRate, salaryCategoryId, payDay } = req.body || {};
 
-    if (!name?.trim() && !email?.trim() && !currency && savingRate === undefined) {
+    if (!name?.trim() && !email?.trim() && !currency && savingRate === undefined && salaryCategoryId === undefined && payDay === undefined) {
       return res.status(400).json({ error: 'Fornisci almeno un campo da aggiornare' });
+    }
+
+    // Periodo di paga: null azzera, altrimenti categoria INCOME dell'utente / giorno 1–31.
+    if (payDay !== undefined && payDay !== null && (!Number.isInteger(payDay) || payDay < 1 || payDay > 31)) {
+      return res.status(400).json({ error: 'Giorno di paga non valido (1–31)' });
+    }
+    if (salaryCategoryId !== undefined && salaryCategoryId !== null) {
+      if (typeof salaryCategoryId !== 'string') {
+        return res.status(400).json({ error: 'Categoria stipendio non valida' });
+      }
+      const cat = await prisma.category.findFirst({ where: { id: salaryCategoryId, userId, type: 'INCOME' } });
+      if (!cat) {
+        return res.status(400).json({ error: 'La categoria stipendio deve essere una tua categoria di entrata' });
+      }
     }
 
     if (currency && !SUPPORTED_CURRENCIES.includes(currency)) {
@@ -366,20 +385,24 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Aggiornamento valuta e % risparmio (indipendenti da nome/email)
-    if (currency || savingRate !== undefined) {
+    // Aggiornamento valuta, % risparmio e periodo di paga (indipendenti da nome/email)
+    const payPeriodChanged = salaryCategoryId !== undefined || payDay !== undefined;
+    if (currency || savingRate !== undefined || payPeriodChanged) {
       await prisma.user.update({
         where: { id: userId },
         data: {
           ...(currency && { currency }),
           ...(savingRate !== undefined && { savingRate }),
+          ...(salaryCategoryId !== undefined && { salaryCategoryId }),
+          ...(payDay !== undefined && { payDay }),
         },
       });
+      if (payPeriodChanged) analyticsCache.onPayPeriodChanged(userId);
     }
 
     const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, currency: true, savingRate: true, createdAt: true },
+      select: { id: true, name: true, email: true, currency: true, savingRate: true, salaryCategoryId: true, payDay: true, createdAt: true },
     });
 
     res.json({

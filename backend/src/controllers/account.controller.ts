@@ -35,8 +35,11 @@ export const getAccounts = async (req: AuthRequest, res: Response) => {
       res.setHeader('X-Cycles-Closed', String(closedCount));
     }
 
+    // I conti archiviati restano fuori da liste e selettori; ?includeArchived=true
+    // li restituisce (con archivedAt) per chi deve mostrare lo storico.
+    const includeArchived = req.query.includeArchived === 'true';
     const accounts = await prisma.account.findMany({
-      where: { userId },
+      where: { userId, ...(includeArchived ? {} : { archivedAt: null }) },
       include: {
         _count: { select: { transactions: true } },
         linkedAccount: { select: { id: true, name: true } },
@@ -164,18 +167,23 @@ export const createAccount = async (req: AuthRequest, res: Response) => {
 
     const user  = await prisma.user.findUnique({ where: { id: userId }, select: { isPro: true } });
     const limit = user?.isPro ? MAX_PRO_ACCOUNTS : MAX_FREE_ACCOUNTS;
-    const count = await prisma.account.count({ where: { userId } });
+    // I conti archiviati non contano nel limite del piano.
+    const count = await prisma.account.count({ where: { userId, archivedAt: null } });
     if (count >= limit) {
       return res.status(403).json({ error: 'Limite account raggiunto', upgrade: !user?.isPro, limit });
     }
 
     const existing = await prisma.account.findFirst({ where: { userId, name: name.trim() } });
     if (existing) {
-      return res.status(409).json({ error: 'Esiste già un conto con questo nome' });
+      return res.status(409).json({
+        error: existing.archivedAt
+          ? 'Esiste un conto archiviato con questo nome: scegline un altro'
+          : 'Esiste già un conto con questo nome',
+      });
     }
 
     if (linkedAccountId) {
-      const linked = await prisma.account.findFirst({ where: { id: linkedAccountId, userId } });
+      const linked = await prisma.account.findFirst({ where: { id: linkedAccountId, userId, archivedAt: null } });
       if (!linked) {
         return res.status(400).json({ error: 'Conto collegato non trovato' });
       }
@@ -227,7 +235,11 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
         where: { userId, name: name.trim(), id: { not: id } },
       });
       if (duplicate) {
-        return res.status(409).json({ error: 'Esiste già un conto con questo nome' });
+        return res.status(409).json({
+          error: duplicate.archivedAt
+            ? 'Esiste un conto archiviato con questo nome: scegline un altro'
+            : 'Esiste già un conto con questo nome',
+        });
       }
     }
 
@@ -239,7 +251,7 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
     }
 
     if (linkedAccountId) {
-      const linked = await prisma.account.findFirst({ where: { id: linkedAccountId, userId } });
+      const linked = await prisma.account.findFirst({ where: { id: linkedAccountId, userId, archivedAt: null } });
       if (!linked) {
         return res.status(400).json({ error: 'Conto collegato non trovato' });
       }
@@ -271,12 +283,21 @@ export const updateAccount = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Elimina un conto.
+//   • Senza alcun movimento collegato → eliminazione definitiva.
+//   • Con movimenti → ARCHIVIAZIONE: il conto sparisce da liste e selettori ma le
+//     sue transazioni restano collegate, così storico, patrimonio e statistiche non
+//     cambiano. Serve saldo a zero (i soldi vanno prima spostati altrove), altrimenti
+//     la liquidità conterebbe per sempre un conto che non si vede più.
+//     Le scadenze FUTURE (ricorrenti attive, pianificate non pagate, piani a rate
+//     attivi) e le carte collegate passano al conto principale: restano impegni
+//     reali e devono continuare a comparire in proiezione e calendario.
 export const deleteAccount = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    const account = await prisma.account.findFirst({ where: { id, userId } });
+    const account = await prisma.account.findFirst({ where: { id, userId, archivedAt: null } });
     if (!account) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
@@ -284,27 +305,119 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Il conto principale non può essere eliminato' });
     }
 
-    // Un conto coinvolto in un trasferimento non va eliminato: le transazioni
-    // collegate diventerebbero orfane (accountId → NULL via onDelete: SetNull) e
-    // l'importo trasferito sparirebbe silenziosamente dal patrimonio netto senza
-    // che la transazione gemella (sull'altro conto) venga corretta di conseguenza.
-    const transferLegsCount = await prisma.transaction.count({
-      where: { userId, accountId: id, transferId: { not: null } },
-    });
-    if (transferLegsCount > 0) {
-      return res.status(400).json({
-        error: 'Questo conto è coinvolto in uno o più trasferimenti: eliminali prima di eliminare il conto.',
-      });
+    const [txCount, recurringCount, plannedCount, planCount, cycleCount] = await Promise.all([
+      prisma.transaction.count({ where: { accountId: id } }),
+      prisma.recurringTransaction.count({ where: { accountId: id } }),
+      prisma.plannedTransaction.count({ where: { OR: [{ accountId: id }, { ccAccountId: id }] } }),
+      prisma.installmentPlan.count({ where: { OR: [{ accountId: id }, { ccAccountId: id }] } }),
+      prisma.billingCycle.count({ where: { accountId: id } }),
+    ]);
+
+    if (txCount + recurringCount + plannedCount + planCount + cycleCount === 0) {
+      await prisma.account.delete({ where: { id } });
+      analyticsCache.onAccountMutated(userId);
+      return res.json({ archived: false, message: 'Conto eliminato con successo' });
     }
 
-    // Le transazioni collegate vengono impostate a NULL (onDelete: SetNull)
-    await prisma.account.delete({ where: { id } });
+    // ── Archiviazione ──
+    const balances = await getAccountsWithBalances(userId);
+    const balance = balances.find((b) => b.id === id)?.balance ?? 0;
+    if (Math.abs(balance) >= 0.005) {
+      return res.status(400).json({
+        error: account.type === 'CREDIT_CARD'
+          ? 'La carta ha ancora un debito nel ciclo aperto: attendi l\'addebito prima di eliminarla'
+          : 'Il conto ha ancora un saldo: spostalo con un trasferimento prima di eliminarlo',
+      });
+    }
+    if (account.type === 'CREDIT_CARD') {
+      const pendingCharges = await prisma.plannedTransaction.count({ where: { ccAccountId: id, isPaid: false } });
+      if (pendingCharges > 0) {
+        return res.status(400).json({ error: 'La carta ha addebiti di cicli chiusi ancora da registrare: registrali prima di eliminarla' });
+      }
+    }
+
+    const main = await prisma.account.findFirst({ where: { userId, isDefault: true, archivedAt: null } });
+    if (!main) {
+      return res.status(400).json({ error: 'Imposta un conto principale prima di eliminare questo conto' });
+    }
+
+    const moved = await prisma.$transaction(async (tx) => {
+      // Anche le ricorrenti in pausa: riattivate, non devono generare movimenti
+      // su un conto archiviato.
+      const recurring = await tx.recurringTransaction.updateMany({
+        where: { accountId: id },
+        data: { accountId: main.id },
+      });
+      const planned = await tx.plannedTransaction.updateMany({
+        where: { accountId: id, isPaid: false },
+        data: { accountId: main.id },
+      });
+      const plans = await tx.installmentPlan.updateMany({
+        where: { accountId: id, status: 'ACTIVE' },
+        data: { accountId: main.id },
+      });
+      // ccAccountId è riservato (oggi non valorizzato dall'API): scollegalo comunque.
+      await tx.installmentPlan.updateMany({
+        where: { ccAccountId: id, status: 'ACTIVE' },
+        data: { ccAccountId: null },
+      });
+      const cards = await tx.account.updateMany({
+        where: { linkedAccountId: id, archivedAt: null },
+        data: { linkedAccountId: main.id },
+      });
+      await tx.account.update({ where: { id }, data: { archivedAt: new Date(), isDefault: false } });
+      return { recurring: recurring.count, planned: planned.count, plans: plans.count, cards: cards.count };
+    });
 
     analyticsCache.onAccountMutated(userId);
+    analyticsCache.onPlannedMutated(userId);
+    analyticsCache.onRecurringMutated(userId);
 
-    res.json({ message: 'Conto eliminato con successo' });
+    const parts = [
+      moved.recurring && `${moved.recurring} ${moved.recurring === 1 ? 'ricorrente' : 'ricorrenti'}`,
+      moved.planned && `${moved.planned} ${moved.planned === 1 ? 'pianificata' : 'pianificate'}`,
+      moved.plans && `${moved.plans} ${moved.plans === 1 ? 'piano a rate' : 'piani a rate'}`,
+      moved.cards && `${moved.cards} ${moved.cards === 1 ? 'carta' : 'carte'}`,
+    ].filter(Boolean);
+    res.json({
+      archived: true,
+      moved,
+      message: parts.length > 0
+        ? `Conto archiviato: lo storico resta. Spostati su ${main.name}: ${parts.join(', ')}`
+        : 'Conto archiviato: lo storico delle transazioni resta disponibile',
+    });
   } catch (error) {
     console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Ripristina un conto archiviato (anche come "annulla" di un'eliminazione
+// involontaria). Lo storico torna visibile com'era; le scadenze e le carte
+// spostate sul conto principale all'archiviazione restano lì (vanno riassegnate
+// a mano se serve). Il ripristino rispetta il limite di conti del piano.
+export const restoreAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    const account = await prisma.account.findFirst({ where: { id, userId, archivedAt: { not: null } } });
+    if (!account) {
+      return res.status(404).json({ error: 'Conto archiviato non trovato' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { isPro: true } });
+    const limit = user?.isPro ? MAX_PRO_ACCOUNTS : MAX_FREE_ACCOUNTS;
+    const active = await prisma.account.count({ where: { userId, archivedAt: null } });
+    if (active >= limit) {
+      return res.status(403).json({ error: `Hai raggiunto il limite di ${limit} conti: archiviane uno prima di ripristinare questo`, limit });
+    }
+
+    await prisma.account.update({ where: { id }, data: { archivedAt: null } });
+    analyticsCache.onAccountMutated(userId);
+    res.json({ message: `${account.name} è di nuovo attivo` });
+  } catch (error) {
+    console.error('Restore account error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };
@@ -392,7 +505,7 @@ export const setDefaultAccount = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    const account = await prisma.account.findFirst({ where: { id, userId } });
+    const account = await prisma.account.findFirst({ where: { id, userId, archivedAt: null } });
     if (!account) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }

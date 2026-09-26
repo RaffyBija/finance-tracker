@@ -25,19 +25,20 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
 
   // Statistiche derivate dalla serie (nessuna matematica backend extra).
   const stats = useMemo(() => {
-    const pts = data?.points ?? [];
+    const all = data?.points ?? [];
+    // I mesi iniziali a zero precedono la creazione dei conti (nessun dato):
+    // le statistiche partono dal primo mese con liquidità, altrimenti la
+    // "crescita" sarebbe misurata da zero e il mese peggiore sarebbe un mese vuoto.
+    const firstIdx = all.findIndex((p) => p.netWorth !== 0);
+    const pts = firstIdx <= 0 ? all : all.slice(firstIdx);
     if (pts.length === 0) return null;
     const values = pts.map((p) => p.netWorth);
-    let maxIdx = 0;
-    let minIdx = 0;
-    values.forEach((v, i) => {
-      if (v > values[maxIdx]) maxIdx = i;
-      if (v < values[minIdx]) minIdx = i;
-    });
-    const avg = values.reduce((s, v) => s + v, 0) / values.length;
 
-    // Variazione media mensile sul periodo.
-    const avgMonthly = pts.length > 1 ? (data!.change) / (pts.length - 1) : 0;
+    const change = values[values.length - 1] - values[0];
+    const changePct = values[0] !== 0 ? (change / Math.abs(values[0])) * 100 : null;
+    const monthsCovered = pts.length - 1;
+    // Variazione media mensile sul periodo con dati.
+    const avgMonthly = monthsCovered > 0 ? change / monthsCovered : 0;
 
     // Drawdown massimo: peggiore calo da un picco precedente (€ e %).
     // La % è espressa solo se il picco è > 0: con picco ≤ 0 il rapporto perde
@@ -54,10 +55,11 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
       }
     }
 
-    // Mese migliore/peggiore: solo con varianza reale (vedi nota storica).
+    // Mese migliore/peggiore: solo mesi CHIUSI (l'ultimo punto è il mese in
+    // corso, incompleto) e solo con varianza reale.
     let best: { month: string; delta: number } | null = null;
     let worst: { month: string; delta: number } | null = null;
-    for (let i = 1; i < pts.length; i++) {
+    for (let i = 1; i < pts.length - 1; i++) {
       const delta = pts[i].netWorth - pts[i - 1].netWorth;
       if (!best || delta > best.delta) best = { month: pts[i].month, delta };
       if (!worst || delta < worst.delta) worst = { month: pts[i].month, delta };
@@ -65,22 +67,21 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
     const hasVariance = !!best && !!worst && best.delta !== worst.delta;
 
     return {
-      max: values[maxIdx], min: values[minIdx], avg,
-      maxMonth: pts[maxIdx].month, minMonth: pts[minIdx].month,
+      change, changePct, monthsCovered, fromMonth: pts[0].month, trimmed: firstIdx > 0,
       avgMonthly, maxDrawdown, maxDrawdownPct,
       best: hasVariance ? best : null,
       worst: hasVariance ? worst : null,
     };
   }, [data]);
 
-  const change = data?.change ?? 0;
-  const changePct = data?.changePct ?? null;
+  const change = stats?.change ?? 0;
+  const changePct = stats?.changePct ?? null;
 
   return (
     <div className="lens-stack">
       <div className="card">
         <div className="widget-head widget-head--wrap">
-          <h3 className="widget-title">Andamento del patrimonio</h3>
+          <h3 className="widget-title">Andamento della liquidità</h3>
           <div className="lens-toolbar">
             <div className="projection-pills" role="group" aria-label="Vista">
               <button
@@ -141,9 +142,11 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
               {signOf(change)}{formatCurrency(Math.abs(change))}
             </span>
             <span className="patrimonio-stat-meta">
-              {changePct !== null
-                ? `${signOf(changePct)}${formatPercent(Math.abs(changePct))}% in ${months} mesi`
-                : `ultimi ${months} mesi`}
+              {stats?.trimmed
+                ? `da ${formatMonth(stats.fromMonth + '-01')}${changePct !== null ? ` (${signOf(changePct)}${formatPercent(Math.abs(changePct))}%)` : ''}`
+                : changePct !== null
+                  ? `${signOf(changePct)}${formatPercent(Math.abs(changePct))}% in ${months} mesi`
+                  : `ultimi ${months} mesi`}
             </span>
           </div>
           <div className="patrimonio-stat">
@@ -152,21 +155,6 @@ export default function TrendLens({ months, setMonths, data, isFetching }: Trend
               {signOf(stats.avgMonthly)}{formatCurrency(Math.abs(stats.avgMonthly))}
             </span>
             <span className="patrimonio-stat-meta">al mese</span>
-          </div>
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label">Patrimonio medio</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.avg)}</span>
-            <span className="patrimonio-stat-meta">ultimi {months} mesi</span>
-          </div>
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label">Massimo</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.max)}</span>
-            <span className="patrimonio-stat-meta">{formatMonth(stats.maxMonth + '-01')}</span>
-          </div>
-          <div className="patrimonio-stat">
-            <span className="patrimonio-stat-label">Minimo</span>
-            <span className="patrimonio-stat-value">{formatCurrency(stats.min)}</span>
-            <span className="patrimonio-stat-meta">{formatMonth(stats.minMonth + '-01')}</span>
           </div>
           <div className="patrimonio-stat">
             <span className="patrimonio-stat-label">Calo massimo</span>

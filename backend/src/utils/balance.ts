@@ -23,6 +23,9 @@ export type AccountBalance = {
   closingDay: number | null;
   linkedAccountId: string | null;
   balance: number;
+  // Conto archiviato: incluso (lo storico e il patrimonio passano dai suoi
+  // movimenti) ma escluso da viste "attive" (minimo per conto, carte del ritmo).
+  archived?: boolean;
 };
 
 // Saldi calcolati per ogni conto dell'utente (stessa logica di account.controller,
@@ -30,7 +33,7 @@ export type AccountBalance = {
 export async function getAccountsWithBalances(userId: string): Promise<AccountBalance[]> {
   const accounts = await prisma.account.findMany({
     where: { userId },
-    select: { id: true, type: true, openingBalance: true, billingDay: true, closingDay: true, linkedAccountId: true },
+    select: { id: true, type: true, openingBalance: true, billingDay: true, closingDay: true, linkedAccountId: true, archivedAt: true },
   });
 
   if (accounts.length === 0) return [];
@@ -82,6 +85,7 @@ export async function getAccountsWithBalances(userId: string): Promise<AccountBa
       closingDay: a.closingDay,
       linkedAccountId: a.linkedAccountId,
       balance,
+      archived: a.archivedAt !== null,
     };
   });
 }
@@ -121,7 +125,7 @@ export async function getLiquidBalance(
 //   (getProjectionSeries): nessun filtro se l'utente non ha ancora nessun conto
 //   (comportamento storico "tutte le transazioni", coerente con getLiquidBalance).
 //   Centralizzata qui perché va applicata in modo identico da Dashboard
-//   (getSummary/getCategoryStats/getMonthlyTrend/getCategoryTrend) e Calendario:
+//   (getSummary/getCategoryStats/getMonthlyTrend) e Calendario:
 //   prima erano tre implementazioni indipendenti, spesso divergenti.
 export async function bankAccountScope(userId: string): Promise<{ accountId?: { in: string[] } }> {
   const accounts = await prisma.account.findMany({

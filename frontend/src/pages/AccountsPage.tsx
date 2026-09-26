@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Plus } from 'lucide-react';
-import { useAccounts, useDeleteAccount, useSetDefaultAccount } from '../hooks/useAccounts';
+import { Lock, Plus, Archive, RotateCcw } from 'lucide-react';
+import { useAccounts, useDeleteAccount, useSetDefaultAccount, useArchivedAccounts, useRestoreAccount } from '../hooks/useAccounts';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AccountCard from '../components/accounts/AccountCard';
@@ -25,7 +25,18 @@ export default function AccountsPage() {
   const { data: accounts = [], isLoading } = useAccounts();
   const deleteMutation = useDeleteAccount();
   const setDefaultMutation = useSetDefaultAccount();
+  const { data: archivedAccounts = [] } = useArchivedAccounts();
+  const restoreMutation = useRestoreAccount();
   const toast = useToast();
+
+  const handleRestore = async (id: string) => {
+    try {
+      const res = await restoreMutation.mutateAsync(id);
+      toast.success(res.message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Errore nel ripristino');
+    }
+  };
 
   const atLimit = accounts.length >= maxAccounts;
 
@@ -53,8 +64,8 @@ export default function AccountsPage() {
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      await deleteMutation.mutateAsync(deletingId);
-      toast.success('Conto eliminato');
+      const result = await deleteMutation.mutateAsync(deletingId);
+      toast.success(result?.message ?? 'Conto eliminato');
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? 'Errore nella eliminazione');
     } finally {
@@ -212,6 +223,42 @@ export default function AccountsPage() {
                 </div>
               </div>
             )}
+
+            {/* ── Conti archiviati: storico conservato, ripristinabili ── */}
+            {archivedAccounts.length > 0 && (
+              <details className="archived-accounts">
+                <summary className="archived-accounts-summary">
+                  <Archive size={15} />
+                  Conti archiviati ({archivedAccounts.length})
+                </summary>
+                <p className="archived-accounts-hint">
+                  Lo storico delle transazioni è conservato. Ripristinando un conto torna attivo; le scadenze spostate sul conto principale restano lì.
+                </p>
+                <ul className="archived-accounts-list">
+                  {archivedAccounts.map((a) => (
+                    <li key={a.id} className="archived-account">
+                      <span className="archived-account-dot" style={{ backgroundColor: a.color }} />
+                      <span className="archived-account-body">
+                        <span className="archived-account-name">{a.name}</span>
+                        <span className="archived-account-meta">
+                          {a.type === 'CREDIT_CARD' ? 'Carta di credito' : 'Conto'}
+                          {a.archivedAt && ` · archiviato il ${new Date(a.archivedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                          {a._count && ` · ${a._count.transactions} transazioni`}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm archived-account-restore"
+                        onClick={() => handleRestore(a.id)}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <RotateCcw size={14} /> Ripristina
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </>
         )}
 
@@ -232,7 +279,7 @@ export default function AccountsPage() {
       <ConfirmModal
         isOpen={!!deletingId}
         title="Elimina conto"
-        message="Le transazioni associate resteranno ma perderanno il collegamento al conto. Continuare?"
+        message="Se il conto ha movimenti verrà archiviato: sparisce dalle liste ma lo storico delle transazioni resta, e le scadenze future passano al conto principale. Il saldo deve essere a zero. Continuare?"
         confirmLabel="Elimina"
         confirmClassName="btn btn-danger btn-md"
         onConfirm={handleDelete}

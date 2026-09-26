@@ -5,6 +5,7 @@ import {
   createAccount,
   updateAccount,
   deleteAccount,
+  restoreAccount,
   setDefaultAccount,
   closeBillingCycle,
   getBillingCycles,
@@ -20,6 +21,7 @@ router.get('/:id', getAccount);
 router.post('/', createAccount);
 router.put('/:id', updateAccount);
 router.delete('/:id', deleteAccount);
+router.post('/:id/restore', restoreAccount);
 router.patch('/:id/default', setDefaultAccount);
 router.post('/:id/close-billing-cycle', closeBillingCycle);
 router.get('/:id/cycles', getBillingCycles);

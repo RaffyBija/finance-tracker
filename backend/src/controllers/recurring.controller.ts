@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateRecurringTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { accountBelongsToUser } from '../utils/ownership';
+import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 
 // ── Due date helpers ─────────────────────────────────────────────────────────
@@ -216,6 +216,11 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
       }
     }
 
+    // Con almeno un conto, il movimento deve averne uno (vedi userHasAccounts).
+    if (!accountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
+    }
+
     if (accountId) {
       const owned = await accountBelongsToUser(accountId, userId);
       if (!owned) {
@@ -281,6 +286,11 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
       if (category.type !== existing.type) {
         return res.status(400).json({ error: 'Il tipo della categoria non corrisponde' });
       }
+    }
+
+    // Non si può togliere il conto a un movimento se l'utente ha dei conti.
+    if (accountId !== undefined && !accountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
     }
 
     if (accountId) {
@@ -418,6 +428,19 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Alcune transazioni ricorrenti non trovate' });
     }
 
+    // Con almeno un conto, nessuna ricorrente senza conto (o su un conto
+    // archiviato) può generare movimenti.
+    const archivedIds = new Set((await prisma.account.findMany({
+      where: { userId, archivedAt: { not: null } },
+      select: { id: true },
+    })).map((a) => a.id));
+    const withoutAccount = recurring.filter((r) => !r.accountId || archivedIds.has(r.accountId));
+    if (withoutAccount.length > 0 && await userHasAccounts(userId)) {
+      return res.status(400).json({
+        error: `Imposta un conto su: ${withoutAccount.map((r) => r.description).join(', ')}`,
+      });
+    }
+
     const today = new Date();
     const created = [];
 
@@ -477,6 +500,13 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
 
     if (!recurring) {
       return res.status(404).json({ error: 'Transazione ricorrente non trovata' });
+    }
+
+    const accountOk = recurring.accountId
+      ? await accountBelongsToUser(recurring.accountId, userId) // rifiuta i conti archiviati
+      : !(await userHasAccounts(userId));
+    if (!accountOk) {
+      return res.status(400).json({ error: `Imposta un conto su: ${recurring.description}` });
     }
 
     const today = new Date();

@@ -16,6 +16,10 @@ model User {
   tourCompleted      Boolean   @default(false)
   currency           String    @default("EUR")
   savingRate         Float     @default(0)
+  // Periodo di paga: la categoria degli accrediti stipendio (date reali passate e
+  // prossima entrata pianificata/ricorrente) + giorno di riferimento di ripiego.
+  salaryCategoryId   String?
+  payDay             Int?
   isEmailVerified    Boolean   @default(false)
   emailVerifyToken   String?
   emailVerifyExpires DateTime?
@@ -24,6 +28,8 @@ model User {
   pendingEmail         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+
+  salaryCategory         Category?              @relation("UserSalaryCategory", fields: [salaryCategoryId], references: [id], onDelete: SetNull)
 
   transactions           Transaction[]
   categories             Category[]
@@ -52,6 +58,9 @@ model Account {
   billingDay      Int?        // giorno di addebito (es. 15)
   closingDay      Int?        // giorno di chiusura ciclo (es. 1) — resetta la CC e crea la pianificata
   linkedAccountId String?
+  // Conto chiuso: sparisce da liste e selettori ma resta nel DB, così le sue
+  // transazioni (storico, patrimonio, statistiche) non perdono il conto.
+  archivedAt      DateTime?
 
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedAccount   Account?    @relation("CCLink", fields: [linkedAccountId], references: [id], onDelete: SetNull)
@@ -99,6 +108,7 @@ model Category {
   recurringTransactions RecurringTransaction[]
   plannedTransactions   PlannedTransaction[]
   installmentPlans      InstallmentPlan[]
+  salaryOfUsers         User[]                 @relation("UserSalaryCategory")
 
   @@unique([userId, name, type])
   @@map("categories")
@@ -113,6 +123,9 @@ model Transaction {
   categoryId      String?
   userId          String
   fromRecurringId String?
+  // Pianificata (o prima rata di un piano) da cui è nata la transazione: la esclude
+  // dal "ritmo quotidiano" (spesa variabile), come fromRecurringId per le ricorrenti.
+  fromPlannedId   String?
   accountId       String?
   transferId      String?
   createdAt       DateTime        @default(now())

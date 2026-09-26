@@ -1,4 +1,4 @@
-/* ── Pagina Patrimonio ──────────────────────────────────────────────────────
+/* ── Sezione Analisi (pagina /patrimonio) ──────────────────────────────────────────────────────
    Stili semantici (zero Tailwind inline). Palette warm Stone, accento teal.
    Gli override .dark sono regole esplicite in fondo al file (fuori da @layer). */
 
@@ -7,107 +7,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-/* Hero patrimonio — band compatta in cima, ancora sempre visibile sopra le lenti */
-.patrimonio-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem 1.5rem;
-  background: #ffffff;
-  border: 1px solid #e7e5e4;
-  border-radius: 16px;
-  padding: 1.15rem 1.5rem;
-}
-
-.patrimonio-hero-main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.patrimonio-hero-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #78716c;
-}
-
-.patrimonio-hero-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.1;
-  color: #1c1917;
-  font-variant-numeric: tabular-nums;
-}
-
-.patrimonio-hero-change {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.patrimonio-hero-change.is-positive { color: #059669; }
-.patrimonio-hero-change.is-negative { color: #dc2626; }
-.patrimonio-hero-change.is-neutral  { color: #78716c; }
-
-.patrimonio-hero-change-pct { opacity: 0.85; }
-
-.patrimonio-hero-change-period {
-  color: #a8a29e;
-  font-weight: 500;
-  margin-left: 0.15rem;
-}
-
-/* Tessera sempre presente: stabilizza l'hero (due estremi) anche senza debito.
-   Base = neutra (a saldo); .is-debt = stato esposizione (rosso/caldo). */
-.patrimonio-hero-cc {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  background: #fafaf9;
-  border: 1px solid #e7e5e4;
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-}
-
-.patrimonio-hero-cc-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #f5f5f4;
-  color: #a8a29e;
-}
-
-.patrimonio-hero-cc.is-debt { background: #faf5f0; border-color: #f0e6dd; }
-.patrimonio-hero-cc.is-debt .patrimonio-hero-cc-icon { background: #fef2f2; color: #dc2626; }
-.patrimonio-hero-cc.is-debt .patrimonio-hero-cc-value { color: #dc2626; }
-
-.patrimonio-hero-cc > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.patrimonio-hero-cc-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #78716c;
-}
-
-.patrimonio-hero-cc-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1c1917;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Sottotitolo header widget (riusabile) */
@@ -159,17 +58,6 @@
   color: #a8a29e;
 }
 
-/* Griglia composizione + risparmio */
-.patrimonio-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 900px) {
-  .patrimonio-grid { grid-template-columns: 1fr 1fr; }
-}
-
 /* Composizione: importo accanto alla quota % */
 .composition-amount { color: #a8a29e; font-weight: 500; }
 
@@ -193,62 +81,6 @@
     height: 200px;
   }
   .composition-pie-body .dashboard-legend-name { max-width: none; }
-}
-
-/* Risparmio: riga statistiche sopra il grafico.
-   .card non ha padding (lo danno head/body): allineo stats e nota alla testata
-   con lo stesso padding orizzontale, altrimenti vanno a filo bordo. */
-.savings-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
-  margin: 0.25rem 0 1rem;
-  padding: 0 1.25rem;
-}
-
-/* Grafico a piena larghezza (come l'Andamento): l'asse Y dà il margine sinistro,
-   niente padding orizzontale extra che lo spingerebbe troppo all'interno.
-   La nota chiude la card sotto, quindi niente padding inferiore qui. */
-.savings-chart {
-  padding: 0;
-}
-
-/* "Entrate · Uscite" a tutta riga su mobile (valore lungo, sta più comodo). */
-@media (max-width: 540px) {
-  .savings-stats { grid-template-columns: 1fr 1fr; }
-  .savings-stat--wide { grid-column: 1 / -1; }
-}
-
-.savings-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.savings-stat-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #78716c;
-}
-
-.savings-stat-value {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1c1917;
-  font-variant-numeric: tabular-nums;
-}
-
-.savings-stat-value.is-positive { color: #059669; }
-.savings-stat-value.is-negative { color: #dc2626; }
-.savings-stat-value.savings-stat-muted { font-size: 0.9rem; color: #78716c; font-weight: 600; }
-
-/* Nota = footer della card: chiude in basso, sotto al grafico. */
-.savings-stats-note {
-  margin: 0;
-  padding: 0.75rem 1.25rem 1.25rem;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: #a8a29e;
 }
 
 /* ── Lenti di analisi (tab + pannello) ────────────────────────────────────
@@ -349,60 +181,6 @@
 /* Variante compatta del valore statistica (etichette testuali, non numeri). */
 .patrimonio-stat-value--sm { font-size: 1rem; }
 
-/* Dettaglio esposizione carte (lente "Dove sono i soldi") */
-.cc-exposure-list {
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 1.25rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.cc-exposure-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.cc-exposure-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.cc-exposure-name {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: #1c1917;
-}
-
-.cc-exposure-value {
-  margin-left: auto;
-  font-weight: 700;
-  color: #dc2626;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Trend spese per categoria (lente "Spese") */
-.category-trend-chart { padding: 0; }
-
-.category-trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1rem;
-  padding: 0.75rem 1.25rem 1.25rem;
-}
-
-.category-trend-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.78rem;
-  color: #78716c;
-}
-
 /* Legenda conti (vista "Per conto", NetWorthByAccountChart senza stacking:
    senza impilamento le aree si sovrappongono, la legenda chiarisce i colori) */
 .networth-account-legend {
@@ -421,52 +199,22 @@
 }
 
 /* ── Dark mode (override espliciti) ─────────────────────────────────────── */
-.dark .patrimonio-hero,
 .dark .patrimonio-stat {
   background: #292524;
   border-color: #44403c;
 }
 
-.dark .patrimonio-hero-value,
 .dark .patrimonio-stat-value { color: #f5f5f4; }
 
-.dark .patrimonio-hero-label,
-.dark .patrimonio-stat-label,
-.dark .savings-stat-label,
-.dark .patrimonio-hero-cc-label { color: #a8a29e; }
+.dark .patrimonio-stat-label { color: #a8a29e; }
 
-.dark .patrimonio-hero-change-period,
 .dark .patrimonio-stat-meta,
 .dark .widget-subtitle,
-.dark .savings-stats-note,
 .dark .composition-amount { color: #78716c; }
 
-.dark .patrimonio-hero-cc {
-  background: #1c1917;
-  border-color: #44403c;
-}
-
-.dark .patrimonio-hero-cc-icon {
-  background: #292524;
-  color: #78716c;
-}
-
-.dark .patrimonio-hero-cc-value { color: #f5f5f4; }
-
-.dark .patrimonio-hero-cc.is-debt { background: #2a201c; border-color: #5c2f28; }
-.dark .patrimonio-hero-cc.is-debt .patrimonio-hero-cc-icon { background: #450a0a; color: #fca5a5; }
-.dark .patrimonio-hero-cc.is-debt .patrimonio-hero-cc-value { color: #fca5a5; }
-
-.dark .savings-stat-value { color: #f5f5f4; }
-.dark .savings-stat-value.savings-stat-muted { color: #a8a29e; }
-.dark .patrimonio-stat-value.is-positive,
-.dark .savings-stat-value.is-positive,
-.dark .patrimonio-hero-change.is-positive { color: #34d399; }
-.dark .patrimonio-stat-value.is-negative,
-.dark .savings-stat-value.is-negative,
-.dark .patrimonio-hero-change.is-negative { color: #f87171; }
-.dark .patrimonio-stat-value.is-neutral,
-.dark .patrimonio-hero-change.is-neutral { color: #a8a29e; }
+.dark .patrimonio-stat-value.is-positive { color: #34d399; }
+.dark .patrimonio-stat-value.is-negative { color: #f87171; }
+.dark .patrimonio-stat-value.is-neutral { color: #a8a29e; }
 
 /* Lenti */
 .dark .lens-tabs {
@@ -482,7 +230,4 @@
 }
 .dark .lens-subtitle { color: #78716c; }
 
-.dark .cc-exposure-name { color: #f5f5f4; }
-.dark .cc-exposure-value { color: #f87171; }
-.dark .category-trend-legend-item { color: #a8a29e; }
 .dark .networth-account-legend-item { color: #a8a29e; }

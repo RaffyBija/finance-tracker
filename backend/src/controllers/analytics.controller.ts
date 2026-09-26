@@ -2,11 +2,65 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { countOccurrences, listOccurrenceDates } from './dashboard.controller';
-import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, type CcEvent } from '../utils/balance';
-import { expandToCategoryLines } from '../utils/categoryContributions';
+import { getAccountsWithBalances, getLiquidBalance, type AccountBalance } from '../utils/balance';
+import { loadPayPeriod, serializePayPeriod, addDays, startOfDay, daysBetween, calendarPeriods, payPeriodsForAnalysis } from '../utils/payPeriod';
+import { loadSpendingRhythm, loadClassifiedExpenses, isoDay, type SpendingRhythm } from '../utils/spendingRhythm';
+import { buildProjectedPoints, buildRhythmEvents, collectProjectionEvents } from '../utils/projection';
 
-const HIST_MONTHS = 3;
+// ── Stima fino al prossimo stipendio ─────────────────────────────────────────
+//
+//   Risponde a "quanto mi resta, e come ci arrivo, fino al prossimo accredito?".
+//   Orizzonte: da oggi al giorno PRIMA dello stipendio (periodo di paga, non mese
+//   solare). Stessi eventi della proiezione (collectProjectionEvents: ricorrenti,
+//   pianificate, rate, addebiti carta) + il ritmo quotidiano stimato dagli ultimi
+//   periodi di paga (spesa variabile, vedi spendingRhythm).
+//
+//   In più, per ogni conto BANK il punto più basso previsto: senza fido conta il
+//   timing del singolo conto, non solo la liquidità aggregata.
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+type Point = { date: string; balance: number };
+
+const lowestOf = (points: Point[]): { value: number; date: string } | null => {
+  if (points.length === 0) return null;
+  let min = points[0];
+  for (const p of points) if (p.balance < min.balance) min = p;
+  return { value: round2(min.balance), date: min.date };
+};
+
+// Proietta uno scope (null = tutta la liquidità, altrimenti un conto BANK + le sue
+// carte collegate) sul range, con e senza ritmo quotidiano.
+async function projectScope(params: {
+  userId: string;
+  accounts: AccountBalance[];
+  scopeId: string | null;
+  startBalance: number;
+  rangeStart: Date;
+  rangeEnd: Date;
+  rhythm: SpendingRhythm;
+  now: Date;
+}) {
+  const { userId, accounts, scopeId, startBalance, rangeStart, rangeEnd, rhythm, now } = params;
+  const c = await collectProjectionEvents({ userId, accounts, scopeId, rangeStart, rangeEnd, withSuspended: false, now });
+  const rhythmEvents = (rate: number) => buildRhythmEvents({
+    rate, shareByAccount: rhythm.shareByAccount, accounts, scopeId,
+    rangeStart, rangeEnd, ccEvents: c.ccEvents, ccAccountsForCharge: c.ccAccountsForCharge, now,
+  });
+  const series = (extra: ReturnType<typeof rhythmEvents>) =>
+    buildProjectedPoints(startBalance, [...c.events, ...extra], rangeStart, rangeEnd);
+
+  const central = rhythmEvents(rhythm.dailyRate);
+  return {
+    collected: c,
+    standard: series([]),
+    withRhythm: series(central),
+    rhythmTotal: central.reduce((s, e) => s + e.amount, 0),
+    // Ritmo alto → saldo più basso.
+    low: rhythm.high > rhythm.low ? series(rhythmEvents(rhythm.high)) : null,
+    high: rhythm.high > rhythm.low ? series(rhythmEvents(rhythm.low)) : null,
+  };
+}
 
 export const getForecast = async (req: AuthRequest, res: Response) => {
   try {
@@ -17,301 +71,299 @@ export const getForecast = async (req: AuthRequest, res: Response) => {
     if (cached) return res.json(cached);
 
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    const daysElapsed = now.getDate();
-    const daysInMonth = monthEnd.getDate();
-    const daysRemaining = daysInMonth - daysElapsed;
-
-    // Range storico: ultimi HIST_MONTHS mesi (escluso il corrente)
-    const histEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-    const histStart = new Date(now.getFullYear(), now.getMonth() - HIST_MONTHS, 1, 0, 0, 0, 0);
-
-    // Da domani a fine mese (per calcolare impegni noti rimanenti)
-    const tomorrowStart = new Date(now);
-    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-    tomorrowStart.setHours(0, 0, 0, 0);
-
-    // Conti dell'utente: servono sia per il saldo (liquidità reale) sia per
-    // derivare lo scope BANK-only, senza una seconda query Account separata.
+    const today = startOfDay(now);
+    const payPeriod = await loadPayPeriod(userId, now);
     const accounts = await getAccountsWithBalances(userId);
-    const bankIds = accounts.filter((a) => a.type === 'BANK').map((a) => a.id);
-    // Stessa esclusione CC di Dashboard/Calendario/Proiezione: una spesa su
-    // carta non è un'uscita di liquidità alla sua data (confluisce nel debito
-    // del ciclo) — senza questo filtro actualExpenses/histAvgExpenses contano
-    // la spesa due volte (acquisto CC + addebito aggregato quando il ciclo
-    // viene saldato), disallineando il Forecast da Dashboard/Proiezione.
-    const ccScope = accounts.length > 0 ? { accountId: { in: bankIds } } : {};
-
-    const [
-      currentMonthTx,
-      historicalTx,
-      recurringActive,
-      plannedRemaining,
-    ] = await Promise.all([
-      prisma.transaction.findMany({
-        where: { userId, date: { gte: monthStart, lte: now }, fromRecurringId: null, transferId: null, ...ccScope },
-        include: {
-          category: { select: { id: true, name: true, color: true, icon: true } },
-          items: { include: { category: { select: { id: true, name: true, color: true, icon: true } } } },
-        },
-      }),
-      prisma.transaction.findMany({
-        where: { userId, date: { gte: histStart, lte: histEnd }, fromRecurringId: null, transferId: null, ...ccScope },
-        include: {
-          category: { select: { id: true, name: true, icon: true, color: true } },
-          items: { include: { category: { select: { id: true, name: true, icon: true, color: true } } } },
-        },
-      }),
-      prisma.recurringTransaction.findMany({
-        where: { userId, isActive: true },
-      }),
-      prisma.plannedTransaction.findMany({
-        where: {
-          userId,
-          isPaid: false,
-          plannedDate: { gte: tomorrowStart, lte: monthEnd },
-        },
-      }),
-    ]);
-
-    // ── Saldo corrente = liquidità reale (solo conti BANK, opening balance incluso) ──
-    //   Coerente con l'hero e la proiezione: le CC non sono liquidità.
     const currentBalance = await getLiquidBalance(userId, accounts);
+    const rhythm = await loadSpendingRhythm(userId, payPeriod, accounts.length > 0 ? accounts.map((a) => a.id) : null, now);
 
-    // ── Attuale mese corrente ──
-    const actualIncome = currentMonthTx
-      .filter((t) => t.type === 'INCOME')
-      .reduce((s, t) => s + Number(t.amount), 0);
-    const actualExpenses = currentMonthTx
-      .filter((t) => t.type === 'EXPENSE')
-      .reduce((s, t) => s + Number(t.amount), 0);
+    // Orizzonte: oggi → vigilia dell'accredito (fine giornata).
+    const eve = addDays(payPeriod.nextPayday, -1);
+    const daysRemaining = Math.max(0, daysBetween(today, eve));
+    const rangeStart = today;
+    const rangeEnd = new Date(Math.max(eve.getTime(), today.getTime()));
+    rangeEnd.setHours(23, 59, 59, 999);
 
-    // ── Ritmo giornaliero (fallback per utenti senza storico) ──
-    const dailyIncomeRate = daysElapsed > 0 ? actualIncome / daysElapsed : 0;
-    const dailyExpenseRate = daysElapsed > 0 ? actualExpenses / daysElapsed : 0;
-
-    // ── Media storica mensile (ultimi HIST_MONTHS mesi) — per display ──
-    const histMonthMap = new Map<string, { income: number; expenses: number }>();
-    historicalTx.forEach((t) => {
-      const d = new Date(t.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      if (!histMonthMap.has(key)) histMonthMap.set(key, { income: 0, expenses: 0 });
-      const m = histMonthMap.get(key)!;
-      if (t.type === 'INCOME') m.income += Number(t.amount);
-      else m.expenses += Number(t.amount);
-    });
-    const histMonths = Array.from(histMonthMap.values());
-    const histCount = histMonths.length || 1;
-    const histAvgIncome = histMonths.reduce((s, m) => s + m.income, 0) / histCount;
-    const histAvgExpenses = histMonths.reduce((s, m) => s + m.expenses, 0) / histCount;
-
-    // ── Analisi per categoria: stima spese abituali rimanenti ──
-    //
-    // Per ogni categoria, calcola la media mensile storica dividendo per HIST_MONTHS
-    // (non per i mesi in cui appare): una categoria presente 1/3 dei mesi pesa 1/3.
-    // Stima rimanente = max(0, avg_mensile - già_speso_questo_mese).
-
-    type CatInfo = { id?: string; name: string; icon?: string; color?: string };
-    const catInfoMap = new Map<string, CatInfo>();
-    const histCatMonthMap = new Map<string, Map<string, number>>(); // catKey → monthKey → totale
-    const histCatCount = new Map<string, number>();                 // catKey → n. movimenti nello storico
-
-    historicalTx.forEach((t) => {
-      if (t.type !== 'EXPENSE') return;
-      const d = new Date(t.date);
-      const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-
-      // Le transazioni divise ripartiscono importo e conteggio tra le righe.
-      for (const line of expandToCategoryLines(t)) {
-        const catKey = line.categoryId || 'no-category';
-        if (!catInfoMap.has(catKey))
-          catInfoMap.set(catKey, {
-            id: line.categoryId ?? undefined,
-            name: line.category?.name || 'Senza categoria',
-            icon: line.category?.icon ?? undefined,
-            color: line.category?.color ?? undefined,
-          });
-
-        histCatCount.set(catKey, (histCatCount.get(catKey) || 0) + 1);
-
-        if (!histCatMonthMap.has(catKey)) histCatMonthMap.set(catKey, new Map());
-        const mm = histCatMonthMap.get(catKey)!;
-        mm.set(monthKey, (mm.get(monthKey) || 0) + line.amount);
-      }
+    const global = await projectScope({
+      userId, accounts, scopeId: null, startBalance: currentBalance,
+      rangeStart, rangeEnd, rhythm, now,
     });
 
-    // Media mensile per categoria sull'intera finestra storica
-    const catAvgMap = new Map<string, number>();
-    histCatMonthMap.forEach((mm, catKey) => {
-      const total = Array.from(mm.values()).reduce((s, v) => s + v, 0);
-      catAvgMap.set(catKey, total / HIST_MONTHS);
-    });
+    const knownIncome = global.collected.projectedIncome;
+    const knownExpenses = global.collected.projectedExpense;
+    const hasFuture = daysRemaining > 0;
+    // Stima alla vigilia come waterfall esplicito (coerente con le righe mostrate).
+    // Senza giorni futuri (stipendio domani/oggi) resta il saldo attuale.
+    const standardAtEve = hasFuture ? currentBalance + knownIncome - knownExpenses : currentBalance;
+    const rhythmAtEve = hasFuture ? standardAtEve - global.rhythmTotal : currentBalance;
+    const lastOf = (pts: Point[] | null) => (pts && pts.length > 0 ? pts[pts.length - 1].balance : null);
 
-    // ── Spese più frequenti — per NUMERO di movimenti, non per importo ──
-    //   Risponde a "quali spese ricorrono spesso" (carburante, supermercato…).
-    //   Esclude "Senza categoria": non è una spesa concreta.
-    //   perMonth = movimenti/mese; avgMonthly = importo medio mensile (informativo).
-    const frequentExpenses = Array.from(histCatCount.entries())
-      .filter(([catKey]) => catKey !== 'no-category')
-      .map(([catKey, count]) => {
-        const info = catInfoMap.get(catKey);
-        return {
-          categoryId: info?.id,
-          categoryName: info?.name || 'Senza categoria',
-          icon: info?.icon ?? null,
-          color: info?.color ?? null,
-          count,
-          perMonth: Math.round((count / HIST_MONTHS) * 10) / 10,
-          avgMonthly: Math.round((catAvgMap.get(catKey) ?? 0) * 100) / 100,
-        };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
-
-    // Spesa mese corrente per categoria (aggiorna anche catInfoMap per categorie nuove)
-    const currentCatSpend = new Map<string, number>();
-    currentMonthTx.forEach((t) => {
-      if (t.type !== 'EXPENSE') return;
-      for (const line of expandToCategoryLines(t)) {
-        const catKey = line.categoryId || 'no-category';
-        if (!catInfoMap.has(catKey))
-          catInfoMap.set(catKey, { id: line.categoryId ?? undefined, name: line.category?.name || 'Senza categoria' });
-        currentCatSpend.set(catKey, (currentCatSpend.get(catKey) || 0) + line.amount);
-      }
-    });
-
-    // Stima rimanente per categoria (solo da storico, non nuove categorie del mese corrente)
-    let habitualRemainingTotal = 0;
-    const habitualCategories: Array<{
-      categoryId?: string;
-      categoryName: string;
-      avgMonthly: number;
-      alreadySpent: number;
-      estimated: number;
-    }> = [];
-
-    catAvgMap.forEach((avg, catKey) => {
-      const alreadySpent = currentCatSpend.get(catKey) || 0;
-      const estimated = Math.max(0, avg - alreadySpent);
-      if (estimated < 0.01) return;
-      habitualRemainingTotal += estimated;
-      const info = catInfoMap.get(catKey);
-      habitualCategories.push({
-        categoryId: info?.id,
-        categoryName: info?.name || 'Senza categoria',
-        avgMonthly: Math.round(avg * 100) / 100,
-        alreadySpent: Math.round(alreadySpent * 100) / 100,
-        estimated: Math.round(estimated * 100) / 100,
+    // Quanto si può spendere al giorno (oltre agli impegni) senza che la liquidità
+    // scenda mai sotto zero prima dello stipendio: min sui giorni futuri di
+    // saldo_standard(d) / giorni trascorsi da oggi a d.
+    let spendablePerDay: number | null = null;
+    if (hasFuture) {
+      let s = Infinity;
+      global.standard.forEach((p, i) => {
+        if (i === 0) return; // oggi = saldo attuale, nessun giorno di spesa
+        s = Math.min(s, p.balance / i);
       });
-    });
+      spendablePerDay = Number.isFinite(s) ? round2(Math.max(0, s)) : null;
+    }
 
-    habitualCategories.sort((a, b) => b.estimated - a.estimated);
-
-    // ── Impegni noti rimanenti ──
-    let knownRemainingIncome = 0;
-    let knownRemainingExpenses = 0;
-
-    // Le spese addebitate su CC non escono dalla liquidità alla loro data: confluiscono
-    // nell'addebito del ciclo (projectCcCharges), contato solo se fattura entro fine mese.
-    const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
-    const ccEvents: CcEvent[] = [];
-
-    if (daysRemaining > 0) {
-      for (const rec of recurringActive) {
-        const rule = {
-          frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-          dayOfMonth: rec.dayOfMonth,
-          startDate: rec.startDate,
-          endDate: rec.endDate,
-          amount: rec.amount,
+    // Punto più basso per conto BANK (solo con più conti: con uno solo coincide
+    // con il dato aggregato).
+    const bankAccounts = accounts.filter((a) => a.type === 'BANK' && !a.archived);
+    let accountLows: object[] = [];
+    if (bankAccounts.length > 1 && hasFuture) {
+      const meta = await prisma.account.findMany({
+        where: { id: { in: bankAccounts.map((a) => a.id) } },
+        select: { id: true, name: true, color: true },
+      });
+      const metaById = new Map(meta.map((m) => [m.id, m]));
+      accountLows = await Promise.all(bankAccounts.map(async (a) => {
+        const scoped = await projectScope({
+          userId, accounts, scopeId: a.id, startBalance: a.balance,
+          rangeStart, rangeEnd, rhythm, now,
+        });
+        const std = lowestOf(scoped.standard);
+        const withR = lowestOf(scoped.withRhythm);
+        return {
+          id: a.id,
+          name: metaById.get(a.id)?.name ?? 'Conto',
+          color: metaById.get(a.id)?.color ?? null,
+          balance: round2(a.balance),
+          standardMin: std,
+          rhythmMin: withR,
         };
-        if (rec.accountId && ccIds.has(rec.accountId)) {
-          const amount = Number(rec.amount);
-          for (const date of listOccurrenceDates(rule, tomorrowStart, monthEnd)) {
-            ccEvents.push({ cardId: rec.accountId, date, signed: rec.type === 'INCOME' ? -amount : amount });
-          }
-          continue;
-        }
-        const occ = countOccurrences(rule, tomorrowStart, monthEnd);
-        if (occ === 0) continue;
-        const total = occ * Number(rec.amount);
-        if (rec.type === 'INCOME') knownRemainingIncome += total;
-        else knownRemainingExpenses += total;
-      }
+      }));
     }
-
-    for (const p of plannedRemaining) {
-      if (p.accountId && ccIds.has(p.accountId)) {
-        const amount = Number(p.amount);
-        // Filtrata per range di plannedDate a monte: mai null qui.
-        ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
-        continue;
-      }
-      if (p.type === 'INCOME') knownRemainingIncome += Number(p.amount);
-      else knownRemainingExpenses += Number(p.amount);
-    }
-
-    // Addebiti CC (debito del ciclo aperto + spese future su CC) con billing entro fine
-    // mese → impegno noto rimanente (currentBalance esclude le CC: li re-introduciamo).
-    if (daysRemaining > 0) {
-      for (const charge of projectCcCharges(accounts, ccEvents, tomorrowStart, monthEnd, now)) {
-        knownRemainingExpenses += charge.amount;
-      }
-    }
-
-    // ── Proiezione ──
-    // Spese: stima per categoria se disponibile storico, altrimenti pace giornaliero.
-    // Income: solo impegni noti (ricorrenti + pianificate) — il pace income distorce
-    // la proiezione quando lo stipendio arriva come importo unico a inizio mese.
-    const hasHistoricalData = catAvgMap.size > 0;
-    const paceRemainingExpenses = dailyExpenseRate * daysRemaining;
-    const forecastedHabitualExpenses = hasHistoricalData
-      ? habitualRemainingTotal
-      : paceRemainingExpenses;
-
-    const projectedEndBalance =
-      currentBalance +
-      knownRemainingIncome -
-      forecastedHabitualExpenses -
-      knownRemainingExpenses;
 
     const result = {
-      daysElapsed,
-      daysInMonth,
+      payPeriod: serializePayPeriod(payPeriod, now),
+      eveDate: isoDay(eve < today ? today : eve),
       daysRemaining,
-      currentBalance,
-      currentMonthActual: {
-        income: Math.round(actualIncome * 100) / 100,
-        expenses: Math.round(actualExpenses * 100) / 100,
+      currentBalance: round2(currentBalance),
+      known: { income: round2(hasFuture ? knownIncome : 0), expenses: round2(hasFuture ? knownExpenses : 0) },
+      rhythm: {
+        basis: rhythm.basis,
+        dailyRate: rhythm.dailyRate,
+        low: rhythm.low,
+        high: rhythm.high,
+        periods: rhythm.periods,
+        current: rhythm.current,
+        topCategories: rhythm.topCategories,
+        remaining: round2(hasFuture ? global.rhythmTotal : 0),
       },
-      dailyPace: {
-        income: Math.round(dailyIncomeRate * 100) / 100,
-        expenses: Math.round(dailyExpenseRate * 100) / 100,
+      atEve: {
+        standard: round2(standardAtEve),
+        withRhythm: round2(rhythmAtEve),
+        // Fascia: con il ritmo più alto/basso dei periodi di confronto.
+        low: hasFuture && global.low ? round2(lastOf(global.low)!) : round2(rhythmAtEve),
+        high: hasFuture && global.high ? round2(lastOf(global.high)!) : round2(rhythmAtEve),
       },
-      knownRemaining: {
-        income: Math.round(knownRemainingIncome * 100) / 100,
-        expenses: Math.round(knownRemainingExpenses * 100) / 100,
+      lowest: {
+        standard: lowestOf(global.standard),
+        withRhythm: lowestOf(global.withRhythm),
       },
-      historicalAvg: {
-        income: Math.round(histAvgIncome * 100) / 100,
-        expenses: Math.round(histAvgExpenses * 100) / 100,
-        monthsConsidered: histCount,
-      },
-      habitualRemaining: {
-        total: Math.round(habitualRemainingTotal * 100) / 100,
-        hasData: hasHistoricalData,
-        categories: habitualCategories.slice(0, 5),
-      },
-      frequentExpenses,
-      projectedEndBalance: Math.round(projectedEndBalance * 100) / 100,
+      spendablePerDay,
+      accounts: accountLows,
     };
 
     analyticsCache.set(cacheKey, result);
     res.json(result);
   } catch (error) {
     console.error('Get forecast error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// Periodo di paga corrente (anteprima in Impostazioni e orizzonte "Stipendio").
+export const getPayPeriod = async (req: AuthRequest, res: Response) => {
+  try {
+    const now = new Date();
+    const payPeriod = await loadPayPeriod(req.userId!, now);
+    res.json(serializePayPeriod(payPeriod, now));
+  } catch (error) {
+    console.error('Get pay period error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// ── Analisi spese ────────────────────────────────────────────────────────────
+//
+//   Dati grezzi ma già normalizzati per la sezione Analisi: le righe di spesa
+//   degli ultimi N periodi (di paga o mesi solari) alla data d'ACQUISTO, carte
+//   incluse, classificate fisse/programmate/variabili; le entrate per periodo; e,
+//   per il periodo in corso, gli impegni ancora attesi fino alla sua fine. Le
+//   aggregazioni (categorie, abitudini, confronti) si fanno lato client: così il
+//   drill-down non richiede altre chiamate.
+//   Param: ?periods=3..12 (default 6), ?mode=pay|month (default pay).
+
+export const getSpendingAnalysis = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const count = Math.min(Math.max(parseInt((req.query.periods as string) || '6', 10) || 6, 3), 12);
+    const mode = req.query.mode === 'month' ? 'month' : 'pay';
+
+    const cacheKey = analyticsCache.keys.spending(userId, `${mode}:${count}`);
+    const cached = analyticsCache.get<object>(cacheKey);
+    if (cached) return res.json(cached);
+
+    const now = new Date();
+    const payPeriod = await loadPayPeriod(userId, now, count - 1);
+    const periods = mode === 'pay' && payPeriod.configured
+      ? payPeriodsForAnalysis(payPeriod)
+      : calendarPeriods(now, count);
+    const effectiveMode = mode === 'pay' && payPeriod.configured ? 'pay' : 'month';
+
+    const accounts = await getAccountsWithBalances(userId);
+    const accountIds = accounts.length > 0 ? accounts.map((a) => a.id) : null;
+    const from = periods[0].start;
+
+    const [lines, incomeTx, categories, accountMeta] = await Promise.all([
+      loadClassifiedExpenses(userId, from, now, accountIds),
+      prisma.transaction.findMany({
+        where: {
+          userId, type: 'INCOME', transferId: null, date: { gte: from, lte: now },
+          ...(accountIds ? { accountId: { in: accountIds } } : {}),
+          OR: [{ categoryId: null }, { category: { isSystem: false } }],
+        },
+        select: { date: true, amount: true },
+      }),
+      prisma.category.findMany({
+        where: { userId },
+        select: { id: true, name: true, color: true, icon: true, type: true },
+      }),
+      prisma.account.findMany({
+        where: { userId },
+        select: { id: true, name: true, color: true, type: true, archivedAt: true },
+      }),
+    ]);
+
+    const income = periods.map((p) => round2(
+      incomeTx.filter((t) => t.date >= p.start && t.date < p.end).reduce((s, t) => s + Number(t.amount), 0),
+    ));
+
+    // Periodo in corso: impegni attesi da domani alla fine del periodo, alla data
+    // d'acquisto (spese su carta incluse come acquisti, non come addebito).
+    const current = periods[periods.length - 1];
+    const today = startOfDay(now);
+    const lastDay = addDays(current.end, -1);
+    let knownRemaining = 0;
+    if (lastDay > today) {
+      const rangeEnd = new Date(lastDay);
+      rangeEnd.setHours(23, 59, 59, 999);
+      const c = await collectProjectionEvents({
+        userId, accounts, scopeId: null, rangeStart: addDays(today, 1), rangeEnd, withSuspended: false, now,
+      });
+      knownRemaining = c.events
+        .filter((e) => e.type === 'EXPENSE' && (e.source === 'recurring' || e.source === 'planned'))
+        .reduce((s, e) => s + e.amount, 0)
+        + c.ccEvents.filter((e) => e.signed > 0).reduce((s, e) => s + e.signed, 0);
+    }
+
+    const result = {
+      mode: effectiveMode,
+      payPeriodConfigured: payPeriod.configured,
+      today: isoDay(today),
+      periods: periods.map((p) => ({
+        start: isoDay(p.start),
+        end: isoDay(p.end),
+        days: daysBetween(p.start, p.end),
+        elapsedDays: p.isCurrent ? Math.min(daysBetween(p.start, today) + 1, daysBetween(p.start, p.end)) : daysBetween(p.start, p.end),
+        isCurrent: p.isCurrent,
+      })),
+      income,
+      knownRemaining: round2(knownRemaining),
+      lines: lines.map((l) => ({
+        date: isoDay(l.date),
+        amount: round2(l.amount),
+        categoryId: l.categoryId,
+        kind: l.kind,
+        accountId: l.accountId,
+        description: l.description,
+        txId: l.txId,
+      })),
+      categories: categories.filter((c) => c.type === 'EXPENSE').map(({ type: _t, ...c }) => c),
+      accounts: accountMeta.map((a) => ({ id: a.id, name: a.name, color: a.color, type: a.type, archived: a.archivedAt !== null })),
+    };
+
+    analyticsCache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Get spending analysis error:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+};
+
+// ── Patrimonio netto oggi ────────────────────────────────────────────────────
+//
+//   La liquidità (Σ conti BANK) non basta a dire quanto si possiede: qui si
+//   aggiungono i crediti ancora da incassare e si tolgono i debiti ancora da
+//   pagare. Non cacheato (poche query, dipende da molte mutation).
+//     • Debito carte: ciclo aperto + addebiti di cicli chiusi non ancora pagati.
+//     • Piani a rate: rate non pagate, per direzione (DEBT / CREDIT).
+//     • Sospesi: importi noti senza data (uscite = debiti, entrate = crediti).
+
+export const getNetWorthNow = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const accounts = await getAccountsWithBalances(userId);
+    const liquidity = await getLiquidBalance(userId, accounts);
+
+    const [pendingCharges, planRates, suspended] = await Promise.all([
+      prisma.plannedTransaction.findMany({
+        where: { userId, isPaid: false, ccAccountId: { not: null } },
+        select: { amount: true },
+      }),
+      prisma.plannedTransaction.findMany({
+        where: { userId, isPaid: false, plan: { status: 'ACTIVE' } },
+        select: { amount: true, plannedDate: true, plan: { select: { id: true, title: true, direction: true, status: true } } },
+      }),
+      prisma.plannedTransaction.findMany({
+        where: { userId, isPaid: false, plannedDate: null, planId: null },
+        select: { amount: true, type: true },
+      }),
+    ]);
+
+    const ccOpen = accounts
+      .filter((a) => a.type === 'CREDIT_CARD' && !a.archived && a.balance < 0)
+      .reduce((s, a) => s - a.balance, 0);
+    const ccDebt = ccOpen + pendingCharges.reduce((s, p) => s + Number(p.amount), 0);
+
+    type PlanAgg = { id: string; title: string; remaining: number; count: number; nextDate: string | null };
+    const byPlan = new Map<string, PlanAgg & { direction: string }>();
+    for (const r of planRates) {
+      if (!r.plan) continue;
+      const e = byPlan.get(r.plan.id) ?? { id: r.plan.id, title: r.plan.title, direction: r.plan.direction, remaining: 0, count: 0, nextDate: null };
+      e.remaining += Number(r.amount);
+      e.count += 1;
+      const d = r.plannedDate ? isoDay(r.plannedDate) : null;
+      if (d && (!e.nextDate || d < e.nextDate)) e.nextDate = d;
+      byPlan.set(r.plan.id, e);
+    }
+    const plans = Array.from(byPlan.values()).map((p) => ({ ...p, remaining: round2(p.remaining) }));
+    const debtPlans = plans.filter((p) => p.direction === 'DEBT').sort((a, b) => b.remaining - a.remaining);
+    const creditPlans = plans.filter((p) => p.direction === 'CREDIT').sort((a, b) => b.remaining - a.remaining);
+    const debts = debtPlans.reduce((s, p) => s + p.remaining, 0);
+    const credits = creditPlans.reduce((s, p) => s + p.remaining, 0);
+    const suspendedOut = suspended.filter((s) => s.type === 'EXPENSE').reduce((s, p) => s + Number(p.amount), 0);
+    const suspendedIn = suspended.filter((s) => s.type === 'INCOME').reduce((s, p) => s + Number(p.amount), 0);
+
+    res.json({
+      liquidity: round2(liquidity),
+      credits: round2(credits),
+      suspendedIn: round2(suspendedIn),
+      ccDebt: round2(ccDebt),
+      debts: round2(debts),
+      suspendedOut: round2(suspendedOut),
+      netWorth: round2(liquidity + credits + suspendedIn - ccDebt - debts - suspendedOut),
+      debtPlans: debtPlans.map(({ direction: _d, ...p }) => p),
+      creditPlans: creditPlans.map(({ direction: _d, ...p }) => p),
+    });
+  } catch (error) {
+    console.error('Get net worth now error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

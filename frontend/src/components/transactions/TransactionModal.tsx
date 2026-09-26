@@ -249,13 +249,17 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
 
     // Payload: in modalità divisa invia le righe e azzera la categoria singola;
     // altrimenti invia items=[] così, in modifica, eventuali righe vengono rimosse.
+    // Il selettore compare solo con più conti: ripiego sul conto principale (il
+    // backend esige un conto quando l'utente ne ha).
+    const accountId = formData.accountId || defaultAccount?.id || undefined;
     const payload: CreateTransactionDTO = splitMode
       ? {
           ...formData,
+          accountId,
           categoryId: undefined,
           items: splitItems.map((r) => ({ amount: Number(r.amount), categoryId: r.categoryId })),
         }
-      : { ...formData, items: [] };
+      : { ...formData, accountId, items: [] };
 
     try {
       if (editingTransactionData) {

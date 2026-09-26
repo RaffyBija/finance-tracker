@@ -11,20 +11,26 @@ import { useTheme } from '../../contexts/ThemeContext';
 //   • tratto pieno  = storia recente reale (serie "actual")
 //   • tratto tratteggiato = proiezione futura (serie "projected")
 //   • dot "oggi" alla giunzione + dot a fine orizzonte
+//   • opzionale: linea "con ritmo quotidiano" (ambra) + fascia probabile, e
+//     marcatore del prossimo stipendio
 // Riusato sia dalla card Dashboard (compact) sia dalla pagina /projection.
 
 const TEAL = '#0d9488';
+const AMBER = '#d97706';
 
 interface ProjectionChartProps {
   points: ProjectionPoint[];
   height?: number;
   compact?: boolean;
+  paydayDate?: string; // YYYY-MM-DD: linea verticale "Stipendio" se nel range
 }
 
 interface ChartDatum {
   date: string;
   actual: number | null;
   projected: number | null;
+  rhythm: number | null;
+  band: [number, number] | null;
 }
 
 const shortDate = (iso: string) =>
@@ -39,12 +45,23 @@ function ProjectionTooltip({ active, payload, formatCurrency }: any) {
     <div className="card card-md dashboard-tooltip">
       <p className="dashboard-tooltip-label">{shortDate(datum.date)}</p>
       <p className="dashboard-tooltip-amount">{formatCurrency(value)}</p>
-      <p className="projection-chart-tip-tag">{isProjected ? 'Proiezione' : 'Saldo reale'}</p>
+      <p className="projection-chart-tip-tag">{isProjected ? 'Solo impegni noti' : 'Saldo reale'}</p>
+      {isProjected && datum.rhythm != null && (
+        <>
+          <p className="dashboard-tooltip-amount projection-chart-tip-rhythm">{formatCurrency(datum.rhythm)}</p>
+          <p className="projection-chart-tip-tag">
+            Con ritmo quotidiano
+            {datum.band && datum.band[0] !== datum.band[1] && (
+              <> · {formatCurrency(datum.band[0])} – {formatCurrency(datum.band[1])}</>
+            )}
+          </p>
+        </>
+      )}
     </div>
   );
 }
 
-export default function ProjectionChart({ points, height = 220, compact = false }: ProjectionChartProps) {
+export default function ProjectionChart({ points, height = 220, compact = false, paydayDate }: ProjectionChartProps) {
   const { formatCurrency, formatCurrencyAxis } = useFormatCurrency();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -52,7 +69,7 @@ export default function ProjectionChart({ points, height = 220, compact = false 
   const gridColor = isDark ? '#44403c' : '#f1f5f9';
   const axisColor = isDark ? '#78716c' : '#a8a29e';
 
-  const { data, anchor, last } = useMemo(() => {
+  const { data, anchor, last, hasRhythm, hasBand } = useMemo(() => {
     // Indice del primo punto proiettato = giunzione "oggi".
     const firstProjIdx = points.findIndex((p) => p.projected);
     const anchorIdx = firstProjIdx === -1 ? points.length - 1 : firstProjIdx;
@@ -64,6 +81,8 @@ export default function ProjectionChart({ points, height = 220, compact = false 
         date: p.date,
         actual: !p.projected || isAnchor ? p.balance : null,
         projected: p.projected ? p.balance : null,
+        rhythm: p.projected && p.rhythm != null ? p.rhythm : null,
+        band: p.projected && p.bandLow != null && p.bandHigh != null ? [p.bandLow, p.bandHigh] as [number, number] : null,
       };
     });
 
@@ -73,8 +92,12 @@ export default function ProjectionChart({ points, height = 220, compact = false 
       data: chart,
       anchor: anchorPt ? { date: anchorPt.date, balance: anchorPt.balance } : null,
       last: lastPt ? { date: lastPt.date, balance: lastPt.balance } : null,
+      hasRhythm: chart.some((d) => d.rhythm != null),
+      hasBand: chart.some((d) => d.band != null && d.band[0] !== d.band[1]),
     };
   }, [points]);
+
+  const showPayday = !!paydayDate && data.some((d) => d.date === paydayDate && d.projected != null);
 
   if (!points.length) return null;
 
@@ -116,6 +139,29 @@ export default function ProjectionChart({ points, height = 220, compact = false 
           {anchor && (
             <ReferenceLine x={anchor.date} stroke={axisColor} strokeDasharray="3 4" strokeWidth={1} />
           )}
+          {showPayday && (
+            <ReferenceLine
+              x={paydayDate}
+              stroke={TEAL}
+              strokeOpacity={0.5}
+              strokeDasharray="4 4"
+              label={compact ? undefined : { value: 'Stipendio', position: 'insideTopRight', fontSize: 11, fill: TEAL }}
+            />
+          )}
+          {!compact && <ReferenceLine y={0} stroke={axisColor} strokeOpacity={0.6} />}
+
+          {hasBand && (
+            <Area
+              type="monotone"
+              dataKey="band"
+              stroke="none"
+              fill={AMBER}
+              fillOpacity={0.12}
+              activeDot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          )}
 
           <Area
             type="monotone"
@@ -139,6 +185,19 @@ export default function ProjectionChart({ points, height = 220, compact = false 
             connectNulls={false}
             isAnimationActive={!compact}
           />
+
+          {hasRhythm && (
+            <Line
+              type="monotone"
+              dataKey="rhythm"
+              stroke={AMBER}
+              strokeWidth={2.2}
+              dot={false}
+              activeDot={{ r: 4, fill: AMBER }}
+              connectNulls={false}
+              isAnimationActive={!compact}
+            />
+          )}
 
           {anchor && (
             <ReferenceDot x={anchor.date} y={anchor.balance} r={4} fill={isDark ? '#292524' : '#ffffff'} stroke={TEAL} strokeWidth={2.4} />

@@ -7,6 +7,17 @@ export const accountsAPI = {
     return data;
   },
 
+  // Solo i conti archiviati (sezione "Conti archiviati" con ripristino).
+  getArchived: async (): Promise<Account[]> => {
+    const { data } = await api.get<Account[]>('/accounts', { params: { includeArchived: true } });
+    return data.filter((a) => !!a.archivedAt);
+  },
+
+  restore: async (id: string): Promise<{ message: string }> => {
+    const { data } = await api.post(`/accounts/${id}/restore`);
+    return data;
+  },
+
   getById: async (id: string): Promise<Account> => {
     const { data } = await api.get<Account>(`/accounts/${id}`);
     return data;
@@ -22,8 +33,10 @@ export const accountsAPI = {
     return data;
   },
 
-  delete: async (id: string): Promise<void> => {
-    await api.delete(`/accounts/${id}`);
+  // Con movimenti il conto viene archiviato (archived: true), non cancellato.
+  delete: async (id: string): Promise<{ archived: boolean; message: string }> => {
+    const { data } = await api.delete(`/accounts/${id}`);
+    return data;
   },
 
   setDefault: async (id: string): Promise<void> => {

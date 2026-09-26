@@ -4,7 +4,7 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreateTransactionDTO, TransactionItemDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
-import { accountBelongsToUser } from '../utils/ownership';
+import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 
 // Include standard per restituire una transazione completa di righe split.
 const txInclude = {
@@ -256,6 +256,11 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Tipo non valido (INCOME o EXPENSE)' });
     }
 
+    // Con almeno un conto, il movimento deve averne uno (vedi userHasAccounts).
+    if (!accountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
+    }
+
     if (accountId) {
       const owned = await accountBelongsToUser(accountId, userId);
       if (!owned) {
@@ -359,8 +364,18 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Dopo la modifica il movimento deve avere un conto (se l'utente ne ha):
+    // così anche le vecchie transazioni senza conto vengono sistemate alla prima modifica.
+    const finalAccountId = accountId !== undefined ? accountId : existingTransaction.accountId;
+    if (!finalAccountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
+    }
+
     if (accountId) {
-      const owned = await accountBelongsToUser(accountId, userId);
+      // Un movimento storico può restare sul suo conto anche se archiviato.
+      const owned = await accountBelongsToUser(accountId, userId, {
+        allowArchived: accountId === existingTransaction.accountId,
+      });
       if (!owned) {
         return res.status(404).json({ error: 'Conto non trovato' });
       }
@@ -543,7 +558,8 @@ export const createTransfer = async (req: AuthRequest, res: Response) => {
 
     // Entrambi i conti devono esistere, appartenere all'utente ed essere BANK.
     const accounts = await prisma.account.findMany({
-      where: { id: { in: [fromAccountId, toAccountId] }, userId },
+      // Nessun trasferimento da/verso un conto archiviato.
+      where: { id: { in: [fromAccountId, toAccountId] }, userId, archivedAt: null },
       select: { id: true, type: true },
     });
 
@@ -626,7 +642,8 @@ export const updateTransfer = async (req: AuthRequest, res: Response) => {
 
     // Entrambi i conti devono esistere, appartenere all'utente ed essere BANK.
     const accounts = await prisma.account.findMany({
-      where: { id: { in: [fromAccountId, toAccountId] }, userId },
+      // Nessun trasferimento da/verso un conto archiviato.
+      where: { id: { in: [fromAccountId, toAccountId] }, userId, archivedAt: null },
       select: { id: true, type: true },
     });
 

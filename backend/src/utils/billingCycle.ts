@@ -247,7 +247,8 @@ export async function closeConcludedCycles(userId: string, now: Date = new Date(
 
   const accountIds = [...new Set(openPast.map((c) => c.accountId))];
   const accounts = await prisma.account.findMany({
-    where: { id: { in: accountIds }, userId, type: 'CREDIT_CARD' },
+    // Le carte archiviate non chiudono né ricalcolano più cicli.
+    where: { id: { in: accountIds }, userId, type: 'CREDIT_CARD', archivedAt: null },
     select: { id: true, name: true, closingDay: true, billingDay: true, linkedAccountId: true },
   });
   const accMap = new Map(accounts.map((a) => [a.id, a]));
@@ -304,7 +305,8 @@ export async function reconcileCcChanges(
 
   const accountIds = [...new Set(ccChanges.map((c) => c.accountId as string))];
   const accounts = await prisma.account.findMany({
-    where: { id: { in: accountIds }, userId, type: 'CREDIT_CARD' },
+    // Le carte archiviate non chiudono né ricalcolano più cicli.
+    where: { id: { in: accountIds }, userId, type: 'CREDIT_CARD', archivedAt: null },
     select: { id: true, name: true, closingDay: true, billingDay: true, linkedAccountId: true },
   });
   const accMap = new Map(accounts.map((a) => [a.id, a]));
