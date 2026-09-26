@@ -1,0 +1,576 @@
+/* ── Sezione Analisi: spese, categorie, abitudini, patrimonio netto ─────────
+   .card non ha padding proprio (lo danno testata e corpo): i blocchi interni
+   usano lo stesso padding orizzontale della .widget-head (1.25rem).
+   Gli override .dark sono in fondo al file. */
+
+/* Controlli condivisi (modalità periodi, orizzonte, periodo scelto) */
+.analysis-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.analysis-hint {
+  margin-top: -0.75rem;
+  font-size: 0.8125rem;
+  color: #78716c;
+}
+
+.analysis-period-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: #f5f5f4;
+}
+.analysis-period-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: #57534e;
+}
+.analysis-period-arrow:hover:not(:disabled) { background: #e7e5e4; }
+.analysis-period-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+.analysis-period-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 10rem;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #292524;
+  font-variant-numeric: tabular-nums;
+}
+.analysis-period-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: none;
+  padding: 0.0625rem 0.4rem;
+  border-radius: 9999px;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+@media (max-width: 640px) {
+  .analysis-period-picker { margin-left: 0; width: 100%; justify-content: space-between; }
+}
+
+/* Hero del periodo */
+.analysis-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem;
+}
+.analysis-hero-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a8a29e;
+}
+.analysis-hero-value {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #1c1917;
+}
+.analysis-hero-value.is-negative { color: #dc2626; }
+.analysis-hero-delta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #78716c;
+}
+.analysis-hero-delta.is-negative { color: #dc2626; }
+.analysis-hero-delta.is-positive { color: #059669; }
+.analysis-hero-delta-note {
+  font-weight: 400;
+  color: #a8a29e;
+}
+
+.analysis-composition {
+  display: flex;
+  gap: 2px;
+  height: 0.625rem;
+  margin-top: 0.75rem;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.analysis-composition-segment { min-width: 4px; }
+
+.analysis-kind-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin-top: 0.5rem;
+}
+.analysis-kind-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #57534e;
+}
+.analysis-kind-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.analysis-kind-name { margin-right: 0.25rem; }
+.analysis-kind-value,
+.analysis-kind-share {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.analysis-kind-value { font-weight: 600; color: #292524; }
+.analysis-kind-share { color: #a8a29e; }
+
+/* Toni sulle meta delle tessere (es. variabili al giorno rispetto alla media) */
+.patrimonio-stat-meta.is-negative { color: #dc2626; }
+.patrimonio-stat-meta.is-positive { color: #059669; }
+
+/* Grafici */
+.analysis-chart { padding: 0 0.75rem 0.5rem 0; }
+.analysis-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: 0.75rem;
+  color: #78716c;
+}
+.analysis-chart-legend li { display: inline-flex; align-items: center; gap: 0.35rem; }
+.analysis-legend-line {
+  display: inline-block;
+  width: 0.9rem;
+  height: 2px;
+  border-radius: 1px;
+}
+.analysis-chart-note {
+  padding: 0 1.25rem 1rem;
+  font-size: 0.75rem;
+  color: #a8a29e;
+}
+.analysis-tooltip-strong { font-weight: 700; }
+
+/* Categorie */
+.analysis-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.analysis-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fffbeb;
+  font-size: 0.8125rem;
+  color: #92400e;
+}
+.analysis-notice svg { flex-shrink: 0; margin-top: 0.1rem; color: #d97706; }
+
+.analysis-table-card { padding: 0.5rem 0; }
+.analysis-table-head,
+.analysis-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem 6.5rem 1.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+}
+.analysis-table-head {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a8a29e;
+}
+.analysis-table-head::after { content: ''; }
+.analysis-table-head .analysis-col-delta { font-family: inherit; font-size: inherit; color: inherit; }
+.analysis-col-num { text-align: right; }
+.analysis-col-trend { display: flex; justify-content: center; }
+
+.analysis-row { border-top: 1px solid #f5f5f4; }
+.analysis-row-main {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #292524;
+}
+.analysis-row-main:hover { background: #fafaf9; }
+.analysis-row-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.analysis-cat-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.analysis-row-label {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analysis-row-share { font-size: 0.75rem; color: #a8a29e; font-variant-numeric: tabular-nums; }
+.analysis-row-total,
+.analysis-col-delta {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.analysis-row-total { font-weight: 600; }
+.analysis-col-delta { font-size: 0.8125rem; color: #78716c; }
+.analysis-col-delta.is-negative { color: #dc2626; }
+.analysis-col-delta.is-positive { color: #059669; }
+.analysis-row-chevron { color: #a8a29e; transition: transform 0.15s ease; }
+.analysis-row.is-open .analysis-row-chevron { transform: rotate(180deg); }
+.analysis-row.is-notable .analysis-row-label::after {
+  content: '•';
+  margin-left: 0.35rem;
+  color: #d97706;
+}
+
+.analysis-spark-bar { fill: #d6d3d1; }
+.analysis-spark-bar.is-selected { fill: #57534e; }
+
+@media (max-width: 640px) {
+  .analysis-table-head,
+  .analysis-row-main { grid-template-columns: minmax(0, 1fr) auto auto 1rem; gap: 0.5rem; padding: 0.625rem 1rem; }
+  .analysis-col-trend,
+  .analysis-row-share { display: none; }
+  .analysis-row-total,
+  .analysis-col-delta { font-size: 0.8125rem; }
+}
+
+.analysis-drill {
+  padding: 0.25rem 1.25rem 1rem 2.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.analysis-drill-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  font-size: 0.8125rem;
+  color: #78716c;
+}
+.analysis-drill-stats strong { color: #292524; font-variant-numeric: tabular-nums; }
+.analysis-drill-list,
+.analysis-drill-frequent ul,
+.analysis-networth-plans ul {
+  display: flex;
+  flex-direction: column;
+}
+.analysis-drill-item,
+.analysis-drill-frequent li,
+.analysis-networth-plans li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #f0efed;
+  font-size: 0.8125rem;
+}
+.analysis-drill-frequent li,
+.analysis-networth-plans li { grid-template-columns: minmax(0, 1fr) auto auto; }
+.analysis-drill-date { color: #a8a29e; white-space: nowrap; }
+.analysis-drill-desc {
+  color: #292524;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analysis-drill-kind { font-size: 0.75rem; color: #a8a29e; white-space: nowrap; }
+.analysis-drill-amount {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: #292524;
+}
+.analysis-drill-amount.is-negative { color: #dc2626; }
+.analysis-drill-amount.is-positive { color: #059669; }
+.analysis-drill-more,
+.analysis-drill-empty { font-size: 0.75rem; color: #a8a29e; padding-top: 0.25rem; }
+.analysis-subtitle {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a8a29e;
+}
+
+@media (max-width: 640px) {
+  .analysis-drill { padding: 0.25rem 1rem 1rem; }
+  /* Voci frequenti e rate: nome sopra, dettaglio sotto, importo a destra. */
+  .analysis-drill-frequent li,
+  .analysis-networth-plans li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.1rem; }
+  .analysis-drill-frequent .analysis-drill-kind,
+  .analysis-networth-plans .analysis-drill-kind { grid-column: 1; grid-row: 2; }
+  .analysis-drill-frequent .analysis-drill-amount,
+  .analysis-networth-plans .analysis-drill-amount { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .analysis-drill-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .analysis-drill-item .analysis-drill-date,
+  .analysis-drill-item .analysis-drill-kind { display: none; }
+}
+
+/* Abitudini */
+.analysis-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 900px) {
+  .analysis-grid-2 { grid-template-columns: 1fr 1fr; }
+}
+.analysis-card-lead {
+  padding: 0 1.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #57534e;
+}
+.analysis-card-lead strong { color: #1c1917; }
+
+.analysis-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 0 1.25rem;
+}
+.analysis-calendar-pad { visibility: hidden; } /* celle vuote prima del primo giorno */
+.analysis-calendar-head {
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #a8a29e;
+}
+.analysis-calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  max-height: 2.5rem;
+  border-radius: 6px;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: #57534e;
+  background: #f5f5f4;
+}
+/* Intensità sequenziale in una sola tinta (ambra = spesa variabile). */
+.analysis-calendar-day.level-1, .analysis-calendar-swatch.level-1 { background: #fef3c7; }
+.analysis-calendar-day.level-2, .analysis-calendar-swatch.level-2 { background: #fcd34d; }
+.analysis-calendar-day.level-3, .analysis-calendar-swatch.level-3 { background: #f59e0b; color: #1c1917; }
+.analysis-calendar-day.level-4, .analysis-calendar-swatch.level-4 { background: #b45309; color: #ffffff; }
+.analysis-calendar-day.level-future { background: transparent; border: 1px dashed #e7e5e4; color: #d6d3d1; }
+.analysis-calendar-scale {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0.75rem 1.25rem 1rem;
+  font-size: 0.6875rem;
+  color: #a8a29e;
+}
+.analysis-calendar-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+  background: #f5f5f4;
+}
+
+.analysis-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1.25rem;
+}
+.analysis-bar-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) 6.5rem 4.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.analysis-bar-label { color: #57534e; white-space: nowrap; }
+.analysis-bar-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #f5f5f4;
+  overflow: hidden;
+}
+.analysis-bar-fill { display: block; height: 100%; border-radius: 9999px; }
+.analysis-bar-value {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  color: #292524;
+}
+.analysis-bar-meta { font-size: 0.75rem; color: #a8a29e; text-align: right; white-space: nowrap; }
+
+.analysis-frequent {
+  display: flex;
+  flex-direction: column;
+  padding: 0 1.25rem 1rem;
+}
+.analysis-frequent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #f0efed;
+}
+.analysis-frequent-body { display: flex; flex-direction: column; min-width: 0; }
+.analysis-frequent-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #292524;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analysis-frequent-meta { font-size: 0.75rem; color: #a8a29e; }
+.analysis-frequent-total {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #292524;
+  white-space: nowrap;
+}
+
+/* Patrimonio netto */
+.analysis-networth { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+.analysis-networth-head { display: flex; flex-direction: column; gap: 0.35rem; }
+.analysis-networth-note { font-size: 0.8125rem; color: #78716c; }
+.analysis-networth-rows { display: flex; flex-direction: column; }
+.analysis-networth-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #f0efed;
+  font-size: 0.875rem;
+  color: #57534e;
+}
+.analysis-networth-amount {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #059669;
+}
+.analysis-networth-amount.is-negative { color: #dc2626; }
+.analysis-networth-plans {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 900px) {
+  .analysis-networth-plans { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Dark mode (override espliciti) ─────────────────────────────────────── */
+.dark .analysis-hint,
+.dark .analysis-networth-note { color: #a8a29e; }
+.dark .analysis-period-picker { background: #1c1917; }
+.dark .analysis-period-arrow { color: #d6d3d1; }
+.dark .analysis-period-arrow:hover:not(:disabled) { background: #44403c; }
+.dark .analysis-period-label { color: #f5f5f4; }
+.dark .analysis-period-badge { background: #0d2d2a; color: #2dd4bf; }
+
+.dark .analysis-hero-value { color: #f5f5f4; }
+.dark .analysis-hero-value.is-negative,
+.dark .analysis-hero-delta.is-negative,
+.dark .analysis-col-delta.is-negative,
+.dark .analysis-drill-amount.is-negative,
+.dark .analysis-networth-amount.is-negative,
+.dark .patrimonio-stat-meta.is-negative { color: #f87171; }
+.dark .analysis-hero-delta.is-positive,
+.dark .analysis-col-delta.is-positive,
+.dark .analysis-drill-amount.is-positive,
+.dark .analysis-networth-amount,
+.dark .patrimonio-stat-meta.is-positive { color: #34d399; }
+.dark .analysis-hero-delta,
+.dark .analysis-chart-legend { color: #a8a29e; }
+.dark .analysis-hero-label,
+.dark .analysis-hero-delta-note,
+.dark .analysis-kind-share,
+.dark .analysis-chart-note,
+.dark .analysis-table-head,
+.dark .analysis-row-share,
+.dark .analysis-drill-date,
+.dark .analysis-drill-kind,
+.dark .analysis-drill-more,
+.dark .analysis-drill-empty,
+.dark .analysis-subtitle,
+.dark .analysis-calendar-head,
+.dark .analysis-calendar-scale,
+.dark .analysis-bar-meta,
+.dark .analysis-frequent-meta { color: #78716c; }
+.dark .analysis-kind-item,
+.dark .analysis-card-lead,
+.dark .analysis-bar-label,
+.dark .analysis-networth-row,
+.dark .analysis-drill-stats { color: #a8a29e; }
+.dark .analysis-kind-value,
+.dark .analysis-row-main,
+.dark .analysis-drill-stats strong,
+.dark .analysis-drill-desc,
+.dark .analysis-drill-amount,
+.dark .analysis-card-lead strong,
+.dark .analysis-bar-value,
+.dark .analysis-frequent-name,
+.dark .analysis-frequent-total { color: #f5f5f4; }
+
+.dark .analysis-notice { background: rgba(217, 119, 6, 0.12); color: #fbbf24; }
+.dark .analysis-notice svg { color: #fbbf24; }
+.dark .analysis-row { border-top-color: #44403c; }
+.dark .analysis-row-main:hover { background: #1c1917; }
+.dark .analysis-spark-bar { fill: #44403c; }
+.dark .analysis-spark-bar.is-selected { fill: #d6d3d1; }
+.dark .analysis-drill-item,
+.dark .analysis-drill-frequent li,
+.dark .analysis-networth-plans li,
+.dark .analysis-frequent-item,
+.dark .analysis-networth-row { border-bottom-color: #44403c; }
+
+.dark .analysis-calendar-day,
+.dark .analysis-calendar-swatch,
+.dark .analysis-bar-track { background: #1c1917; }
+.dark .analysis-calendar-day { color: #a8a29e; }
+.dark .analysis-calendar-day.level-1, .dark .analysis-calendar-swatch.level-1 { background: #451a03; color: #fcd34d; }
+.dark .analysis-calendar-day.level-2, .dark .analysis-calendar-swatch.level-2 { background: #78350f; color: #fde68a; }
+.dark .analysis-calendar-day.level-3, .dark .analysis-calendar-swatch.level-3 { background: #b45309; color: #fffbeb; }
+.dark .analysis-calendar-day.level-4, .dark .analysis-calendar-swatch.level-4 { background: #f59e0b; color: #1c1917; }
+.dark .analysis-calendar-day.level-future { background: transparent; border-color: #44403c; color: #57534e; }

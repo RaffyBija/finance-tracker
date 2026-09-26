@@ -76,6 +76,10 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
     setSubmitting(true);
     let done = 0;
     let failed = 0;
+    // Primo messaggio d'errore del backend (es. "Imposta un conto su: …"), mostrato nel toast.
+    let firstError: string | undefined;
+    const errorOf = (err: unknown) =>
+      (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
     const ok: string[] = [];
 
     const recurring = chosen.filter((e) => e.kind === 'recurring');
@@ -91,19 +95,21 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
         // count reale: il backend salta una ricorrente senza scadenza calcolabile.
         done += result.count;
         ok.push(...recurring.map((e) => e.key));
-      } catch {
+      } catch (err) {
         failed += recurring.length;
+        firstError ??= errorOf(err);
       }
     }
 
     // Pianificate e addebiti carta: data prevista (o quella corretta), non "oggi".
     for (const e of chosen.filter((x) => x.kind === 'planned' || x.kind === 'cc')) {
       try {
-        await markAsPaid.mutateAsync({ id: e.id, date: dateOf(e) });
+        await markAsPaid.mutateAsync({ id: e.id, date: dateOf(e), accountId: accountOf(e) });
         done += 1;
         ok.push(e.key);
-      } catch {
+      } catch (err) {
         failed += 1;
+        firstError ??= errorOf(err);
       }
     }
 
@@ -112,8 +118,9 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
         await payInstallments.mutateAsync({ plannedIds: g.ids, date: g.date, accountId: g.accountId });
         done += g.ids.length;
         ok.push(...g.ids.map((id) => `i:${id}`));
-      } catch {
+      } catch (err) {
         failed += g.ids.length;
+        firstError ??= errorOf(err);
       }
     }
 
@@ -124,7 +131,7 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
       onDismiss();
     } else {
       // Il popup resta aperto: le voci registrate spariscono, le altre si possono riprovare.
-      toast.error(`${failed} moviment${failed === 1 ? 'o non registrato' : 'i non registrati'}: riprova`);
+      toast.error(`${failed} moviment${failed === 1 ? 'o non registrato' : 'i non registrati'}: ${firstError ?? 'riprova'}`);
     }
   };
 
@@ -261,7 +268,8 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
           <button
             type="button"
             onClick={handleRegister}
-            disabled={chosen.length === 0 || submitting || chosen.some((e) => e.needsAccount && !accountOf(e))}
+            // Senza conti (utente che non li usa) nessuna voce può richiederne uno.
+            disabled={chosen.length === 0 || submitting || (accounts.length > 0 && chosen.some((e) => e.needsAccount && !accountOf(e)))}
             className="btn btn-primary btn-md"
           >
             {submitting ? 'Registrazione...' : `Registra (${chosen.length})`}

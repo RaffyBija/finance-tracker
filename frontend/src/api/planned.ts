@@ -31,8 +31,12 @@ export const plannedApi = {
     return response.data;
   },
 
-  markAsPaid: async (id: string, date?: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
-    const response = await apiClient.patch(`/planned/${id}/mark-paid`, date ? { date } : {});
+  // accountId: conto su cui registrare, solo se la pianificata non ne ha uno.
+  markAsPaid: async (id: string, date?: string, accountId?: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
+    const response = await apiClient.patch(`/planned/${id}/mark-paid`, {
+      ...(date ? { date } : {}),
+      ...(accountId ? { accountId } : {}),
+    });
     return response.data;
   },
 };

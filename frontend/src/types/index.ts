@@ -8,6 +8,9 @@ export interface User {
   currency: string;
   // Percentuale di risparmio target (0–0.9) usata dal budget automatico
   savingRate: number;
+  // Periodo di paga: categoria degli accrediti stipendio + giorno di riferimento
+  salaryCategoryId?: string | null;
+  payDay?: number | null;
   createdAt: string;
 }
 
@@ -172,6 +175,61 @@ export interface ProjectionPoint {
   date: string;       // YYYY-MM-DD
   balance: number;    // saldo a fine giornata
   projected: boolean; // false = storia reale (solid), true = proiezione (dashed)
+  // Solo con il ritmo quotidiano attivo (punti proiettati):
+  rhythm?: number;    // saldo con la spesa variabile stimata
+  bandLow?: number;   // con il ritmo più alto dei periodi di confronto
+  bandHigh?: number;  // con il ritmo più basso
+}
+
+// ── Periodo di paga (stipendio → stipendio) ──
+export type PayPeriodSource = 'planned' | 'recurring' | 'payday' | 'calendar';
+
+export interface PayPeriod {
+  configured: boolean;
+  source: PayPeriodSource;
+  start: string;       // YYYY-MM-DD, inizio del periodo corrente
+  nextPayday: string;  // YYYY-MM-DD, prossimo accredito atteso
+  daysElapsed: number;
+  daysTotal: number;
+  daysToPayday: number;
+}
+
+// ── Ritmo quotidiano (spesa variabile stimata) ──
+export interface RhythmPeriodStat {
+  start: string;
+  end: string;   // escluso
+  days: number;
+  spent: number;
+  rate: number;
+}
+
+export interface RhythmCategory {
+  categoryId: string | null;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  daily: number;
+  share: number;
+}
+
+export interface SpendingRhythmStats {
+  basis: 'periods' | 'current' | 'none';
+  dailyRate: number;
+  low: number;
+  high: number;
+  periods: RhythmPeriodStat[];
+  current: { start: string; days: number; spent: number; rate: number };
+  topCategories: RhythmCategory[];
+}
+
+export interface ProjectionRhythm extends SpendingRhythmStats {
+  appliedRate: number;
+  override: boolean;
+  scopeDaily: number;
+  totalEstimated: number;
+  projectedBalance: number;
+  projectedLow: number;
+  projectedHigh: number;
 }
 
 export interface ProjectionEvent {
@@ -180,6 +238,18 @@ export interface ProjectionEvent {
   amount: number;
   type: TransactionType;
   source: 'recurring' | 'planned' | 'cc' | 'sospeso';
+}
+
+export interface ProjectionSeriesParams {
+  months?: number;
+  startDate?: string;
+  endDate?: string;
+  accountId?: string;
+  historyDays?: number;
+  includeSuspended?: boolean;
+  horizon?: 'payday';     // fino al prossimo accredito (ignora months/date)
+  rhythm?: boolean;       // aggiunge la linea col ritmo quotidiano
+  rhythmRate?: number;    // override manuale del ritmo (€/giorno)
 }
 
 export interface ProjectionSeries {
@@ -192,6 +262,8 @@ export interface ProjectionSeries {
   suspendedCount: number;
   points: ProjectionPoint[];
   events: ProjectionEvent[];
+  payPeriod: PayPeriod;
+  rhythm: ProjectionRhythm | null;
 }
 
 // ── Andamento storico del patrimonio netto (liquidità) ──
@@ -215,19 +287,6 @@ export interface NetWorthByAccountSeries {
     name: string;
     color: string | null;
     points: NetWorthPoint[];  // un punto per mese (allineato a months)
-  }[];
-}
-
-// ── Trend per categoria nel tempo (top N + "Altre") ──
-export interface CategoryTrendSeries {
-  months: string[];           // chiavi mese allineate, YYYY-MM
-  type: TransactionType;
-  categories: {
-    id: string;
-    name: string;
-    color: string | null;
-    total: number;            // totale del periodo (per ordinamento)
-    totals: number[];         // totale per mese (allineato a months)
   }[];
 }
 
@@ -513,6 +572,7 @@ export interface Account {
   linkedAccount?: { id: string; name: string } | null;
   linkedCC?: { id: string; name: string; color: string }[];
   balance: number;
+  archivedAt?: string | null; // conto archiviato (solo con includeArchived)
   createdAt: string;
   updatedAt: string;
   _count?: { transactions: number };
@@ -559,38 +619,84 @@ export interface UpdateAccountDTO {
 
 // Analytics
 
-export interface ForecastHabitualCategory {
-  categoryId?: string;
-  categoryName: string;
-  avgMonthly: number;
-  alreadySpent: number;
-  estimated: number;
+// Stima fino al prossimo stipendio (card dashboard "Stima realistica").
+export interface ForecastLowPoint {
+  value: number;
+  date: string;
 }
 
-export interface ForecastFrequentExpense {
-  categoryId?: string;
-  categoryName: string;
-  icon?: string | null;
-  color?: string | null;
-  count: number;
-  perMonth: number;
-  avgMonthly: number;
+export interface ForecastAccountLow {
+  id: string;
+  name: string;
+  color: string | null;
+  balance: number;
+  standardMin: ForecastLowPoint | null;
+  rhythmMin: ForecastLowPoint | null;
 }
 
 export interface Forecast {
-  daysElapsed: number;
-  daysInMonth: number;
-  daysRemaining: number;
+  payPeriod: PayPeriod;
+  eveDate: string;         // giorno prima dell'accredito
+  daysRemaining: number;   // giorni da domani alla vigilia inclusa
   currentBalance: number;
-  currentMonthActual: { income: number; expenses: number };
-  dailyPace: { income: number; expenses: number };
-  knownRemaining: { income: number; expenses: number };
-  historicalAvg: { income: number; expenses: number; monthsConsidered: number };
-  habitualRemaining: {
-    total: number;
-    hasData: boolean;
-    categories: ForecastHabitualCategory[];
-  };
-  frequentExpenses: ForecastFrequentExpense[];
-  projectedEndBalance: number;
+  known: { income: number; expenses: number };
+  rhythm: SpendingRhythmStats & { remaining: number };
+  atEve: { standard: number; withRhythm: number; low: number; high: number };
+  lowest: { standard: ForecastLowPoint | null; withRhythm: ForecastLowPoint | null };
+  spendablePerDay: number | null;
+  accounts: ForecastAccountLow[];
 }
+
+// ── Analisi spese (sezione Analisi) ──
+export type ExpenseKind = 'fixed' | 'planned' | 'variable';
+
+export interface AnalysisPeriod {
+  start: string;       // YYYY-MM-DD incluso
+  end: string;         // YYYY-MM-DD escluso
+  days: number;
+  elapsedDays: number; // = days per i periodi chiusi
+  isCurrent: boolean;
+}
+
+export interface SpendingLine {
+  date: string;
+  amount: number;
+  categoryId: string | null;
+  kind: ExpenseKind;
+  accountId: string | null;
+  description: string | null;
+  txId: string;
+}
+
+export interface SpendingAnalysis {
+  mode: 'pay' | 'month';
+  payPeriodConfigured: boolean;
+  today: string;
+  periods: AnalysisPeriod[];
+  income: number[];           // per periodo
+  knownRemaining: number;     // impegni attesi nel periodo in corso
+  lines: SpendingLine[];
+  categories: { id: string; name: string; color: string | null; icon: string | null }[];
+  accounts: { id: string; name: string; color: string; type: AccountType; archived: boolean }[];
+}
+
+export interface NetWorthPlan {
+  id: string;
+  title: string;
+  remaining: number;
+  count: number;
+  nextDate: string | null;
+}
+
+export interface NetWorthNow {
+  liquidity: number;
+  credits: number;
+  suspendedIn: number;
+  ccDebt: number;
+  debts: number;
+  suspendedOut: number;
+  netWorth: number;
+  debtPlans: NetWorthPlan[];
+  creditPlans: NetWorthPlan[];
+}
+

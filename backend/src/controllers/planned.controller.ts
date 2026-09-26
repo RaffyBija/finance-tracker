@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreatePlannedTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
-import { accountBelongsToUser } from '../utils/ownership';
+import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 
 class AlreadyPaidError extends Error {}
@@ -142,6 +142,11 @@ export const createPlannedTransaction = async (req: AuthRequest, res: Response) 
       }
     }
 
+    // Con almeno un conto, il movimento deve averne uno (vedi userHasAccounts).
+    if (!accountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
+    }
+
     if (accountId) {
       const owned = await accountBelongsToUser(accountId, userId);
       if (!owned) {
@@ -211,6 +216,11 @@ export const updatePlannedTransaction = async (req: AuthRequest, res: Response) 
       }
     }
 
+    // Non si può togliere il conto a un movimento se l'utente ha dei conti.
+    if (accountId !== undefined && !accountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: ACCOUNT_REQUIRED_ERROR });
+    }
+
     if (accountId) {
       const owned = await accountBelongsToUser(accountId, userId);
       if (!owned) {
@@ -278,7 +288,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { date } = req.body || {};
+    const { date, accountId } = req.body || {};
 
     const planned = await prisma.plannedTransaction.findFirst({
       where: { id, userId },
@@ -304,6 +314,16 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Data non valida' });
     }
 
+    // Conto della transazione reale: quello passato (opzionale), altrimenti quello
+    // della pianificata. Con almeno un conto non si registra mai un movimento senza.
+    if (accountId && !(await accountBelongsToUser(accountId, userId))) {
+      return res.status(404).json({ error: 'Conto non trovato' });
+    }
+    const targetAccountId: string | null = accountId || planned.accountId;
+    if (!targetAccountId && await userHasAccounts(userId)) {
+      return res.status(400).json({ error: 'Questa scadenza non ha un conto: modificala e scegli il conto prima di registrarla' });
+    }
+
     // Crea la transazione reale, propagando il conto della pianificata.
     // Per le pianificate normali il comportamento resta invariato: data = oggi.
     // Transazione reale + pianificata pagata in un'unica operazione atomica: mai
@@ -318,7 +338,8 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
           categoryId: planned.categoryId,
           date: date ? new Date(date) : new Date(),
           userId,
-          ...(planned.accountId && { accountId: planned.accountId }),
+          fromPlannedId: planned.id,
+          ...(targetAccountId && { accountId: targetAccountId }),
         },
       });
       const marked = await tx.plannedTransaction.updateMany({

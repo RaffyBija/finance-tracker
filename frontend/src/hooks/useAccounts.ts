@@ -4,7 +4,7 @@ import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateAccountDTO, UpdateAccountDTO } from '../types';
 
 const ACCOUNT_KEYS = ['accounts'];
-const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles'];
+const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles', 'installments'];
 
 const invalidateAccounts = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {
   keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
@@ -67,6 +67,22 @@ export const useDeleteAccount = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => accountsAPI.delete(id),
+    onSuccess: () => invalidateAccounts(queryClient, ACCOUNT_DELETE_KEYS),
+  });
+};
+
+export const useArchivedAccounts = () => {
+  return useQuery({
+    queryKey: ['accounts', 'archived'],
+    queryFn: () => accountsAPI.getArchived(),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useRestoreAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => accountsAPI.restore(id),
     onSuccess: () => invalidateAccounts(queryClient, ACCOUNT_DELETE_KEYS),
   });
 };

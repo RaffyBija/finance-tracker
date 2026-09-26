@@ -16,9 +16,9 @@ import type {
   MonthlyTrend,
   ProjectedBalance,
   ProjectionSeries,
+  ProjectionSeriesParams,
   NetWorthSeries,
   NetWorthByAccountSeries,
-  CategoryTrendSeries,
   TransactionType,
 } from "../types";
 import { getToken, clearToken } from "../utils/tokenStorage";
@@ -85,7 +85,7 @@ export const authAPI = {
     return data;
   },
   
-  updateProfile: async (data: { name?: string; email?: string; currency?: string; savingRate?: number }): Promise<{
+  updateProfile: async (data: { name?: string; email?: string; currency?: string; savingRate?: number; salaryCategoryId?: string | null; payDay?: number | null }): Promise<{
   user: User;
   emailChangeRequested: boolean;
   message: string;
@@ -270,7 +270,7 @@ export const dashboardAPI = {
   return response.data;
 },
 
-  getProjectionSeries: async (params: { months?: number; startDate?: string; endDate?: string; accountId?: string; historyDays?: number; includeSuspended?: boolean }) => {
+  getProjectionSeries: async (params: ProjectionSeriesParams) => {
   const response = await api.get<ProjectionSeries>('/dashboard/projection-series', { params });
   return response.data;
 },
@@ -285,10 +285,6 @@ export const dashboardAPI = {
     return data;
   },
 
-  getCategoryTrend: async (params: { months?: number; type?: TransactionType }): Promise<CategoryTrendSeries> => {
-    const { data } = await api.get<CategoryTrendSeries>('/dashboard/category-trend', { params });
-    return data;
-  },
 
 };
 

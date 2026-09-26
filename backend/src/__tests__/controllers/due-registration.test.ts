@@ -11,6 +11,7 @@ vi.mock('../../utils/prisma', () => {
     plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), delete: vi.fn() },
     recurringTransaction: { findMany: vi.fn(), update: vi.fn() },
     transaction: { create: vi.fn() },
+    account: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(),
   };
   return { default: client };

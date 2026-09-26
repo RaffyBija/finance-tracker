@@ -288,6 +288,34 @@
   margin: 20px 0;
 }
 
+/* Sotto-sezione dentro un pannello (es. Periodo di paga in Preferenze) */
+.settings-subsection-head {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 12px;
+}
+.settings-subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1917;
+}
+
+/* Anteprima del prossimo accredito */
+.settings-payperiod-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0fdfa;
+  font-size: 0.85rem;
+  color: #115e59;
+}
+.settings-payperiod-source {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: #78716c;
+}
+
 /* Segmented control per il tema */
 .theme-seg {
   display: inline-flex;
@@ -471,3 +499,8 @@
 .dark .settings-notice-danger { background: #450a0a; border-color: #7f1d1d; }
 .dark .settings-notice-danger .settings-notice-title { color: #f87171; }
 .dark .settings-notice-danger .settings-notice-text  { color: #fca5a5; }
+
+/* Periodo di paga — dark */
+.dark .settings-subsection-title { color: #f5f5f4; }
+.dark .settings-payperiod-preview { background: rgba(13, 148, 136, 0.12); color: #99f6e4; }
+.dark .settings-payperiod-source { color: #a8a29e; }

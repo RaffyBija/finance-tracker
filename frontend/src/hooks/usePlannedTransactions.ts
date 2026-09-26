@@ -68,7 +68,9 @@ export function useMarkAsPaid() {
   const queryClient = useQueryClient();
   return useMutation({
     // date: obbligatoria solo per i Sospesi (nessuna plannedDate da cui derivarla).
-    mutationFn: ({ id, date }: { id: string; date?: string }) => plannedApi.markAsPaid(id, date),
+    // accountId: solo per una pianificata senza conto (scelto nel popup).
+    mutationFn: ({ id, date, accountId }: { id: string; date?: string; accountId?: string }) =>
+      plannedApi.markAsPaid(id, date, accountId),
     onSuccess: () => invalidatePlanned(queryClient, PLANNED_PAID_KEYS),
   });
 }

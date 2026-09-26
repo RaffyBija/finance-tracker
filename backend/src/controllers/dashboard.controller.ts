@@ -4,6 +4,19 @@ import { AuthRequest } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { getAccountsWithBalances, getLiquidBalance, projectCcCharges, bankAccountScope, type CcEvent } from '../utils/balance';
 import { expandToCategoryLines } from '../utils/categoryContributions';
+import { listOccurrenceDates, countOccurrences } from '../utils/occurrences';
+import { dayKey, buildProjectedPoints, buildRhythmEvents, collectProjectionEvents } from '../utils/projection';
+import { loadPayPeriod, serializePayPeriod, addDays, startOfDay } from '../utils/payPeriod';
+import { loadSpendingRhythm } from '../utils/spendingRhythm';
+
+type ProjectedPoint = {
+  date: string;
+  balance: number;
+  projected: boolean;
+  rhythm?: number;
+  bandLow?: number;
+  bandHigh?: number;
+};
 
 // ── Ottieni il sommario finanziario ───────────────────────────────────────────
 
@@ -163,118 +176,9 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Helper: conta le occorrenze reali di una ricorrente in un range ───────────
-//
-//   Logica:
-//   - WEEKLY  → conta quanti lunedì (o qualsiasi giorno settimanale) cadono tra start ed end
-//               Semplificato: floor(diffGiorni / 7), con +1 se il giorno di partenza
-//               della ricorrente non è stato ancora contato.
-//   - MONTHLY → conta i mesi in cui il dayOfMonth cade all'interno di [start, end].
-//               Itera mese per mese e verifica se la data costruita è nel range.
-//   - YEARLY  → conta gli anni in cui la data anniversario (mese+giorno di startDate
-//               della ricorrente) cade all'interno di [start, end].
-//
-//   Ritorna { occurrences, effectiveAmount } dove effectiveAmount tiene già conto
-//   dell'importo unitario × occorrenze.
-
-type OccurrenceRule = {
-  frequency: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
-  dayOfMonth: number | null;
-  startDate: Date;
-  endDate: Date | null;
-  amount: any;
-};
-
-// Elenca le DATE esatte in cui una ricorrente cade nel range [rangeStart, rangeEnd].
-// Fonte di verità unica della cadenza: countOccurrences ne ritorna solo il conteggio,
-// la proiezione (getProjectionSeries) usa le date per posizionare gli eventi nel tempo.
-export function listOccurrenceDates(
-  rec: OccurrenceRule,
-  rangeStart: Date,
-  rangeEnd: Date,
-): Date[] {
-  // La ricorrente deve essere attiva almeno in parte nel range
-  const recStart = rec.startDate > rangeStart ? rec.startDate : rangeStart;
-  const recEnd   = rec.endDate && rec.endDate < rangeEnd ? rec.endDate : rangeEnd;
-
-  if (recStart > recEnd) return [];
-
-  const dates: Date[] = [];
-
-  switch (rec.frequency) {
-    case 'WEEKLY': {
-      // Ogni 7 giorni a partire da rec.startDate originale
-      // Troviamo la prima occorrenza >= recStart
-      const msPerWeek  = 7 * 24 * 60 * 60 * 1000;
-      const originTime = rec.startDate.getTime();
-      const startTime  = recStart.getTime();
-      const endTime    = recEnd.getTime();
-
-      // Quante settimane intere dall'origine fino a recStart
-      const weeksToStart = Math.ceil((startTime - originTime) / msPerWeek);
-      let   current      = new Date(originTime + weeksToStart * msPerWeek);
-
-      while (current.getTime() <= endTime) {
-        dates.push(new Date(current.getTime()));
-        current = new Date(current.getTime() + msPerWeek);
-      }
-      break;
-    }
-
-    case 'MONTHLY': {
-      // Il giorno del mese è dayOfMonth (es. 5, 10, 20, 30)
-      // Itera mese per mese tra recStart e recEnd
-      const day = rec.dayOfMonth ?? rec.startDate.getDate();
-
-      const cursor = new Date(recStart.getFullYear(), recStart.getMonth(), 1);
-      const endMonth = new Date(recEnd.getFullYear(), recEnd.getMonth(), 1);
-
-      while (cursor <= endMonth) {
-        // Gestisce mesi con meno giorni (es. 30 febbraio → ultimo giorno del mese)
-        const daysInMonth   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
-        const effectiveDay  = Math.min(day, daysInMonth);
-        const occurrence    = new Date(cursor.getFullYear(), cursor.getMonth(), effectiveDay);
-
-        if (occurrence >= recStart && occurrence <= recEnd) {
-          dates.push(occurrence);
-        }
-
-        cursor.setMonth(cursor.getMonth() + 1);
-      }
-      break;
-    }
-
-    case 'YEARLY': {
-      // La data anniversario è il mese e giorno di rec.startDate
-      const originMonth = rec.startDate.getMonth();
-      const originDay   = rec.startDate.getDate();
-
-      const startYear = recStart.getFullYear();
-      const endYear   = recEnd.getFullYear();
-
-      for (let year = startYear; year <= endYear; year++) {
-        const daysInMonth  = new Date(year, originMonth + 1, 0).getDate();
-        const effectiveDay = Math.min(originDay, daysInMonth);
-        const occurrence   = new Date(year, originMonth, effectiveDay);
-
-        if (occurrence >= recStart && occurrence <= recEnd) {
-          dates.push(occurrence);
-        }
-      }
-      break;
-    }
-  }
-
-  return dates;
-}
-
-export function countOccurrences(
-  rec: OccurrenceRule,
-  rangeStart: Date,
-  rangeEnd: Date,
-): number {
-  return listOccurrenceDates(rec, rangeStart, rangeEnd).length;
-}
+// Cadenza delle ricorrenti: spostata in utils/occurrences (riusata da proiezione,
+// previsione e periodo di paga). Ri-esportata qui per i chiamanti esistenti.
+export { listOccurrenceDates, countOccurrences };
 
 // ── Proiezione saldo (endpoint unificato) ─────────────────────────────────────
 //
@@ -441,75 +345,43 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
 //
 //   Param: ?months=N | ?startDate=&endDate=  (+ ?accountId= scope, ?historyDays=N)
 
-const dayKey = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-
-// Costruisce il tratto PROIETTATO del grafico: un punto per OGNI giorno civile
-// tra rangeStart e rangeEnd (inclusi), mai un punto per evento. Se più eventi
-// cadono lo stesso giorno vengono aggregati in un solo delta netto, e i giorni
-// senza eventi riportano in avanti l'ultimo saldo noto (forward-fill). Questo
-// mantiene l'asse X (categoriale in Recharts, non a scala temporale) sempre a
-// densità 1 punto/giorno: senza questo, un giorno con più eventi produceva più
-// punti duplicati con la stessa data ma saldo intermedio/finale, disallineando
-// la posizione visiva dal tempo reale e rendendo la lettura del grafico
-// dipendente dall'orizzonte scelto.
-// Il punto di rangeStart ("oggi") resta fissato a currentBalance esatto — gli
-// eventi datati oggi si riflettono solo dal punto di domani in poi, per
-// preservare la giunzione visiva con actualPoints (che converge già a
-// currentBalance) e la label "Oggi" mostrata in ProjectionPage/ProjectedView.
-export function buildProjectedPoints(
-  currentBalance: number,
-  events: { date: Date; amount: number; type: 'INCOME' | 'EXPENSE' }[],
-  rangeStart: Date,
-  rangeEnd: Date,
-): { date: string; balance: number; projected: boolean }[] {
-  const deltaByDay: Record<string, number> = {};
-  for (const ev of events) {
-    const k = dayKey(ev.date);
-    const signed = ev.type === 'INCOME' ? ev.amount : -ev.amount;
-    deltaByDay[k] = (deltaByDay[k] ?? 0) + signed;
-  }
-
-  const points: { date: string; balance: number; projected: boolean }[] = [];
-  let running = currentBalance;
-
-  points.push({ date: dayKey(rangeStart), balance: running, projected: true });
-  running += deltaByDay[dayKey(rangeStart)] ?? 0;
-
-  const day = new Date(rangeStart);
-  day.setDate(day.getDate() + 1);
-  while (day <= rangeEnd) {
-    const k = dayKey(day);
-    running += deltaByDay[k] ?? 0;
-    points.push({ date: k, balance: running, projected: true });
-    day.setDate(day.getDate() + 1);
-  }
-  return points;
-}
+// dayKey e buildProjectedPoints vivono in utils/projection (riusati dalla
+// previsione per periodo di paga); ri-esportati qui per i chiamanti esistenti.
+export { buildProjectedPoints };
 
 export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { months, startDate, endDate, accountId, historyDays, includeSuspended } = req.query;
+    const { months, startDate, endDate, accountId, historyDays, includeSuspended, horizon, rhythm, rhythmRate } = req.query;
     const scopeId = typeof accountId === 'string' && accountId ? accountId : null;
     const histDays = Math.min(Math.max(parseInt((historyDays as string) || '30', 10) || 30, 7), 365);
     const withSuspended = includeSuspended === 'true';
+    const untilPayday = horizon === 'payday';
+    const withRhythm = rhythm === 'true';
+    // Override manuale del ritmo (€/giorno): sostituisce la stima, senza fascia.
+    const overrideRate = typeof rhythmRate === 'string' && rhythmRate !== '' && Number.isFinite(Number(rhythmRate)) && Number(rhythmRate) >= 0
+      ? Number(rhythmRate)
+      : null;
 
-    const paramSuffix = `${months ? `m${months}` : `${startDate}_${endDate}`}_h${histDays}${scopeId ? `_a${scopeId}` : ''}${withSuspended ? '_s1' : ''}`;
+    const rangeKey = untilPayday ? 'payday' : months ? `m${months}` : `${startDate}_${endDate}`;
+    const paramSuffix = `${rangeKey}_h${histDays}${scopeId ? `_a${scopeId}` : ''}${withSuspended ? '_s1' : ''}${withRhythm ? `_r${overrideRate ?? ''}` : ''}`;
     const cacheKey    = analyticsCache.keys.projectionSeries(userId, paramSuffix);
     const cached      = analyticsCache.get<object>(cacheKey);
     if (cached) return res.json(cached);
 
     // ── Range futuro (anchor → fine) ──
     const now = new Date();
+    const payPeriod = await loadPayPeriod(userId, now);
     let rangeStart: Date;
     let rangeEnd: Date;
 
-    if (startDate && endDate) {
+    if (untilPayday) {
+      // Fino al giorno del prossimo accredito incluso: si vede il punto più basso
+      // prima dello stipendio e il salto dell'accredito.
+      rangeStart = new Date(now);
+      rangeEnd   = new Date(payPeriod.nextPayday);
+      if (rangeEnd <= rangeStart) rangeEnd = addDays(startOfDay(now), 1);
+    } else if (startDate && endDate) {
       rangeStart = new Date(startDate as string);
       rangeEnd   = new Date(endDate as string);
     } else if (months) {
@@ -547,130 +419,60 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       ? (accounts.find((a) => a.id === scopeId)?.balance ?? 0)
       : await getLiquidBalance(userId, accounts);
 
-    // Vista per-conto: includiamo anche le CC collegate a QUESTO conto (linkedAccountId).
-    // Isolare una CC dal proprio ciclo di fatturazione non ha senso (il suo saldo da
-    // sola non è significativo) — il ciclo va sempre visto insieme al conto su cui si
-    // scaricherà l'addebito, esattamente come già avviene in modalità "tutti i conti".
-    const scopedAccountIds = scopeId
-      ? [scopeId, ...accounts.filter((a) => a.type === 'CREDIT_CARD' && a.linkedAccountId === scopeId).map((a) => a.id)]
-      : null;
+    const {
+      events, ccEvents, ccAccountsForCharge, scopedAccountIds,
+      projectedIncome, projectedExpense, recurringCount, plannedCount, suspendedCount,
+    } = await collectProjectionEvents({ userId, accounts, scopeId, rangeStart, rangeEnd, withSuspended, now });
 
-    // ── FUTURO: raccoglie gli eventi (ricorrenti + pianificate + CC + sospesi) ──
-    const events: { date: Date; label: string; amount: number; type: 'INCOME' | 'EXPENSE'; source: 'recurring' | 'planned' | 'cc' | 'sospeso' }[] = [];
-    let projectedIncome  = 0;
-    let projectedExpense = 0;
-    let recurringCount   = 0;
-    let plannedCount     = 0;
-    let suspendedCount   = 0;
-
-    const recurringTransactions = await prisma.recurringTransaction.findMany({
-      where: {
-        userId,
-        ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
-        isActive: true,
-        startDate: { lte: rangeEnd },
-        OR: [{ endDate: null }, { endDate: { gte: rangeStart } }],
-      },
-    });
-
-    // Conti CC: le spese addebitate su carta non escono dalla liquidità alla loro data
-    // → raccolte come ccEvents e proiettate come addebito del ciclo (projectCcCharges).
-    // Vale sia in vista globale sia in vista per-conto (per le CC collegate a scopeId,
-    // filtrate a monte da scopedAccountIds).
-    const ccIds = new Set(accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id));
-    const ccEvents: CcEvent[] = [];
-
-    for (const rec of recurringTransactions) {
-      const occurrences = listOccurrenceDates(
-        {
-          frequency:  rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-          dayOfMonth: rec.dayOfMonth,
-          startDate:  rec.startDate,
-          endDate:    rec.endDate,
-          amount:     rec.amount,
-        },
-        rangeStart,
-        rangeEnd,
-      );
-      const amount = Number(rec.amount);
-      const isCc = rec.accountId && ccIds.has(rec.accountId);
-      for (const date of occurrences) {
-        recurringCount += 1;
-        if (isCc) {
-          ccEvents.push({ cardId: rec.accountId!, date, signed: rec.type === 'INCOME' ? -amount : amount });
-          continue;
-        }
-        if (rec.type === 'INCOME') projectedIncome  += amount;
-        else                       projectedExpense += amount;
-        events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring' });
-      }
-    }
-
-    const plannedTransactions = await prisma.plannedTransaction.findMany({
-      where: {
-        userId,
-        ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
-        isPaid: false,
-        plannedDate: { gte: rangeStart, lte: rangeEnd },
-      },
-    });
-
-    plannedCount = plannedTransactions.length;
-    for (const p of plannedTransactions) {
-      const amount = Number(p.amount);
-      // Filtrata per range di plannedDate a monte: mai null qui.
-      if (p.accountId && ccIds.has(p.accountId)) {
-        ccEvents.push({ cardId: p.accountId, date: p.plannedDate!, signed: p.type === 'INCOME' ? -amount : amount });
-        continue;
-      }
-      if (p.type === 'INCOME') projectedIncome  += amount;
-      else                     projectedExpense += amount;
-      events.push({ date: p.plannedDate!, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned' });
-    }
-
-    // Sospesi (plannedDate null, opt-in via includeSuspended): nessuna data reale, quindi
-    // contati come se accadessero oggi (anchor della proiezione) — è una stima di
-    // esposizione totale, non un evento datato come gli altri. Mai inclusi di default.
-    if (withSuspended) {
-      const suspended = await prisma.plannedTransaction.findMany({
-        where: {
-          userId,
-          planId: null,
-          isPaid: false,
-          plannedDate: null,
-          ...(scopedAccountIds ? { accountId: { in: scopedAccountIds } } : {}),
-        },
-      });
-      suspendedCount = suspended.length;
-      for (const s of suspended) {
-        const amount = Number(s.amount);
-        // Un Sospeso su CC confluisce nel ciclo come le altre voci, non abbassa/alza
-        // direttamente la liquidità proiettata.
-        if (s.accountId && ccIds.has(s.accountId)) {
-          ccEvents.push({ cardId: s.accountId, date: rangeStart, signed: s.type === 'INCOME' ? -amount : amount });
-          continue;
-        }
-        if (s.type === 'INCOME') projectedIncome  += amount;
-        else                     projectedExpense += amount;
-        events.push({ date: rangeStart, label: s.description, amount, type: s.type as 'INCOME' | 'EXPENSE', source: 'sospeso' });
-      }
-    }
-
-    // Addebiti CC futuri → uscita di liquidità al billingDay del ciclo (debito del ciclo
-    // aperto + spese future su CC, aggregati per ciclo, una volta sola). In vista per-conto
-    // limitato alle sole CC collegate a scopeId (projectCcCharges filtra internamente per
-    // CREDIT_CARD ed è no-op se l'array non ne contiene nessuna).
-    const ccAccountsForCharge = scopeId
-      ? accounts.filter((a) => a.type === 'CREDIT_CARD' && (a.id === scopeId || a.linkedAccountId === scopeId))
-      : accounts;
-    for (const charge of projectCcCharges(ccAccountsForCharge, ccEvents, rangeStart, rangeEnd, now)) {
-      projectedExpense += charge.amount;
-      events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc' });
-    }
 
     // ── Costruzione tratto PROIETTATO (dashed): un punto per ogni giorno civile ──
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
-    const points = buildProjectedPoints(currentBalance, events, rangeStart, rangeEnd);
+    const points: ProjectedPoint[] = buildProjectedPoints(currentBalance, events, rangeStart, rangeEnd);
+
+    // ── Ritmo quotidiano (opt-in): spesa variabile stimata sopra gli impegni noti ──
+    //   Linea alternativa + fascia [ritmo basso, ritmo alto], stessi giorni della
+    //   linea standard (che resta invariata).
+    let rhythmResult: object | null = null;
+    if (withRhythm) {
+      const scopeAccountIds = accounts.length > 0 ? accounts.map((a) => a.id) : null;
+      const rhythmStats = await loadSpendingRhythm(userId, payPeriod, scopeAccountIds, now);
+      const appliedRate = overrideRate ?? rhythmStats.dailyRate;
+      const rateEvents = (rate: number) => buildRhythmEvents({
+        rate, shareByAccount: rhythmStats.shareByAccount, accounts, scopeId,
+        rangeStart, rangeEnd, ccEvents, ccAccountsForCharge, now,
+      });
+      const central = rateEvents(appliedRate);
+      const withBand = overrideRate === null && rhythmStats.high > rhythmStats.low;
+      const series = (extra: typeof central) => buildProjectedPoints(currentBalance, [...events, ...extra], rangeStart, rangeEnd);
+      const centralPts = series(central);
+      // Ritmo ALTO → saldo più BASSO (e viceversa).
+      const lowPts = withBand ? series(rateEvents(rhythmStats.high)) : centralPts;
+      const highPts = withBand ? series(rateEvents(rhythmStats.low)) : centralPts;
+      const r2 = (n: number) => Math.round(n * 100) / 100;
+      points.forEach((p, i) => {
+        p.rhythm = r2(centralPts[i].balance);
+        p.bandLow = r2(lowPts[i].balance);
+        p.bandHigh = r2(highPts[i].balance);
+      });
+
+      const totalEstimated = central.reduce((s, e) => s + e.amount, 0);
+      // Quota del ritmo che ricade sullo scope (tutto, o il conto + carte collegate).
+      const scopeShare = scopeId
+        ? Object.entries(rhythmStats.shareByAccount)
+            .filter(([id]) => scopedAccountIds!.includes(id))
+            .reduce((s, [, share]) => s + share, 0)
+        : 1;
+      rhythmResult = {
+        ...rhythmStats,
+        appliedRate,
+        override: overrideRate !== null,
+        scopeDaily: Math.round(appliedRate * scopeShare * 100) / 100,
+        totalEstimated: Math.round(totalEstimated * 100) / 100,
+        projectedBalance: r2(centralPts[centralPts.length - 1]?.balance ?? currentBalance),
+        projectedLow: r2(lowPts[lowPts.length - 1]?.balance ?? currentBalance),
+        projectedHigh: r2(highPts[highPts.length - 1]?.balance ?? currentBalance),
+      };
+    }
 
     // ── Tratto ACTUAL (solid): storia recente ricostruita all'indietro ──
     const pastStart = new Date(rangeStart);
@@ -732,6 +534,8 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       suspendedCount,
       points: [...actualPoints, ...points],
       events: events.map((e) => ({ date: dayKey(e.date), label: e.label, amount: e.amount, type: e.type, source: e.source })),
+      payPeriod: serializePayPeriod(payPeriod),
+      rhythm: rhythmResult,
     };
     analyticsCache.set(cacheKey, result);
     res.json(result);
@@ -917,7 +721,7 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
     // in AccountBalance: lookup separato.
     const meta = await prisma.account.findMany({
       where: { userId, type: 'BANK' },
-      select: { id: true, name: true, color: true, createdAt: true },
+      select: { id: true, name: true, color: true, createdAt: true, archivedAt: true },
     });
     const metaById = new Map(meta.map((m) => [m.id, m]));
 
@@ -947,7 +751,9 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
       // sul comportamento originale.
       const anchors = m ? [{ openingBalance: a.openingBalance, createdAt: m.createdAt }] : undefined;
       const points = reconstructNetWorthSeries(a.balance, txnsByAccount.get(a.id) ?? [], months, now, anchors);
-      return { id: a.id, name: m?.name ?? 'Conto', color: m?.color ?? null, points };
+      // I conti archiviati restano nel grafico storico, riconoscibili dal nome.
+      const name = m ? (m.archivedAt ? `${m.name} (archiviato)` : m.name) : 'Conto';
+      return { id: a.id, name, color: m?.color ?? null, points };
     });
 
     const result = { months: monthKeys(months, now), accounts };
@@ -955,97 +761,6 @@ export const getNetWorthByAccount = async (req: AuthRequest, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error('Get net worth by account error:', error);
-    res.status(500).json({ error: 'Errore del server' });
-  }
-};
-
-// ── Trend di spesa/entrata per categoria nel tempo ────────────────────────────
-//   Per ciascun mese dell'orizzonte, il totale per categoria (stessa base di
-//   getCategoryStats/getMonthlyTrend: transferId null). Restituisce le top N
-//   categorie per totale + un aggregato "Altre", così il grafico resta leggibile.
-
-const CATEGORY_TREND_TOP_N = 6;
-
-export const getCategoryTrend = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const months = Math.min(Math.max(parseInt((req.query.months as string) || '12', 10) || 12, 3), 60);
-    const type = req.query.type === 'INCOME' ? 'INCOME' : 'EXPENSE';
-
-    const cacheKey = analyticsCache.keys.categoryTrend(userId, `m${months}:${type}`);
-    const cached = analyticsCache.get<object>(cacheKey);
-    if (cached) return res.json(cached);
-
-    const now = new Date();
-    const keys = monthKeys(months, now);
-    const idx = new Map(keys.map((k, i) => [k, i]));
-    const firstMonthStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
-    firstMonthStart.setHours(0, 0, 0, 0);
-
-    const transactions = await prisma.transaction.findMany({
-      where: { userId, type, transferId: null, date: { gte: firstMonthStart }, ...(await bankAccountScope(userId)) },
-      include: { category: true, items: { include: { category: true } } },
-    });
-
-    // Accumula totale-per-mese per categoria. Le transazioni divise (split)
-    // ripartiscono il loro importo tra le righe, ciascuna sulla propria categoria.
-    type Acc = { id: string; name: string; color: string | null; total: number; totals: number[] };
-    const byCat = new Map<string, Acc>();
-
-    for (const t of transactions) {
-      const d = new Date(t.date);
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const mi = idx.get(monthKey);
-      if (mi === undefined) continue;
-
-      for (const line of expandToCategoryLines(t)) {
-        const key = line.categoryId || 'uncategorized';
-        if (!byCat.has(key)) {
-          byCat.set(key, {
-            id: key,
-            name: line.category?.name || 'Senza categoria',
-            color: line.category?.color || null,
-            total: 0,
-            totals: new Array(keys.length).fill(0),
-          });
-        }
-        const acc = byCat.get(key)!;
-        acc.totals[mi] += line.amount;
-        acc.total += line.amount;
-      }
-    }
-
-    const sorted = Array.from(byCat.values()).sort((a, b) => b.total - a.total);
-    const top = sorted.slice(0, CATEGORY_TREND_TOP_N);
-    const rest = sorted.slice(CATEGORY_TREND_TOP_N);
-
-    const categories = top.map((c) => ({
-      ...c,
-      totals: c.totals.map((n) => round2(n)),
-      total: round2(c.total),
-    }));
-
-    if (rest.length > 0) {
-      const otherTotals = new Array(keys.length).fill(0);
-      let otherTotal = 0;
-      for (const c of rest) {
-        c.totals.forEach((n, i) => { otherTotals[i] += n; });
-        otherTotal += c.total;
-      }
-      categories.push({
-        id: 'other',
-        name: 'Altre',
-        color: '#a8a29e',
-        totals: otherTotals.map((n) => round2(n)),
-        total: round2(otherTotal),
-      });
-    }
-
-    const result = { months: keys, type, categories };
-    analyticsCache.set(cacheKey, result);
-    res.json(result);
-  } catch (error) {
-    console.error('Get category trend error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };

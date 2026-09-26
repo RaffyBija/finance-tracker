@@ -1,68 +1,73 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, CreditCard } from 'lucide-react';
-import { useNetWorthSeries } from '../hooks/useDashboard';
-import { useAccounts } from '../hooks/useAccounts';
-import { useFormatCurrency } from '../hooks/useFormatCurrency';
-import PatrimonioLensTabs, { LENSES } from '../components/patrimonio/PatrimonioLensTabs';
-import type { LensId } from '../components/patrimonio/PatrimonioLensTabs';
-import TrendLens from '../components/patrimonio/TrendLens';
-import CompositionLens from '../components/patrimonio/CompositionLens';
-import SavingsLens from '../components/patrimonio/SavingsLens';
-import SpendingLens from '../components/patrimonio/SpendingLens';
-import { toneOf, signOf } from '../components/patrimonio/tone';
+import { ArrowLeft } from 'lucide-react';
+import { useSpendingAnalysis } from '../hooks/useAnalytics';
+import AnalysisTabs, { ANALYSIS_TABS, type AnalysisTabId } from '../components/analysis/AnalysisTabs';
+import PeriodPicker from '../components/analysis/PeriodPicker';
+import SpendingOverview from '../components/analysis/SpendingOverview';
+import CategoryAnalysis from '../components/analysis/CategoryAnalysis';
+import SpendingHabits from '../components/analysis/SpendingHabits';
+import NetWorthLens from '../components/analysis/NetWorthLens';
+import { SkeletonCard } from '../components/shared/Skeleton';
 
-const STORAGE_KEY = 'patrimonioLens';
-const isLensId = (s: string): s is LensId => LENSES.some((l) => l.id === s);
+// Sezione Analisi (route /patrimonio): strumenti per capire a fondo le spese
+// (Spese, Categorie, Abitudini) e il patrimonio netto. Le prime tre schede
+// condividono periodi (di paga o mesi), orizzonte e periodo selezionato.
 
-// Lente iniziale: priorità all'hash URL (link condivisibile), poi all'ultima scelta
-// salvata, infine "andamento".
-const initialLens = (): LensId => {
+type Mode = 'pay' | 'month';
+const HORIZONS = [3, 6, 12] as const;
+
+// Preferenze della vista (per viewer, non critiche): best effort su localStorage.
+const PREF_KEY = 'analysisPrefs';
+const readPrefs = (): { tab?: AnalysisTabId; mode?: Mode; horizon?: number } => {
+  try { return JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}'); } catch { return {}; }
+};
+const writePrefs = (p: object) => {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch { /* storage non disponibile */ }
+};
+
+const isTab = (s: string): s is AnalysisTabId => ANALYSIS_TABS.some((t) => t.id === s);
+
+const initialTab = (): AnalysisTabId => {
   const hash = window.location.hash.replace('#', '');
-  if (hash && isLensId(hash)) return hash;
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && isLensId(saved)) return saved;
-  return 'andamento';
+  if (isTab(hash)) return hash;
+  const saved = readPrefs().tab;
+  return saved && isTab(saved) ? saved : 'spese';
 };
 
 export default function PatrimonioPage() {
-  const { formatCurrency, formatPercent } = useFormatCurrency();
-  const [months, setMonths] = useState<number>(12);
-  const [lens, setLens] = useState<LensId>(initialLens);
+  const prefs = readPrefs();
+  const [tab, setTab] = useState<AnalysisTabId>(initialTab);
+  const [mode, setMode] = useState<Mode>(prefs.mode === 'month' ? 'month' : 'pay');
+  const [horizon, setHorizon] = useState<number>(
+    HORIZONS.some((h) => h === prefs.horizon) ? prefs.horizon! : 6,
+  );
+  const [selected, setSelected] = useState<number | null>(null);
 
-  const { data, isFetching } = useNetWorthSeries(months);
-  const { data: accounts = [] } = useAccounts();
+  const { data, isLoading, isError } = useSpendingAnalysis(horizon, mode);
 
-  // Persistenza lente + sync hash (back/forward del browser).
-  const selectLens = (id: LensId) => {
-    setLens(id);
-    localStorage.setItem(STORAGE_KEY, id);
-    if (window.location.hash.replace('#', '') !== id) {
-      window.history.replaceState(null, '', `#${id}`);
-    }
-  };
+  useEffect(() => { writePrefs({ tab, mode, horizon }); }, [tab, mode, horizon]);
+
+  // Cambiando orizzonte o modalità i periodi cambiano: si torna al periodo in corso.
+  useEffect(() => { setSelected(null); }, [horizon, mode]);
 
   useEffect(() => {
     const onHash = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash && isLensId(hash)) setLens(hash);
+      if (isTab(hash)) setTab(hash);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  // Esposizione CC (debito) — mostrata separata, mai sottratta dal patrimonio.
-  const hasCreditCard = useMemo(() => accounts.some((a) => a.type === 'CREDIT_CARD'), [accounts]);
-  const ccExposure = useMemo(
-    () => accounts.filter((a) => a.type === 'CREDIT_CARD').reduce((s, a) => s + a.balance, 0),
-    [accounts]
-  );
-  const ccIsDebt = ccExposure < 0;
+  const selectTab = (id: AnalysisTabId) => {
+    setTab(id);
+    if (window.location.hash.replace('#', '') !== id) window.history.replaceState(null, '', `#${id}`);
+  };
 
-  const current = data?.current ?? 0;
-  const change = data?.change ?? 0;
-  const changePct = data?.changePct ?? null;
-  const changeTone = toneOf(change);
+  const periodCount = data?.periods.length ?? 0;
+  const sel = selected === null || selected >= periodCount ? periodCount - 1 : selected;
+  const isSpendingTab = tab !== 'patrimonio';
 
   return (
     <div className="container-custom">
@@ -72,59 +77,58 @@ export default function PatrimonioPage() {
             <ArrowLeft size={14} />
             Torna alla dashboard
           </Link>
-          <h1 className="page-header-title">Patrimonio</h1>
-          <p className="page-header-subtitle">
-            Quanto hai, dov'è e come è cambiato nel tempo
-          </p>
+          <h1 className="page-header-title">Analisi</h1>
+          <p className="page-header-subtitle">Dove vanno i tuoi soldi, come spendi e quanto possiedi</p>
         </div>
       </div>
 
       <div className="patrimonio-sections">
-        {/* ── Hero patrimonio (ancora, sempre visibile) ── */}
-        <div className="patrimonio-hero">
-          <div className="patrimonio-hero-main">
-            <span className="patrimonio-hero-label">Patrimonio liquido</span>
-            <span className="patrimonio-hero-value">{formatCurrency(current)}</span>
-            <span className={`patrimonio-hero-change is-${changeTone}`}>
-              {changeTone === 'positive' ? <TrendingUp size={15} />
-                : changeTone === 'negative' ? <TrendingDown size={15} />
-                : <Minus size={15} />}
-              {signOf(change)}{formatCurrency(Math.abs(change))}
-              {changePct !== null && (
-                <span className="patrimonio-hero-change-pct">
-                  ({signOf(changePct)}{formatPercent(Math.abs(changePct), 2)}%)
-                </span>
-              )}
-              <span className="patrimonio-hero-change-period">negli ultimi {months} mesi</span>
-            </span>
-          </div>
-          {hasCreditCard && (
-            <div className={`patrimonio-hero-cc${ccIsDebt ? ' is-debt' : ''}`}>
-              <span className="patrimonio-hero-cc-icon"><CreditCard size={16} /></span>
-              <div>
-                <span className="patrimonio-hero-cc-label">Esposizione carte</span>
-                <span className="patrimonio-hero-cc-value">{formatCurrency(ccExposure)}</span>
-              </div>
+        <AnalysisTabs active={tab} onChange={selectTab} />
+
+        {isSpendingTab && (
+          <div className="analysis-controls">
+            <div className="projection-pills" role="group" aria-label="Suddivisione in periodi">
+              <button type="button" className={`projection-pill${mode === 'pay' ? ' is-active' : ''}`} aria-pressed={mode === 'pay'} onClick={() => setMode('pay')}>
+                Periodo di paga
+              </button>
+              <button type="button" className={`projection-pill${mode === 'month' ? ' is-active' : ''}`} aria-pressed={mode === 'month'} onClick={() => setMode('month')}>
+                Mese
+              </button>
             </div>
-          )}
-        </div>
+            <div className="projection-pills" role="group" aria-label="Numero di periodi">
+              {HORIZONS.map((h) => (
+                <button key={h} type="button" className={`projection-pill${horizon === h ? ' is-active' : ''}`} aria-pressed={horizon === h} onClick={() => setHorizon(h)}>
+                  {h}
+                </button>
+              ))}
+            </div>
+            {data && (
+              <PeriodPicker periods={data.periods} mode={data.mode} selected={sel} onChange={setSelected} />
+            )}
+          </div>
+        )}
 
-        {/* ── Lenti di analisi ── */}
-        <PatrimonioLensTabs active={lens} onChange={selectLens} />
+        {isSpendingTab && mode === 'pay' && data && !data.payPeriodConfigured && (
+          <p className="analysis-hint">
+            Periodo di paga non impostato: sto usando i mesi solari.{' '}
+            <Link to="/profile#preferenze" className="projection-inline-link">Imposta lo stipendio</Link>
+          </p>
+        )}
 
-        {/* ── Pannello della lente attiva (scorre) ── */}
-        <div
-          className="lens-panel"
-          role="tabpanel"
-          id={`lens-panel-${lens}`}
-          aria-labelledby={`lens-tab-${lens}`}
-        >
-          {lens === 'andamento' && (
-            <TrendLens months={months} setMonths={setMonths} data={data} isFetching={isFetching} />
+        <div className="lens-panel" role="tabpanel" id={`lens-panel-${tab}`} aria-labelledby={`lens-tab-${tab}`}>
+          {tab === 'patrimonio' ? (
+            <NetWorthLens />
+          ) : isLoading || (!data && !isError) ? (
+            <SkeletonCard />
+          ) : isError || !data ? (
+            <div className="card dashboard-chart-empty">Impossibile caricare l'analisi. Riprova più tardi.</div>
+          ) : (
+            <>
+              {tab === 'spese' && <SpendingOverview data={data} selected={sel} onSelect={setSelected} />}
+              {tab === 'categorie' && <CategoryAnalysis data={data} selected={sel} />}
+              {tab === 'abitudini' && <SpendingHabits data={data} selected={sel} />}
+            </>
           )}
-          {lens === 'composizione' && <CompositionLens />}
-          {lens === 'risparmio' && <SavingsLens months={months} />}
-          {lens === 'spese' && <SpendingLens months={months} />}
         </div>
       </div>
     </div>

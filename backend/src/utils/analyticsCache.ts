@@ -20,14 +20,6 @@ const delNetWorth = (uid: string): void => {
     .forEach(k => cache.del(k));
 };
 
-// Il trend per categoria è cacheato per-orizzonte e per-tipo → invalida tutte le
-// varianti dell'utente con un delete per prefisso (come delMonthlyTrend).
-const delCategoryTrend = (uid: string): void => {
-  cache.keys()
-    .filter(k => k.startsWith(`category-trend:${uid}:`))
-    .forEach(k => cache.del(k));
-};
-
 // Il trend mensile è cacheato per-orizzonte (suffisso months) → invalida tutte
 // le varianti dell'utente con un delete per prefisso.
 const delMonthlyTrend = (uid: string): void => {
@@ -44,6 +36,14 @@ const delBudgetSuggestions = (uid: string): void => {
     .forEach(k => cache.del(k));
 };
 
+// Analisi spese: cacheata per modalità/numero di periodi. Dipende da transazioni,
+// scadenze, conti, categorie e periodo di paga: si invalida insieme al forecast.
+const delSpending = (uid: string): void => {
+  cache.keys()
+    .filter(k => k.startsWith(`spending:${uid}:`))
+    .forEach(k => cache.del(k));
+};
+
 export const analyticsCache = {
   get: <T>(key: string): T | undefined => cache.get<T>(key),
   set: <T>(key: string, value: T): void => { cache.set(key, value); },
@@ -53,13 +53,13 @@ export const analyticsCache = {
 
   keys: {
     forecast:         (uid: string) => `forecast:${uid}`,
+    spending:         (uid: string, suffix: string) => `spending:${uid}:${suffix}`,
     budgetSuggestions:(uid: string, suffix = '') => `budget-suggestions:${uid}:${suffix}`,
     monthlyTrend:     (uid: string, suffix: string) => `monthly-trend:${uid}:${suffix}`,
     projectedBalance: (uid: string, suffix: string) => `projected-balance:${uid}:${suffix}`,
     projectionSeries: (uid: string, suffix: string) => `projection-series:${uid}:${suffix}`,
     netWorthSeries:   (uid: string, suffix: string) => `networth-series:${uid}:${suffix}`,
     netWorthByAccount:(uid: string, suffix: string) => `networth-by-account:${uid}:${suffix}`,
-    categoryTrend:    (uid: string, suffix: string) => `category-trend:${uid}:${suffix}`,
     recurringDue:     (uid: string) => `recurring-due:${uid}`,
     plannedDue:       (uid: string) => `planned-due:${uid}`,
     installmentsDue:  (uid: string) => `installments-due:${uid}`,
@@ -70,15 +70,17 @@ export const analyticsCache = {
   // Una transazione è cambiata (create/update/delete)
   onTransactionMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
+    delSpending(uid);
     delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
-    delCategoryTrend(uid);
     delProjections(uid);
     delNetWorth(uid);
   },
 
   // Una ricorrente è cambiata (create/update/delete/toggle)
   onRecurringMutated: (uid: string) => {
+    cache.del(`forecast:${uid}`);
+    delSpending(uid);
     cache.del(`recurring-due:${uid}`);
     delBudgetSuggestions(uid);
     delProjections(uid);
@@ -87,9 +89,9 @@ export const analyticsCache = {
   // Una ricorrente è stata eseguita (crea anche una transazione reale)
   onRecurringExecuted: (uid: string) => {
     cache.del(`forecast:${uid}`);
+    delSpending(uid);
     delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
-    delCategoryTrend(uid);
     cache.del(`recurring-due:${uid}`);
     delProjections(uid);
     delNetWorth(uid);
@@ -98,6 +100,7 @@ export const analyticsCache = {
   // Una pianificata è cambiata (create/update/delete) — include le rate dei piani
   onPlannedMutated: (uid: string) => {
     cache.del(`forecast:${uid}`);
+    delSpending(uid);
     delBudgetSuggestions(uid);
     cache.del(`planned-due:${uid}`);
     cache.del(`installments-due:${uid}`);
@@ -107,9 +110,9 @@ export const analyticsCache = {
   // Una pianificata è stata pagata (crea anche una transazione reale)
   onPlannedPaid: (uid: string) => {
     cache.del(`forecast:${uid}`);
+    delSpending(uid);
     delBudgetSuggestions(uid);
     delMonthlyTrend(uid);
-    delCategoryTrend(uid);
     cache.del(`planned-due:${uid}`);
     cache.del(`installments-due:${uid}`);
     delProjections(uid);
@@ -125,17 +128,30 @@ export const analyticsCache = {
   // altrimenti restano in cache col valore pre-modifica fino a 5 minuti (stdTTL),
   // disallineati da getSummary/getCategoryStats (non cachate).
   onAccountMutated: (uid: string) => {
+    cache.del(`forecast:${uid}`);
+    delSpending(uid);
     delNetWorth(uid);
     delBudgetSuggestions(uid);
     delProjections(uid);
     delMonthlyTrend(uid);
-    delCategoryTrend(uid);
   },
 
   // Una categoria è cambiata (create/update/delete): nome/colore sono embeddati
   // nel trend per categoria → invalidalo (il delete riassegna le tx a "Senza
   // categoria", cambiando anche gli aggregati).
+  // Anche le categorie del ritmo quotidiano (forecast/proiezione) e l'eventuale
+  // categoria stipendio (SetNull alla cancellazione) dipendono dalle categorie.
   onCategoryMutated: (uid: string) => {
-    delCategoryTrend(uid);
+    cache.del(`forecast:${uid}`);
+    delSpending(uid);
+    delProjections(uid);
+  },
+
+  // Impostazioni del periodo di paga cambiate (categoria stipendio / giorno):
+  // cambiano orizzonte "fino allo stipendio" e periodi del ritmo quotidiano.
+  onPayPeriodChanged: (uid: string) => {
+    cache.del(`forecast:${uid}`);
+    delSpending(uid);
+    delProjections(uid);
   },
 };

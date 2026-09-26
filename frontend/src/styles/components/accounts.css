@@ -778,3 +778,82 @@
 .dark .account-flashcard-value.is-income { color: #34d399; }
 .dark .account-flashcard-value.is-expense { color: #f87171; }
 .dark .account-linked-card-name { color: #f5f5f4; }
+
+/* ── Conti archiviati (ripristinabili) ── */
+.archived-accounts {
+  margin-top: 32px;
+  border-top: 1px solid #e7e5e4;
+  padding-top: 16px;
+}
+.archived-accounts-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #78716c;
+  list-style: none;
+}
+.archived-accounts-summary::-webkit-details-marker { display: none; }
+.archived-accounts-hint {
+  margin: 10px 0 12px;
+  font-size: 0.8125rem;
+  color: #78716c;
+}
+.archived-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.archived-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fafaf9;
+  border: 1px solid #f5f5f4;
+}
+.archived-account-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.archived-account-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.archived-account-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #57534e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archived-account-meta {
+  font-size: 0.75rem;
+  color: #a8a29e;
+}
+.archived-account-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Conti archiviati — dark */
+.dark .archived-accounts { border-top-color: #44403c; }
+.dark .archived-accounts-summary,
+.dark .archived-accounts-hint { color: #a8a29e; }
+.dark .archived-account { background: #292524; border-color: #44403c; }
+.dark .archived-account-name { color: #e7e5e4; }
+.dark .archived-account-meta { color: #78716c; }
+

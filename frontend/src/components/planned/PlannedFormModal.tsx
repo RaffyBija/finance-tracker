@@ -128,6 +128,9 @@ export default function PlannedFormModal({
     const payload: CreatePlannedTransactionDTO = {
       ...formData,
       plannedDate: noDate ? undefined : formData.plannedDate,
+      // Il selettore compare solo con più conti e i conti possono caricarsi dopo
+      // l'apertura del form: ripiego sul conto principale (il backend lo esige).
+      accountId: formData.accountId || defaultAccount?.id || undefined,
     };
     try {
       if (editingItem) {

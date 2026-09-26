@@ -11,6 +11,11 @@ import {
   ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '../utils/currency';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCategories } from '../hooks/useCategories';
+import { usePayPeriod } from '../hooks/useAnalytics';
+import { broadcastInvalidation } from '../utils/syncChannel';
+import type { PayPeriodSource } from '../types';
 
 // ── Sezione: Generale (identità + dati account) ──────────────────────────────
 
@@ -288,6 +293,113 @@ function PreferencesSection() {
           </select>
         </div>
       </div>
+
+      <div className="settings-divider" />
+
+      <div className="settings-section-head settings-subsection-head">
+        <h3 className="settings-subsection-title">Periodo di paga</h3>
+        <p className="settings-section-desc">
+          Le analisi partono dall'ultimo stipendio e arrivano al prossimo, non al mese solare.
+        </p>
+      </div>
+      <PayPeriodSettings />
+    </>
+  );
+}
+
+// ── Blocco: Periodo di paga (in Preferenze) ──────────────────────────────────
+//   Categoria degli accrediti stipendio + giorno di riferimento di ripiego.
+//   Guidano l'orizzonte "fino allo stipendio" e il ritmo quotidiano della proiezione.
+
+const PAY_SOURCE_LABEL: Record<PayPeriodSource, string> = {
+  planned: 'dalla pianificata dello stipendio',
+  recurring: 'dalla ricorrente dello stipendio',
+  payday: 'dal giorno di paga impostato',
+  calendar: 'mese solare (periodo di paga non impostato)',
+};
+
+const longDate = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+
+function PayPeriodSettings() {
+  const { user, updateUser } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { data: incomeCategories = [] } = useCategories('INCOME');
+  const { data: payPeriod } = usePayPeriod();
+  const [isPending, setIsPending] = useState(false);
+
+  const save = async (patch: { salaryCategoryId?: string | null; payDay?: number | null }) => {
+    setIsPending(true);
+    try {
+      const res = await authAPI.updateProfile(patch);
+      updateUser(res.user ?? res);
+      // Orizzonte "stipendio", stima e proiezione dipendono da queste impostazioni.
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      broadcastInvalidation(['dashboard']);
+      toast.success('Periodo di paga aggiornato');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="settings-pref">
+        <div className="settings-pref-text">
+          <span className="settings-pref-title">Categoria stipendio</span>
+          <span className="settings-pref-desc">
+            Le entrate di questa categoria segnano l'inizio di ogni periodo di paga.
+          </span>
+        </div>
+        <div className="settings-pref-control">
+          <select
+            className="form-select"
+            value={user?.salaryCategoryId ?? ''}
+            onChange={(e) => save({ salaryCategoryId: e.target.value || null })}
+            disabled={isPending}
+            aria-label="Categoria stipendio"
+          >
+            <option value="">Nessuna</option>
+            {incomeCategories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="settings-pref">
+        <div className="settings-pref-text">
+          <span className="settings-pref-title">Giorno di paga</span>
+          <span className="settings-pref-desc">
+            Usato solo se lo stipendio non è pianificato né ricorrente.
+          </span>
+        </div>
+        <div className="settings-pref-control">
+          <select
+            className="form-select"
+            value={user?.payDay ?? ''}
+            onChange={(e) => save({ payDay: e.target.value ? Number(e.target.value) : null })}
+            disabled={isPending}
+            aria-label="Giorno di paga"
+          >
+            <option value="">Non impostato</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={d}>Giorno {d}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {payPeriod && (
+        <p className="settings-payperiod-preview" role="status">
+          Prossimo accredito: <strong>{longDate(payPeriod.nextPayday)}</strong>
+          {payPeriod.daysToPayday > 0 && ` (tra ${payPeriod.daysToPayday} ${payPeriod.daysToPayday === 1 ? 'giorno' : 'giorni'})`}
+          <span className="settings-payperiod-source">{PAY_SOURCE_LABEL[payPeriod.source]}</span>
+        </p>
+      )}
     </>
   );
 }

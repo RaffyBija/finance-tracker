@@ -28,7 +28,8 @@ export interface DueEntry {
   planId?: string;
   /** Sospeso: nessuna data prevista, la data proposta è oggi. */
   undated?: boolean;
-  /** Rata di un piano a pagamento manuale (nessun conto fisso): il conto si sceglie ora. */
+  /** Nessun conto fisso (rata di un piano a pagamento manuale, o pianificata
+   *  senza conto): il conto si sceglie ora, al momento della registrazione. */
   needsAccount?: boolean;
 }
 
@@ -91,6 +92,8 @@ export function plannedToEntry(p: PlannedTransaction, accounts: Account[], today
     scheduledDate,
     daysOverdue: daysBetween(scheduledDate, today),
     ...(p.plannedDate ? {} : { undated: true }),
+    // Una pianificata senza conto non si può registrare senza sceglierne uno.
+    ...(!isCc && !p.accountId && accounts.length > 0 ? { needsAccount: true } : {}),
   };
 }
 

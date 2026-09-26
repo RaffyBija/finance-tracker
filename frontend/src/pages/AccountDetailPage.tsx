@@ -64,8 +64,8 @@ export default function AccountDetailPage() {
   const handleDelete = async () => {
     if (!account) return;
     try {
-      await deleteMutation.mutateAsync(account.id);
-      toast.success('Conto eliminato');
+      const result = await deleteMutation.mutateAsync(account.id);
+      toast.success(result?.message ?? 'Conto eliminato');
       navigate('/accounts');
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? 'Errore nella eliminazione');
@@ -274,7 +274,7 @@ export default function AccountDetailPage() {
       <ConfirmModal
         isOpen={confirmDelete}
         title="Elimina conto"
-        message="Le transazioni associate resteranno ma perderanno il collegamento al conto. Continuare?"
+        message="Se il conto ha movimenti verrà archiviato: sparisce dalle liste ma lo storico delle transazioni resta, e le scadenze future passano al conto principale. Il saldo deve essere a zero. Continuare?"
         confirmLabel="Elimina"
         confirmClassName="btn btn-danger btn-md"
         onConfirm={handleDelete}

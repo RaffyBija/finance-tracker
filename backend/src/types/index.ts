@@ -63,6 +63,8 @@ export interface AuthResponse {
     tourCompleted: boolean;
     currency: string;
     savingRate: number;
+    salaryCategoryId?: string | null;
+    payDay?: number | null;
   };
 }
 

@@ -194,12 +194,15 @@ export default function RecurringFormModal({
   const persist = async (): Promise<boolean> => {
     setSubmitError(null);
     if (!validate(formData)) return false;
+    // Il selettore compare solo con più conti e i conti possono caricarsi dopo
+    // l'apertura del form: ripiego sul conto principale (il backend lo esige).
+    const payload = { ...formData, accountId: formData.accountId || defaultAccount?.id || undefined };
     try {
       if (editingItem) {
-        await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
+        await updateMutation.mutateAsync({ id: editingItem.id, data: payload });
         toast.success('Spesa ricorrente aggiornata con successo');
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
         toast.success('Spesa ricorrente creata con successo');
       }
       return true;

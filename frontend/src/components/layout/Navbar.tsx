@@ -22,7 +22,7 @@ interface NavItem {
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
 // Link primari (desktop top bar + mobile bottom bar): le stesse 4 voci operative.
-// Analisi (Patrimonio, Proiezione) e Gestione vivono nel dropdown/tray, non qui.
+// Analisi (Analisi spese e patrimonio, Proiezione) e Gestione vivono nel dropdown/tray, non qui.
 const PRIMARY: NavItem[] = [
   { path: '/dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/transactions', label: 'Transazioni', icon: ArrowLeftRight  },
@@ -32,7 +32,7 @@ const PRIMARY: NavItem[] = [
 
 // Sezione "Analisi" del menu (dropdown desktop + tray mobile).
 const ANALISI: NavItem[] = [
-  { path: '/patrimonio', label: 'Patrimonio', icon: PiggyBank },
+  { path: '/patrimonio', label: 'Analisi', icon: PiggyBank },
   { path: '/projection', label: 'Proiezione', icon: LineChart },
 ];
 

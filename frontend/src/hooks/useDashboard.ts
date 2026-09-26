@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { dashboardAPI } from '../api/client';
+import type { ProjectionSeriesParams } from '../types';
 
 interface DateRange {
   startDate: string;
@@ -13,14 +14,6 @@ interface ProjectedBalanceParams {
   accountId?: string;
 }
 
-interface ProjectionSeriesParams {
-  months?: number;
-  startDate?: string;
-  endDate?: string;
-  accountId?: string;
-  historyDays?: number;
-  includeSuspended?: boolean;
-}
 
 // staleTime: 0 + refetchOnMount: true → refetch garantito ad ogni mount (override del default globale false)
 // il trend mensile è dati storici stabili, può restare cacheato più a lungo
@@ -96,14 +89,5 @@ export const useNetWorthByAccount = (months: number = 12, enabled = true) => {
     queryFn: () => dashboardAPI.getNetWorthByAccount({ months }),
     staleTime: 5 * 60 * 1000,
     enabled,
-  });
-};
-
-// Trend per categoria nel tempo (default EXPENSE): dati storici → cache 5 min.
-export const useCategoryTrend = (months: number = 12, type: 'INCOME' | 'EXPENSE' = 'EXPENSE') => {
-  return useQuery({
-    queryKey: ['dashboard', 'category-trend', months, type],
-    queryFn: () => dashboardAPI.getCategoryTrend({ months, type }),
-    staleTime: 5 * 60 * 1000,
   });
 };

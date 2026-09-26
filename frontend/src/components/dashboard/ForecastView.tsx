@@ -1,97 +1,82 @@
-import { TrendingUp, TrendingDown, Repeat } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, Activity, Wallet, CalendarClock } from 'lucide-react';
 import { useForecast } from '../../hooks/useAnalytics';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import { SkeletonCard } from '../shared/Skeleton';
 
-// Vista "Stima realistica" della card Andamento del saldo.
-// Layout a waterfall: Oggi → +entrate → −spese fisse → −spese abituali → fine mese.
-// In più, le spese ricorrenti più frequenti (per numero di movimenti) con icona.
-// Orizzonte fisso a fine mese corrente. Chrome/titolo dal genitore.
+// Vista "Stima realistica" della card Andamento del saldo: da oggi al giorno
+// prima del prossimo stipendio (periodo di paga, non mese solare).
+//   Oggi → + entrate → − impegni (ricorrenti, pianificate, carte) → − ritmo quotidiano
+//   = liquidità stimata alla vigilia dell'accredito, con fascia probabile.
+// In più: punto più basso, quanto si può spendere al giorno senza andare sotto
+// zero, conti che toccano il minimo, dove va il ritmo. Chrome/titolo dal genitore.
 
+const shortDate = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 
-function ForecastSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div style={{ height: '0.625rem', width: '12rem', background: '#e7e5e4', borderRadius: '0.25rem', marginBottom: '1rem' }} />
-      <div style={{ background: '#fafaf9', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1rem' }}>
-        <div style={{ height: '0.625rem', width: '8rem', background: '#e7e5e4', borderRadius: '0.25rem', marginBottom: '0.5rem' }} />
-        <div style={{ height: '1.75rem', width: '9rem', background: '#e7e5e4', borderRadius: '0.25rem' }} />
-      </div>
-    </div>
-  );
-}
+const signed = (n: number, fmt: (v: number) => string) => `${n < 0 ? '−' : ''}${fmt(Math.abs(n))}`;
 
 export default function ForecastView() {
   const { formatCurrency } = useFormatCurrency();
   const { data: forecast, isLoading, isError } = useForecast();
 
-  if (isLoading) return <ForecastSkeleton />;
-  if (isError) {
-    return (
-      <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>
-        Errore nel calcolo della stima. Riprova più tardi.
-      </div>
-    );
-  }
-  if (!forecast) {
-    return (
-      <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#a8a29e', fontSize: '0.875rem' }}>
-        Nessun dato disponibile per la stima.
-      </div>
-    );
-  }
+  if (isLoading) return <SkeletonCard />;
+  if (isError) return <div className="forecast-empty">Errore nel calcolo della stima. Riprova più tardi.</div>;
+  if (!forecast) return <div className="forecast-empty">Nessun dato disponibile per la stima.</div>;
 
-  const {
-    daysElapsed,
-    daysInMonth,
-    daysRemaining,
-    currentBalance,
-    knownRemaining,
-    habitualRemaining,
-    frequentExpenses,
-    dailyPace,
-    projectedEndBalance,
-  } = forecast;
-
-  const isPositive = projectedEndBalance >= currentBalance;
-  const delta = projectedEndBalance - currentBalance;
-
-  // La spesa abituale stimata: storico per categoria se disponibile, altrimenti ritmo attuale.
-  const habitualExpense = habitualRemaining.hasData
-    ? habitualRemaining.total
-    : dailyPace.expenses * daysRemaining;
-
-  const monthProgress = Math.min(100, Math.round((daysElapsed / daysInMonth) * 100));
+  const { payPeriod, eveDate, daysRemaining, currentBalance, known, rhythm, atEve, lowest, spendablePerDay, accounts } = forecast;
+  const progress = Math.min(100, Math.round((payPeriod.daysElapsed / payPeriod.daysTotal) * 100));
+  const hasRhythm = rhythm.basis !== 'none';
+  const hasBand = hasRhythm && atEve.low !== atEve.high;
+  const low = hasRhythm ? lowest.withRhythm : lowest.standard;
+  const accountMins = accounts.filter((a) => (hasRhythm ? a.rhythmMin : a.standardMin) != null);
+  const paceDelta = rhythm.current.rate - rhythm.dailyRate;
 
   return (
     <>
       <p className="forecast-caption">
-        Stima a fine mese: impegni certi + spese abituali (escluse le ricorrenti già contate)
+        {payPeriod.configured
+          ? `Fino al prossimo stipendio (${shortDate(payPeriod.nextPayday)}): impegni noti + ritmo quotidiano stimato`
+          : 'Fino a fine mese: imposta il periodo di paga per ragionare da stipendio a stipendio'}
       </p>
+      {!payPeriod.configured && (
+        <Link to="/profile#preferenze" className="forecast-setup-link">
+          <CalendarClock size={13} /> Imposta il periodo di paga
+        </Link>
+      )}
 
-      {/* ── Avanzamento del mese ── */}
+      {/* ── Avanzamento del periodo di paga ── */}
       <div className="forecast-progress-bar">
-        <div className="forecast-progress-fill" style={{ width: `${monthProgress}%` }} />
+        <div className="forecast-progress-fill" style={{ width: `${progress}%` }} />
       </div>
       <div className="forecast-progress-labels">
-        <span>Giorno {daysElapsed} di {daysInMonth}</span>
-        <span>{daysRemaining > 0 ? `${daysRemaining} giorni rimanenti` : 'ultimo giorno'}</span>
+        <span>Giorno {payPeriod.daysElapsed} di {payPeriod.daysTotal}</span>
+        <span>
+          {payPeriod.daysToPayday > 1
+            ? `${payPeriod.daysToPayday} giorni allo stipendio`
+            : payPeriod.daysToPayday === 1 ? 'stipendio domani' : 'stipendio oggi'}
+        </span>
       </div>
 
-      {/* ── Risultato: saldo stimato a fine mese ── */}
+      {/* ── Risultato: liquidità alla vigilia dell'accredito ── */}
       <div className="forecast-result">
-        <span className="forecast-result-label">Saldo stimato a fine mese</span>
+        <span className="forecast-result-label">Liquidità stimata il {shortDate(eveDate)}</span>
         <div className="forecast-result-row">
-          <span className={`forecast-result-value${projectedEndBalance < 0 ? ' is-negative' : ''}`}>
-            {projectedEndBalance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(projectedEndBalance))}
+          <span className={`forecast-result-value${atEve.withRhythm < 0 ? ' is-negative' : ''}`}>
+            {signed(atEve.withRhythm, formatCurrency)}
           </span>
-          <span className={`forecast-result-delta${isPositive ? ' is-positive' : ' is-negative'}`}>
-            {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-            {isPositive ? '+' : '−'}{formatCurrency(Math.abs(delta))} vs oggi
-          </span>
+          {hasBand && (
+            <span className="forecast-result-range">
+              fascia {signed(atEve.low, formatCurrency)} – {signed(atEve.high, formatCurrency)}
+            </span>
+          )}
         </div>
+        <span className="forecast-result-sub">
+          Solo impegni noti: {signed(atEve.standard, formatCurrency)}
+        </span>
       </div>
 
-      {/* ── Waterfall: dal saldo di oggi a quello di fine mese ── */}
+      {/* ── Waterfall: da oggi alla vigilia dello stipendio ── */}
       <div className="forecast-waterfall">
         <div className="forecast-wf-row is-start">
           <span className="forecast-wf-label">Saldo di oggi</span>
@@ -99,45 +84,101 @@ export default function ForecastView() {
         </div>
         <div className="forecast-wf-row">
           <span className="forecast-wf-label">Entrate previste</span>
-          <span className="forecast-wf-amount is-income">+{formatCurrency(knownRemaining.income)}</span>
+          <span className="forecast-wf-amount is-income">+{formatCurrency(known.income)}</span>
         </div>
         <div className="forecast-wf-row">
-          <span className="forecast-wf-label">Spese fisse (ricorrenti + pianificate)</span>
-          <span className="forecast-wf-amount is-expense">−{formatCurrency(knownRemaining.expenses)}</span>
+          <span className="forecast-wf-label">Impegni (ricorrenti, pianificate, carte)</span>
+          <span className="forecast-wf-amount is-expense">−{formatCurrency(known.expenses)}</span>
         </div>
         <div className="forecast-wf-row">
-          <span className="forecast-wf-label">Spese abituali stimate</span>
-          <span className="forecast-wf-amount is-expense">−{formatCurrency(habitualExpense)}</span>
+          <span className="forecast-wf-label">
+            Ritmo quotidiano
+            {hasRhythm && daysRemaining > 0 && (
+              <span className="forecast-wf-hint"> · {formatCurrency(rhythm.dailyRate)}/giorno × {daysRemaining} gg</span>
+            )}
+          </span>
+          <span className="forecast-wf-amount is-expense">−{formatCurrency(rhythm.remaining)}</span>
         </div>
         <div className="forecast-wf-row is-total">
-          <span className="forecast-wf-label">Saldo a fine mese</span>
-          <span className={`forecast-wf-amount${projectedEndBalance < 0 ? ' is-expense' : ''}`}>
-            {formatCurrency(projectedEndBalance)}
+          <span className="forecast-wf-label">Stima al {shortDate(eveDate)}</span>
+          <span className={`forecast-wf-amount${atEve.withRhythm < 0 ? ' is-expense' : ''}`}>
+            {signed(atEve.withRhythm, formatCurrency)}
           </span>
         </div>
       </div>
 
-      {/* ── Spese ricorrenti più frequenti ── */}
-      {frequentExpenses.length > 0 && (
-        <div className="forecast-frequent">
-          <div className="forecast-frequent-header">
-            <Repeat size={13} />
-            Spese più frequenti
+      {!hasRhythm && (
+        <p className="forecast-note">
+          Ritmo quotidiano non ancora stimabile: servono almeno 7 giorni di spese registrate.
+        </p>
+      )}
+
+      {/* ── Indicatori ── */}
+      <div className="forecast-insights">
+        {low && daysRemaining > 0 && (
+          <div className={`forecast-insight${low.value < 0 ? ' is-danger' : ''}`}>
+            <span className="forecast-insight-icon">
+              {low.value < 0 ? <AlertTriangle size={14} /> : <Activity size={14} />}
+            </span>
+            <span className="forecast-insight-label">Punto più basso</span>
+            <span className="forecast-insight-value">{signed(low.value, formatCurrency)}</span>
+            <span className="forecast-insight-meta">il {shortDate(low.date)}</span>
           </div>
+        )}
+        {spendablePerDay !== null && (
+          <div className="forecast-insight">
+            <span className="forecast-insight-icon"><Wallet size={14} /></span>
+            <span className="forecast-insight-label">Spendibile al giorno</span>
+            <span className="forecast-insight-value">{formatCurrency(spendablePerDay)}</span>
+            <span className="forecast-insight-meta">senza andare sotto zero</span>
+          </div>
+        )}
+        {hasRhythm && rhythm.basis === 'periods' && (
+          <div className={`forecast-insight${paceDelta > 0.5 ? ' is-warning' : ''}`}>
+            <span className="forecast-insight-icon"><Activity size={14} /></span>
+            <span className="forecast-insight-label">Ritmo di questo periodo</span>
+            <span className="forecast-insight-value">{formatCurrency(rhythm.current.rate)}/g</span>
+            <span className="forecast-insight-meta">abituale {formatCurrency(rhythm.dailyRate)}/g</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Minimo per conto (senza fido conta il singolo conto) ── */}
+      {accountMins.length > 0 && (
+        <div className="forecast-accounts">
+          <div className="forecast-frequent-header">Punto più basso per conto</div>
+          <ul className="forecast-account-list">
+            {accountMins.map((a) => {
+              const m = (hasRhythm ? a.rhythmMin : a.standardMin)!;
+              return (
+                <li key={a.id} className={`forecast-account-item${m.value < 0 ? ' is-danger' : ''}`}>
+                  <span className="forecast-account-dot" style={{ background: a.color ?? '#a8a29e' }} />
+                  <span className="forecast-account-name">{a.name}</span>
+                  <span className="forecast-account-date">{shortDate(m.date)}</span>
+                  <span className="forecast-account-value">{signed(m.value, formatCurrency)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* ── Dove va il ritmo ── */}
+      {hasRhythm && rhythm.topCategories.length > 0 && (
+        <div className="forecast-frequent">
+          <div className="forecast-frequent-header">Dove va il ritmo quotidiano</div>
           <div className="forecast-frequent-list">
-            {frequentExpenses.slice(0, 4).map((c) => (
-              <div key={c.categoryId ?? c.categoryName} className="forecast-frequent-item">
+            {rhythm.topCategories.slice(0, 4).map((c) => (
+              <div key={c.categoryId ?? c.name} className="forecast-frequent-item">
                 <span
                   className="forecast-frequent-icon"
                   style={{ backgroundColor: (c.color ?? '#0d9488') + '22', color: c.color ?? '#0d9488' }}
                 >
                   {c.icon || '•'}
                 </span>
-                <span className="forecast-frequent-name">{c.categoryName}</span>
-                <span className="forecast-frequent-freq">
-                  ~{c.perMonth}×/mese
-                </span>
-                <span className="forecast-frequent-amount">~{formatCurrency(c.avgMonthly)}</span>
+                <span className="forecast-frequent-name">{c.name}</span>
+                <span className="forecast-frequent-freq">{Math.round(c.share * 100)}%</span>
+                <span className="forecast-frequent-amount">~{formatCurrency(c.daily)}/g</span>
               </div>
             ))}
           </div>
