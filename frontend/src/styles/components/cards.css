@@ -476,8 +476,11 @@
     @apply inline-flex gap-0.5 p-0.5 rounded-lg bg-neutral-100 self-start;
   }
 
+  /* I due selettori (tipo di periodo, corrente/successivo) in riga */
+  .budget-sugg-period-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
   .budget-sugg-month-option {
-    @apply inline-flex items-center px-3 py-1.5 rounded-md bg-transparent text-sm font-medium text-neutral-500 capitalize;
+    @apply inline-flex items-center px-3 py-1.5 rounded-md bg-transparent text-sm font-medium text-neutral-500;
     transition: background-color 0.15s var(--ease-out-quart), color 0.15s var(--ease-out-quart);
   }
 

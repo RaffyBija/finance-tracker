@@ -17,8 +17,8 @@ function isActiveNow(b: Budget): boolean {
 }
 
 // Fascia riepilogo in cima alla pagina Budget: dà il colpo d'occhio che mancava
-// (budgetato/speso/rimanente dei budget attivi) + lo spendibile del mese, il numero
-// d'orientamento immediato. Lo spendibile riusa l'endpoint dei suggerimenti (cacheato).
+// (budgetato/speso/rimanente dei budget attivi) + lo spendibile del periodo (di paga,
+// o mese se non impostato), il numero d'orientamento immediato. Lo spendibile riusa l'endpoint dei suggerimenti (cacheato).
 export default function BudgetSummary({ budgets }: BudgetSummaryProps) {
   const { formatCurrency } = useFormatCurrency();
   const { data: suggestions, isLoading: spendableLoading } = useBudgetSuggestions(
@@ -59,9 +59,11 @@ export default function BudgetSummary({ budgets }: BudgetSummaryProps) {
         </span>
       </div>
       <div className="budget-summary-stat budget-summary-spendable">
-        <span className="budget-summary-label">Spendibile questo mese</span>
+        <span className="budget-summary-label">
+          {suggestions?.mode === 'month' ? 'Spendibile questo mese' : 'Spendibile nel periodo'}
+        </span>
         <span className="budget-summary-value">
-          {spendableLoading || !suggestions ? '—' : formatCurrency(suggestions.spendable)}
+          {spendableLoading || !suggestions ? '…' : formatCurrency(suggestions.spendable)}
         </span>
       </div>
     </div>

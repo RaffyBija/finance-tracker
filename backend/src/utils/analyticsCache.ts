@@ -150,6 +150,7 @@ export const analyticsCache = {
   // Impostazioni del periodo di paga cambiate (categoria stipendio / giorno):
   // cambiano orizzonte "fino allo stipendio" e periodi del ritmo quotidiano.
   onPayPeriodChanged: (uid: string) => {
+    delBudgetSuggestions(uid);
     cache.del(`forecast:${uid}`);
     delSpending(uid);
     delProjections(uid);

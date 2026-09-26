@@ -8,9 +8,8 @@ import {
   recentBudgetWindows,
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
-import { countOccurrences } from './dashboard.controller';
-import { getAccountsWithBalances, getLiquidBalance, openCCObligations } from '../utils/balance';
-import { expandToCategoryLines } from '../utils/categoryContributions';
+import { computeBudgetPlan, applySaving, type BudgetPlan } from '../utils/budgetPlan';
+import { loadPayBoundaries, addDays } from '../utils/payPeriod';
 import { analyticsCache } from '../utils/analyticsCache';
 
 // Spesa di un budget DENTRO una finestra-periodo esplicita. La finestra effettiva è
@@ -41,8 +40,11 @@ const computeBudgetSpent = async (
   const baseWhere = { userId, type: 'EXPENSE' as const, transferId: null, date: dateFilter };
 
   if (!budget.categoryId) {
+    // Budget globale: esclusa la categoria di sistema "Pagamento Carta" (l'addebito
+    // del ciclo): gli acquisti su carta sono già contati alla loro data, altrimenti
+    // la stessa spesa peserebbe due volte.
     const agg = await prisma.transaction.aggregate({
-      where: baseWhere,
+      where: { ...baseWhere, OR: [{ categoryId: null }, { category: { isSystem: false } }] },
       _sum: { amount: true },
     });
     return Number(agg._sum.amount || 0);
@@ -90,6 +92,17 @@ const budgetPercentage = (spent: number, envelope: number): number => {
 // Tetto di costo: il carry accumula al più sugli ultimi N periodi precedenti.
 const MAX_ROLLOVER_PERIODS = 12;
 
+// Confini del periodo di paga per le finestre PAY_PERIOD, caricati una volta per
+// richiesta e solo se serve. Copertura: riporto (12 periodi) + storico (24) e un
+// margine in avanti. null = periodo di paga non configurato → finestre mensili.
+type PayBoundaries = Date[] | null;
+const payBoundariesFor = async (userId: string, periods: BudgetPeriod[]): Promise<PayBoundaries> => {
+  if (!periods.includes('PAY_PERIOD')) return null;
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth() - 40, 1);
+  return loadPayBoundaries(userId, from, addDays(now, 80), now);
+};
+
 // Carry "entrante" nella finestra corrente: piega le finestre precedenti attive in
 // ordine cronologico. effective(k) = amount + carry(k); remaining = effective − spent;
 //   SURPLUS → carry = max(0, remaining)  (lo sforamento non si riporta)
@@ -108,6 +121,7 @@ const computeCarryIn = async (
     period: BudgetPeriod;
   },
   current: BudgetWindow,
+  pay: PayBoundaries = null,
 ): Promise<number> => {
   if (budget.rollover === 'NONE') return 0;
   const amount = Number(budget.amount);
@@ -123,6 +137,7 @@ const computeCarryIn = async (
     budget.period,
     MAX_ROLLOVER_PERIODS + 1,
     current.periodEnd,
+    pay,
   ).filter(
     (w) =>
       w.periodEnd < current.periodStart && // solo periodi precedenti a quello corrente
@@ -168,11 +183,12 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
     });
 
     // Calcola spesa del periodo CORRENTE per ogni budget (la finestra dipende da `period`).
+    const pay = await payBoundariesFor(userId, budgets.map((b) => b.period));
     const budgetsWithSpent = await Promise.all(
       budgets.map(async (budget) => {
-        const window = currentBudgetWindow(budget.period);
+        const window = currentBudgetWindow(budget.period, new Date(), pay);
         const spent = await computeBudgetSpent(userId, budget, window);
-        const carryIn = await computeCarryIn(userId, budget, window);
+        const carryIn = await computeCarryIn(userId, budget, window, pay);
         const effectiveAmount = Number(budget.amount) + carryIn;
 
         return {
@@ -212,9 +228,10 @@ export const getBudget = async (req: AuthRequest, res: Response) => {
     }
 
     // Calcola spesa del periodo corrente
-    const window = currentBudgetWindow(budget.period);
+    const pay = await payBoundariesFor(userId, [budget.period]);
+    const window = currentBudgetWindow(budget.period, new Date(), pay);
     const spent = await computeBudgetSpent(userId, budget, window);
-    const carryIn = await computeCarryIn(userId, budget, window);
+    const carryIn = await computeCarryIn(userId, budget, window, pay);
     const effectiveAmount = Number(budget.amount) + carryIn;
 
     const budgetWithSpent = {
@@ -256,7 +273,8 @@ export const getBudgetHistory = async (req: AuthRequest, res: Response) => {
     }
 
     const amount = Number(budget.amount);
-    const windows = recentBudgetWindows(budget.period, periods);
+    const pay = await payBoundariesFor(userId, [budget.period]);
+    const windows = recentBudgetWindows(budget.period, periods, new Date(), pay);
 
     // Tieni solo le finestre che intersecano l'intervallo di attività del budget.
     const validWindows = windows.filter(
@@ -274,7 +292,7 @@ export const getBudgetHistory = async (req: AuthRequest, res: Response) => {
     const history = await Promise.all(
       validWindows.map(async (w) => {
         const spent = await computeBudgetSpent(userId, budget, w);
-        const carry = await computeCarryIn(userId, budget, w);
+        const carry = await computeCarryIn(userId, budget, w, pay);
         const budgeted = amount + carry;
         return {
           periodStart: w.periodStart,
@@ -461,290 +479,12 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Budget automatico (Feature B): spendibile mensile + tetti proposti ──────────
-//
-// Riusa gli stessi building-block della previsione (getForecast):
-//   • entrate/impegni del mese via countOccurrences (ricorrenti) + pianificate;
-//   • cuscinetto = liquidità reale BANK al netto del debito dei cicli CC aperti
-//     (getLiquidBalance − debito CC aperto: quella liquidità è già impegnata);
-//   • medie storiche per categoria (split-aware via expandToCategoryLines).
-//
-//   disponibile = entratePreviste + cuscinetto − impegniFissi
-//   spendibile  = disponibile − (max(0, disponibile) × savingRate)
-//
-// Includere il cuscinetto di liquidità è cruciale: un mese a reddito quasi zero non
-// risulta "spendibile negativo" finché c'è liquidità a coprire gli impegni fissi.
+// ── Proposte intelligenti ───────────────────────────────────────────────────
+//   Il calcolo vive in utils/budgetPlan.ts (stessa logica di Proiezione e Analisi:
+//   competenza, periodo di paga, ritmo quotidiano). Qui: parametri, cache e
+//   risparmio (derivato a runtime, così lo slider non invalida la cache).
 
-const SUGG_HIST_MONTHS = 3;
-const STANDARD_CUT = 0.15; // taglio "standard" sulla media storica per il tetto proposto
-
-const round2 = (n: number): number => Math.round(n * 100) / 100;
-
-type BudgetSuggestionItem = {
-  categoryId: string;
-  name: string;
-  icon: string | null;
-  color: string | null;
-  avgMonthly: number;
-  suggestedCap: number;
-  currentBudgetId: string | null;
-  currentAmount: number | null;
-};
-
-// Parte costosa e indipendente da savingRate → cacheabile. savingTarget e spendable
-// si derivano da questa base con savingRate a runtime (così l'override dello slider
-// non richiede invalidazione cache).
-type BudgetSuggestionsBase = {
-  expectedIncome: number;
-  fixedCommitments: number;
-  cushion: number;
-  // Dettaglio per il breakdown UI:
-  //   liquidity      = liquidità pura dei conti (selezionati) — saldo, niente proiezione;
-  //   ccDueThisMonth = quota di fixedCommitments dovuta agli addebiti CC del mese target.
-  // Per il mese prossimo (offset 1) cushion ≠ liquidity: la differenza è la proiezione
-  // dei flussi residui del mese corrente (es. stipendio in arrivo).
-  liquidity: number;
-  ccDueThisMonth: number;
-  // Spese ricorrenti su carta del mese: NON contate nel fisso diretto (vanno nell'addebito
-  // di un ciclo futuro), esposte per avvisare l'utente che torneranno nell'estratto conto.
-  deferredCcMonthly: number;
-  perCategory: BudgetSuggestionItem[];
-};
-
-const computeBudgetSuggestionsBase = async (
-  userId: string,
-  monthOffset = 0,
-  accountIds?: string[],
-): Promise<BudgetSuggestionsBase> => {
-  const now = new Date();
-  // Mese target: corrente (offset 0) o futuro (offset 1 = prossimo). Le proposte
-  // lavorano sul PIANO dell'intero mese (non prorata da oggi).
-  const monthStart = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1, 0, 0, 0, 0);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0, 23, 59, 59, 999);
-
-  // Storico medie: SEMPRE ultimi SUGG_HIST_MONTHS mesi prima di adesso (non shiftato
-  // dall'offset: le medie storiche non dipendono dal mese che stiamo proponendo).
-  const histEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-  const histStart = new Date(now.getFullYear(), now.getMonth() - SUGG_HIST_MONTHS, 1, 0, 0, 0, 0);
-
-  // Filtro conti (item c): se presente, cuscinetto + ricorrenti/pianificate sono
-  // ristretti ai conti selezionati. I flussi SENZA conto (accountId null) sono
-  // inclusi sempre (non attribuibili a un conto, quindi non escludibili).
-  const filtering = Array.isArray(accountIds) && accountIds.length > 0;
-  const selectedSet = new Set(accountIds ?? []);
-  const acctWhere = filtering
-    ? { OR: [{ accountId: { in: accountIds } }, { accountId: null }] }
-    : {};
-
-  const [accounts, recurringActive, plannedMonth, historicalTx, activeBudgets, systemCategories] = await Promise.all([
-    getAccountsWithBalances(userId),
-    // Tutte le ricorrenti attive: il filtro conti (BANK) e l'esclusione delle ricorrenti
-    // su CARTA sono applicati nei loop sotto, non nella query, perché ci serve comunque
-    // sommare le ricorrenti su carta (deferredCcMonthly) per avvisare l'utente.
-    prisma.recurringTransaction.findMany({ where: { userId, isActive: true } }),
-    prisma.plannedTransaction.findMany({
-      where: { userId, isPaid: false, plannedDate: { gte: monthStart, lte: monthEnd }, ...acctWhere },
-    }),
-    prisma.transaction.findMany({
-      where: {
-        userId,
-        type: 'EXPENSE',
-        date: { gte: histStart, lte: histEnd },
-        fromRecurringId: null,
-        transferId: null,
-      },
-      include: {
-        category: { select: { id: true, name: true, icon: true, color: true } },
-        items: { include: { category: { select: { id: true, name: true, icon: true, color: true } } } },
-      },
-    }),
-    prisma.budget.findMany({
-      where: {
-        userId,
-        categoryId: { not: null },
-        startDate: { lte: now },
-        OR: [{ endDate: null }, { endDate: { gte: now } }],
-      },
-      select: { id: true, categoryId: true, amount: true },
-    }),
-    // Categorie di sistema (es. "Pagamento Carta"): da escludere dalle medie per non
-    // gonfiare una categoria con gli addebiti CC (chiude il doppio conteggio settlement).
-    prisma.category.findMany({ where: { userId, isSystem: true }, select: { id: true } }),
-  ]);
-
-  const systemCatIds = new Set(systemCategories.map((c) => c.id));
-  // Conti CARTA: le loro ricorrenti/spese non escono dal conto nel mese in cui cadono,
-  // ma rientrano nell'addebito del ciclo (contato a parte come ccDueThisMonth). Vanno
-  // quindi SEMPRE escluse dal fisso diretto del mese, a prescindere dal filtro conti.
-  const ccAccountIds = new Set(
-    accounts.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id),
-  );
-
-  // Cuscinetto = liquidità BANK reale (NIENTE sottrazione del debito CC qui). Il debito
-  // dei cicli CC aperti è un'uscita FUTURA che cade al prossimo billing day: va contato
-  // come impegno nel mese in cui ricade l'addebito (vedi sotto), esattamente come fa la
-  // proiezione (getProjectedBalance via openCCObligations). Scontarlo sempre dal
-  // cuscinetto caricherebbe il mese corrente di un addebito che invece pesa su quello
-  // successivo. I cicli CC chiusi sono già pianificate (contate negli impegni del mese).
-  //
-  // Con filtro conti sommiamo direttamente i BANK selezionati (NON via getLiquidBalance,
-  // che su set vuoto ricadrebbe sul saldo all-time). Senza filtro riusiamo getLiquidBalance
-  // (che mantiene il fallback per utenti senza conti).
-  const liquid = filtering
-    ? accounts
-        .filter((a) => a.type !== 'CREDIT_CARD' && selectedSet.has(a.id))
-        .reduce((sum, a) => sum + a.balance, 0)
-    : await getLiquidBalance(userId, accounts);
-
-  let cushion = liquid;
-
-  // Cuscinetto PROIETTATO (item b, offset > 0): la liquidità di oggi non contiene ancora
-  // i flussi residui del mese corrente (es. lo stipendio del 23, o un addebito CC dovuto
-  // entro fine mese). Per proporre il mese prossimo proiettiamo il cuscinetto a inizio di
-  // quel mese: entrate residue − impegni residui (ricorrenti + pianificate + addebiti CC
-  // dovuti) nell'intervallo [oggi, fine del mese precedente al target].
-  if (monthOffset > 0) {
-    // Inizio giornata locale (come ogni altro range-start del codebase): un'occorrenza
-    // di OGGI (es. stipendio del giorno stesso non ancora incassato) cade a mezzanotte
-    // e dev'essere inclusa nel cuscinetto residuo, non scartata dal confronto con l'ora.
-    const projStart = new Date(now);
-    projStart.setHours(0, 0, 0, 0);
-    const projEnd = new Date(monthStart.getFullYear(), monthStart.getMonth(), 0, 23, 59, 59, 999);
-
-    const plannedResidual = await prisma.plannedTransaction.findMany({
-      where: { userId, isPaid: false, plannedDate: { gte: projStart, lte: projEnd }, ...acctWhere },
-    });
-
-    let resDelta = 0;
-    for (const rec of recurringActive) {
-      if (rec.accountId && ccAccountIds.has(rec.accountId)) continue; // su carta → addebito
-      if (filtering && rec.accountId && !selectedSet.has(rec.accountId)) continue; // BANK non selezionato
-      const occ = countOccurrences(
-        {
-          frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-          dayOfMonth: rec.dayOfMonth,
-          startDate: rec.startDate,
-          endDate: rec.endDate,
-          amount: rec.amount,
-        },
-        projStart,
-        projEnd,
-      );
-      if (occ === 0) continue;
-      const total = occ * Number(rec.amount);
-      resDelta += rec.type === 'INCOME' ? total : -total;
-    }
-    for (const p of plannedResidual) {
-      resDelta += p.type === 'INCOME' ? Number(p.amount) : -Number(p.amount);
-    }
-    // Addebiti CC dovuti entro fine mese corrente (stessa logica della proiezione). Le CC
-    // non sono tra i conti BANK filtrabili: il loro debito grava comunque sulla liquidità.
-    resDelta -= openCCObligations(accounts, projStart, projEnd, now).total;
-    cushion += resDelta;
-  }
-
-  // Entrate previste e impegni fissi del MESE INTERO (piano, non prorata da oggi)
-  let expectedIncome = 0;
-  let fixedCommitments = 0;
-  // Spese ricorrenti su CARTA che cadono nel mese: non sono fisso diretto (rientrano
-  // nell'addebito di un ciclo futuro), ma le esponiamo per avvisare l'utente.
-  let deferredCcMonthly = 0;
-
-  for (const rec of recurringActive) {
-    const occ = countOccurrences(
-      {
-        frequency: rec.frequency as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-        dayOfMonth: rec.dayOfMonth,
-        startDate: rec.startDate,
-        endDate: rec.endDate,
-        amount: rec.amount,
-      },
-      monthStart,
-      monthEnd,
-    );
-    if (occ === 0) continue;
-    const total = occ * Number(rec.amount);
-    if (rec.accountId && ccAccountIds.has(rec.accountId)) {
-      // Su carta: pagata col prossimo estratto conto, non da questo mese. Le INCOME su
-      // carta (rare, es. cashback) riducono il debito del ciclo, non sono entrate del
-      // conto BANK: volutamente non contate qui né in expectedIncome.
-      if (rec.type === 'EXPENSE') deferredCcMonthly += total;
-      continue;
-    }
-    if (filtering && rec.accountId && !selectedSet.has(rec.accountId)) continue; // BANK non selezionato
-    if (rec.type === 'INCOME') expectedIncome += total;
-    else fixedCommitments += total;
-  }
-
-  for (const p of plannedMonth) {
-    if (p.type === 'INCOME') expectedIncome += Number(p.amount);
-    else fixedCommitments += Number(p.amount);
-  }
-
-  // Addebiti dei cicli CC aperti dovuti NEL MESE TARGET (prossimo billing day dentro
-  // [monthStart, monthEnd]): impegno fisso del mese, come nella proiezione. Il cuscinetto
-  // non li sconta più, quindi non c'è doppio conteggio. I cicli chiusi sono pianificate,
-  // già incluse sopra in fixedCommitments.
-  const ccDueThisMonth = openCCObligations(accounts, monthStart, monthEnd, now).total;
-  fixedCommitments += ccDueThisMonth;
-
-  // ── Medie storiche per categoria (split-aware), escluse le "senza categoria" ──
-  type CatInfo = { name: string; icon: string | null; color: string | null };
-  const catInfo = new Map<string, CatInfo>();
-  const catTotals = new Map<string, number>();
-
-  for (const t of historicalTx) {
-    for (const line of expandToCategoryLines(t)) {
-      if (!line.categoryId) continue;
-      if (systemCatIds.has(line.categoryId)) continue; // addebiti CC: non discrezionali
-      const key = line.categoryId;
-      if (!catInfo.has(key)) {
-        catInfo.set(key, {
-          name: line.category?.name || 'Categoria',
-          icon: line.category?.icon ?? null,
-          color: line.category?.color ?? null,
-        });
-      }
-      catTotals.set(key, (catTotals.get(key) || 0) + line.amount);
-    }
-  }
-
-  const budgetByCat = new Map<string, { id: string; amount: number }>();
-  for (const b of activeBudgets) {
-    if (b.categoryId) budgetByCat.set(b.categoryId, { id: b.id, amount: Number(b.amount) });
-  }
-
-  const perCategory: BudgetSuggestionItem[] = [];
-  catTotals.forEach((total, key) => {
-    const avgMonthly = total / SUGG_HIST_MONTHS;
-    if (avgMonthly < 0.01) return;
-    const info = catInfo.get(key)!;
-    const existing = budgetByCat.get(key) ?? null;
-    perCategory.push({
-      categoryId: key,
-      name: info.name,
-      icon: info.icon,
-      color: info.color,
-      avgMonthly: round2(avgMonthly),
-      suggestedCap: round2(avgMonthly * (1 - STANDARD_CUT)),
-      currentBudgetId: existing ? existing.id : null,
-      currentAmount: existing ? existing.amount : null,
-    });
-  });
-  perCategory.sort((a, b) => b.avgMonthly - a.avgMonthly);
-
-  return {
-    expectedIncome: round2(expectedIncome),
-    fixedCommitments: round2(fixedCommitments),
-    cushion: round2(cushion),
-    liquidity: round2(liquid),
-    ccDueThisMonth: round2(ccDueThisMonth),
-    deferredCcMonthly: round2(deferredCcMonthly),
-    perCategory,
-  };
-};
-
-// GET /budgets/suggestions?savingRate=<override?>&monthOffset=<0|1>&accountIds=<csv?>
+// GET /budgets/suggestions?period=pay|month&offset=0|1&savingRate=&accountIds=<csv>
 export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
@@ -757,11 +497,12 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
       if (Number.isFinite(v) && v >= 0 && v <= 0.9) overrideRate = v;
     }
 
-    // Mese target: 0 = corrente (default), 1 = prossimo (item b).
-    const monthOffset = req.query.monthOffset === '1' ? 1 : 0;
+    const mode = req.query.period === 'month' ? 'month' : 'pay';
+    // offset: 0 = periodo corrente, 1 = successivo (monthOffset accettato per compatibilità).
+    const offset = req.query.offset === '1' || req.query.monthOffset === '1' ? 1 : 0;
 
-    // Conti BANK selezionati (item c): CSV o array ripetuto. Validati come conti BANK
-    // dell'utente; gli id ignoti vengono scartati. Se nessuno valido → nessun filtro.
+    // Conti BANK selezionati: CSV o array ripetuto, validati come conti BANK attivi
+    // dell'utente; gli id ignoti vengono scartati. Nessuno valido → nessun filtro.
     const rawAccts = req.query.accountIds;
     const requested = Array.isArray(rawAccts)
       ? (rawAccts as string[])
@@ -771,40 +512,26 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
     let accountIds: string[] | undefined;
     if (requested.length > 0) {
       const bankAccounts = await prisma.account.findMany({
-        where: { userId, type: 'BANK', id: { in: requested } },
+        where: { userId, type: 'BANK', archivedAt: null, id: { in: requested } },
         select: { id: true },
       });
       const valid = bankAccounts.map((a) => a.id);
       if (valid.length > 0) accountIds = valid;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { savingRate: true },
-    });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { savingRate: true } });
     const savingRate = overrideRate ?? Number(user?.savingRate ?? 0);
 
-    // Cache key per-suffisso: mese + insieme di conti (ordinati per stabilità). La base
-    // NON dipende da savingRate (derivato a runtime), quindi non entra nella chiave.
-    const suffix = `o${monthOffset}${
-      accountIds ? `_a${[...accountIds].sort().join('-')}` : ''
-    }`;
+    const suffix = `${mode}_o${offset}${accountIds ? `_a${[...accountIds].sort().join('-')}` : ''}`;
     const cacheKey = analyticsCache.keys.budgetSuggestions(userId, suffix);
-    let base = analyticsCache.get<BudgetSuggestionsBase>(cacheKey);
-    if (!base) {
-      base = await computeBudgetSuggestionsBase(userId, monthOffset, accountIds);
-      analyticsCache.set(cacheKey, base);
+    let plan = analyticsCache.get<BudgetPlan>(cacheKey);
+    if (!plan) {
+      plan = await computeBudgetPlan(userId, { mode, offset, accountIds });
+      analyticsCache.set(cacheKey, plan);
     }
 
-    // Il risparmio è una quota del disponibile del mese (entrate + cuscinetto −
-    // impegni), non delle sole entrate: così lo slider funziona anche nei mesi a
-    // reddito zero finché c'è liquidità. Clamp a 0 se il disponibile è negativo
-    // (in rosso non si "mette da parte").
-    const disposable = base.expectedIncome + base.cushion - base.fixedCommitments;
-    const savingTarget = round2(Math.max(0, disposable) * savingRate);
-    const spendable = round2(disposable - savingTarget);
-
-    res.json({ ...base, savingRate, savingTarget, spendable, monthOffset });
+    const { savingTarget, spendable } = applySaving(plan.disposable, plan.expectedIncome, savingRate);
+    res.json({ ...plan, savingRate, savingTarget, spendable });
   } catch (error) {
     console.error('Get budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });
@@ -817,7 +544,12 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
 export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { items } = req.body as { items?: Array<{ categoryId?: unknown; amount?: unknown }> };
+    const { items, period: rawPeriod } = req.body as {
+      items?: Array<{ categoryId?: unknown; amount?: unknown }>;
+      period?: unknown;
+    };
+    // Periodo dei budget proposti: quello delle proposte (periodo di paga o mese).
+    const period: BudgetPeriod = rawPeriod === 'PAY_PERIOD' ? 'PAY_PERIOD' : 'MONTHLY';
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Nessun budget da applicare' });
@@ -850,25 +582,29 @@ export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) =>
         startDate: { lte: now },
         OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
-      select: { id: true, categoryId: true },
+      select: { id: true, categoryId: true, period: true },
     });
     const existingByCat = new Map<string, string>();
     for (const b of existing) {
       if (b.categoryId) existingByCat.set(b.categoryId, b.id);
     }
+    // Budget esistenti che cambiano periodo (es. da mensile a periodo di paga):
+    // restituiti al client, che deve poterlo mostrare.
+    const periodChanged = existing.filter((b) => b.period !== period).map((b) => b.categoryId);
 
     const ops = categoryIds.map((categoryId) => {
       const amount = byCat.get(categoryId)!;
       const existingId = existingByCat.get(categoryId);
       if (existingId) {
-        return prisma.budget.update({ where: { id: existingId }, data: { amount } });
+        // Il tetto proposto è calcolato per quel periodo: il budget lo adotta.
+        return prisma.budget.update({ where: { id: existingId }, data: { amount, period } });
       }
       return prisma.budget.create({
         data: {
           name: catName.get(categoryId)!,
           amount,
           categoryId,
-          period: 'MONTHLY',
+          period,
           rollover: 'NONE',
           startDate: now,
           userId,
@@ -879,7 +615,7 @@ export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) =>
     const result = await prisma.$transaction(ops);
     analyticsCache.delPattern(`budget-suggestions:${userId}`);
 
-    res.status(200).json({ applied: result.length });
+    res.status(200).json({ applied: result.length, ...(periodChanged.length > 0 && { periodChanged }) });
   } catch (error) {
     console.error('Apply budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });

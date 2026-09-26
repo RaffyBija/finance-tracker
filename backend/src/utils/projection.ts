@@ -137,7 +137,18 @@ export function buildRhythmEvents(params: {
 // non pagate, sospesi (opt-in) e addebiti dei cicli carta. Fonte unica usata da
 // getProjectionSeries e dalla previsione per periodo di paga (getForecast).
 export type ProjectionSource = 'recurring' | 'planned' | 'cc' | 'sospeso';
-export type FutureEvent = { date: Date; label: string; amount: number; type: 'INCOME' | 'EXPENSE'; source: ProjectionSource };
+// accountId: conto dell'evento (per filtri multi-conto, es. proposte budget).
+// settlement: pianificata di addebito di un ciclo carta (ccAccountId valorizzato):
+//   è il pagamento di acquisti già fatti, non una spesa nuova "per competenza".
+export type FutureEvent = {
+  date: Date;
+  label: string;
+  amount: number;
+  type: 'INCOME' | 'EXPENSE';
+  source: ProjectionSource;
+  accountId?: string | null;
+  settlement?: boolean;
+};
 
 export async function collectProjectionEvents(params: {
   userId: string;
@@ -196,7 +207,13 @@ export async function collectProjectionEvents(params: {
     );
     const amount = Number(rec.amount);
     const isCc = rec.accountId && ccIds.has(rec.accountId);
+    // Occorrenze già eseguite (fino a lastExecutedDate, anche in anticipo) hanno già
+    // la loro transazione reale: contarle di nuovo raddoppierebbe il movimento.
+    const executedUntil = rec.lastExecutedDate
+      ? new Date(rec.lastExecutedDate.getFullYear(), rec.lastExecutedDate.getMonth(), rec.lastExecutedDate.getDate())
+      : null;
     for (const date of occurrences) {
+      if (executedUntil && date <= executedUntil) continue;
       recurringCount += 1;
       if (isCc) {
         ccEvents.push({ cardId: rec.accountId!, date, signed: rec.type === 'INCOME' ? -amount : amount });
@@ -204,7 +221,7 @@ export async function collectProjectionEvents(params: {
       }
       if (rec.type === 'INCOME') projectedIncome  += amount;
       else                       projectedExpense += amount;
-      events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring' });
+      events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring', accountId: rec.accountId });
     }
   }
 
@@ -227,7 +244,10 @@ export async function collectProjectionEvents(params: {
     }
     if (p.type === 'INCOME') projectedIncome  += amount;
     else                     projectedExpense += amount;
-    events.push({ date: p.plannedDate!, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned' });
+    events.push({
+      date: p.plannedDate!, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned',
+      accountId: p.accountId, settlement: !!p.ccAccountId,
+    });
   }
 
   // Sospesi (plannedDate null, opt-in via includeSuspended): nessuna data reale, quindi
@@ -254,7 +274,7 @@ export async function collectProjectionEvents(params: {
       }
       if (s.type === 'INCOME') projectedIncome  += amount;
       else                     projectedExpense += amount;
-      events.push({ date: rangeStart, label: s.description, amount, type: s.type as 'INCOME' | 'EXPENSE', source: 'sospeso' });
+      events.push({ date: rangeStart, label: s.description, amount, type: s.type as 'INCOME' | 'EXPENSE', source: 'sospeso', accountId: s.accountId });
     }
   }
 

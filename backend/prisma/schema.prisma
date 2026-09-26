@@ -328,6 +328,7 @@ enum BudgetPeriod {
   WEEKLY
   MONTHLY
   YEARLY
+  PAY_PERIOD // da stipendio a stipendio (vedi utils/payPeriod.ts)
 }
 
 // Riporto dell'avanzo/sforamento di un budget al periodo successivo.

@@ -8,6 +8,7 @@ import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../api/client';
 import { useToast } from '../../contexts/ToastContext';
+import { usePayPeriod } from '../../hooks/useAnalytics';
 
 interface BudgetSuggestionsModalProps {
   isOpen: boolean;
@@ -16,9 +17,9 @@ interface BudgetSuggestionsModalProps {
 
 type RowState = { selected: boolean; cap: number };
 
-// Soglia "fine mese": se i giorni residui nel mese corrente sono ≤ di questo valore,
-// proporre di default il mese prossimo (un budget mensile per pochi giorni è inutile).
-const NEXT_MONTH_THRESHOLD_DAYS = 7;
+// Soglia "fine periodo": se al termine del periodo corrente mancano ≤ di questi
+// giorni, proporre di default il periodo successivo (un budget per pochi giorni è inutile).
+const NEXT_PERIOD_THRESHOLD_DAYS = 7;
 
 function daysRemainingInMonth(): number {
   const now = new Date();
@@ -26,17 +27,13 @@ function daysRemainingInMonth(): number {
   return lastDay - now.getDate();
 }
 
-// Nome del mese target (offset 0 = corrente, 1 = prossimo), es. "luglio 2026".
-function monthLabel(offset: number): string {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  return d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-}
+type Mode = 'pay' | 'month';
 
-// Cruscotto del budget automatico: calcola lo spendibile del mese (entrate previste
-// + cuscinetto di liquidità − impegni fissi − risparmio target) e propone un tetto
-// per categoria dalle medie storiche. L'utente sceglie quali budget creare/aggiornare
-// e può personalizzare la % di risparmio e ogni tetto prima di applicare.
+// Cruscotto del budget automatico: calcola lo spendibile del periodo (di paga o mese)
+// per competenza (disponibilità netta a inizio periodo + entrate − spese fisse e
+// programmate − risparmio) e propone un tetto per categoria dalla spesa variabile
+// media. L'utente sceglie quali budget creare/aggiornare e può personalizzare la %
+// di risparmio e ogni tetto prima di applicare.
 export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSuggestionsModalProps) {
   const { user, updateUser } = useAuth();
   const { formatCurrency } = useFormatCurrency();
@@ -59,10 +56,17 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     !!selectedAccountIds && selectedAccountIds.length === bankAccounts.length;
   const selectAll = () => setSelectedAccountIds(bankAccounts.map((a) => a.id));
 
-  // Mese target: di default il prossimo se siamo a fine mese, altrimenti il corrente.
-  const [monthOffset, setMonthOffset] = useState<number>(
-    daysRemainingInMonth() <= NEXT_MONTH_THRESHOLD_DAYS ? 1 : 0,
-  );
+  // Periodo: di paga se impostato, altrimenti mese solare.
+  const payConfigured = !!user?.salaryCategoryId || !!user?.payDay;
+  const [mode, setMode] = useState<Mode>(payConfigured ? 'pay' : 'month');
+  const { data: payPeriod } = usePayPeriod(isOpen && mode === 'pay');
+
+  // Periodo target: di default il successivo se quello corrente sta finendo.
+  const [chosenOffset, setChosenOffset] = useState<number | null>(null);
+  const defaultOffset = mode === 'pay'
+    ? (payPeriod && payPeriod.daysToPayday <= NEXT_PERIOD_THRESHOLD_DAYS ? 1 : 0)
+    : (daysRemainingInMonth() <= NEXT_PERIOD_THRESHOLD_DAYS ? 1 : 0);
+  const offset = chosenOffset ?? defaultOffset;
 
   // Tutti i BANK selezionati ⇒ nessun filtro (cache stabile, identico all'overview).
   // Un sottoinsieme stretto ⇒ passa la lista al backend.
@@ -72,12 +76,11 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     return selectedAccountIds;
   }, [selectedAccountIds, bankAccounts.length]);
 
-  const { data, isLoading, isError } = useBudgetSuggestions(
-    undefined,
-    isOpen,
-    monthOffset,
-    accountIdsParam,
-  );
+  const { data, isLoading, isError } = useBudgetSuggestions(undefined, isOpen, {
+    period: mode,
+    offset,
+    accountIds: accountIdsParam,
+  });
 
   // % risparmio come intero 0..90 (slider). La base dei suggerimenti NON dipende da
   // savingRate → lo spendibile si ricalcola lato client senza rifare la query.
@@ -88,7 +91,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   useEffect(() => {
     if (!data) return;
     // Reinizializza solo le righe per-categoria (lo slider resta dove l'utente l'ha
-    // messo, anche cambiando mese o conti).
+    // messo, anche cambiando periodo o conti).
     const init: Record<string, RowState> = {};
     for (const c of data.perCategory) init[c.categoryId] = { selected: true, cap: c.suggestedCap };
     setRows(init);
@@ -107,12 +110,12 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     });
 
   const rate = savingPct / 100;
-  // Risparmio = quota del disponibile (entrate + cuscinetto − impegni), non delle sole
-  // entrate: lo slider funziona anche a reddito zero. Clamp a 0 se in rosso. Allineato
-  // al backend (budget.controller getBudgetSuggestions).
-  const disposable = data ? data.expectedIncome + data.cushion - data.fixedCommitments : 0;
-  const savingTarget = Math.max(0, disposable) * rate;
+  // Risparmio = quota delle ENTRATE del periodo, mai oltre il disponibile (in rosso
+  // non si mette da parte). Allineato al backend (budgetPlan.applySaving).
+  const disposable = data?.disposable ?? 0;
+  const savingTarget = data ? Math.min(Math.max(0, disposable), Math.max(0, data.expectedIncome) * rate) : 0;
   const spendable = disposable - savingTarget;
+  const periodName = data ? data.window.label : '';
 
   const selectedItems = useMemo(
     () => (data ? data.perCategory.filter((c) => rows[c.categoryId]?.selected) : []),
@@ -129,11 +132,10 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   type Warn = { level: 'danger' | 'warning' | 'info'; text: string };
   const warnings: Warn[] = [];
   if (data) {
-    const mese = monthLabel(monthOffset);
     if (data.expectedIncome <= 0.001) {
       warnings.push({
         level: 'danger',
-        text: `Nessuna entrata prevista per ${mese}: lo spendibile arriva tutto dalla liquidità. Spendendolo per intero resti senza riserva.`,
+        text: `Nessuna entrata prevista per ${periodName}: lo spendibile arriva tutto dalla liquidità. Spendendolo per intero resti senza riserva.`,
       });
     } else if (data.expectedIncome < data.fixedCommitments) {
       warnings.push({
@@ -144,13 +146,19 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     if (savingTarget < 0.01 && spendable > 0) {
       warnings.push({
         level: 'warning',
-        text: 'Con il risparmio a 0% lo spendibile azzera il margine di fine mese. Alza la percentuale per trattenere una riserva.',
+        text: 'Con il risparmio a 0% lo spendibile azzera il margine di fine periodo. Alza la percentuale per trattenere una riserva.',
       });
     }
-    if (data.deferredCcMonthly > 0.01) {
+    if (data.offset === 0 && data.variableSpent > spendable + 0.001) {
+      warnings.push({
+        level: 'danger',
+        text: `In questo periodo hai già speso ${formatCurrency(data.variableSpent)} di spese variabili, oltre lo spendibile.`,
+      });
+    }
+    if (mode === 'pay' && !data.payPeriodConfigured) {
       warnings.push({
         level: 'info',
-        text: `Ricorrenti su carta per ${formatCurrency(data.deferredCcMonthly)}/mese: non pesano su questo spendibile, le paghi nell'addebito di un mese successivo.`,
+        text: 'Periodo di paga non impostato (Impostazioni → Preferenze): le proposte usano il mese solare.',
       });
     }
     if (data.liquidity < 0) {
@@ -177,7 +185,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     }
 
     try {
-      await applyMutation.mutateAsync(items);
+      await applyMutation.mutateAsync({ items, period: data?.budgetPeriod ?? 'MONTHLY' });
 
       // Persisti la % risparmio nel profilo (se richiesto e cambiata): non bloccare
       // l'esito dell'apply se la preferenza non si salva.
@@ -202,27 +210,48 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   return (
     <BaseModal isOpen={isOpen} title="Proponi budget" onClose={onClose}>
       <div className="modal-form budget-sugg">
-        {/* Mese target: corrente / prossimo (sempre interattivo) */}
+        {/* Periodo: di paga o mese, corrente o successivo */}
         <div className="form-group">
-          <span className="form-label">Mese da pianificare</span>
-          <div className="budget-sugg-month-seg" role="group" aria-label="Mese da pianificare">
+          <span className="form-label">Periodo da pianificare</span>
+          <div className="budget-sugg-period-row">
+          <div className="budget-sugg-month-seg" role="group" aria-label="Tipo di periodo">
             <button
               type="button"
-              className={`budget-sugg-month-option ${monthOffset === 0 ? 'is-selected' : ''}`}
-              aria-pressed={monthOffset === 0}
-              onClick={() => setMonthOffset(0)}
+              className={`budget-sugg-month-option ${mode === 'pay' ? 'is-selected' : ''}`}
+              aria-pressed={mode === 'pay'}
+              onClick={() => { setMode('pay'); setChosenOffset(null); }}
             >
-              {monthLabel(0)}
+              Periodo di paga
             </button>
             <button
               type="button"
-              className={`budget-sugg-month-option ${monthOffset === 1 ? 'is-selected' : ''}`}
-              aria-pressed={monthOffset === 1}
-              onClick={() => setMonthOffset(1)}
+              className={`budget-sugg-month-option ${mode === 'month' ? 'is-selected' : ''}`}
+              aria-pressed={mode === 'month'}
+              onClick={() => { setMode('month'); setChosenOffset(null); }}
             >
-              {monthLabel(1)}
+              Mese
             </button>
           </div>
+          <div className="budget-sugg-month-seg" role="group" aria-label="Periodo da pianificare">
+            <button
+              type="button"
+              className={`budget-sugg-month-option ${offset === 0 ? 'is-selected' : ''}`}
+              aria-pressed={offset === 0}
+              onClick={() => setChosenOffset(0)}
+            >
+              In corso
+            </button>
+            <button
+              type="button"
+              className={`budget-sugg-month-option ${offset === 1 ? 'is-selected' : ''}`}
+              aria-pressed={offset === 1}
+              onClick={() => setChosenOffset(1)}
+            >
+              Successivo
+            </button>
+          </div>
+          </div>
+          {data && <p className="form-help">Periodo: <strong>{data.window.label}</strong></p>}
         </div>
 
         {/* Selettore conti BANK inclusi nel cuscinetto e nei flussi (item c) */}
@@ -287,47 +316,52 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                 className="budget-sugg-slider"
               />
               <p className="form-help">
-                Consigliato 10–20%. Una percentuale alta riduce molto lo spendibile del mese.
+                Quota delle entrate del periodo da mettere da parte. Consigliato 10–20%.
               </p>
             </div>
 
             <div className="budget-sugg-breakdown">
               <div className="budget-sugg-line">
-                <span>{allSelected ? 'Liquidità conti' : 'Liquidità conti selezionati'}</span>
-                <span>{formatCurrency(data.liquidity)}</span>
-              </div>
-              {monthOffset === 1 && (
-                <div className="budget-sugg-line">
-                  <span>In arrivo entro fine {monthLabel(0)}</span>
-                  <span>
-                    {data.cushion - data.liquidity >= 0 ? '+' : '−'}
-                    {formatCurrency(Math.abs(data.cushion - data.liquidity))}
+                <span>
+                  Disponibile a inizio periodo
+                  <span className="budget-sugg-subnote">
+                    oggi {formatCurrency(data.liquidity)} sui conti
+                    {data.ccDebt > 0 ? `, ${formatCurrency(data.ccDebt)} di debito carte` : ''}
+                    {data.gap
+                      ? `; stima fino all'inizio: −${formatCurrency(data.gap.fixed)} di impegni, −${formatCurrency(data.gap.variable)} di spese variabili${data.gap.income > 0 ? `, +${formatCurrency(data.gap.income)} di entrate` : ''}`
+                      : ''}
                   </span>
-                </div>
-              )}
+                </span>
+                <span>{formatCurrency(data.netStart)}</span>
+              </div>
               <div className="budget-sugg-line">
-                <span>Entrate previste ({monthLabel(monthOffset)})</span>
+                <span>Entrate del periodo</span>
                 <span>+{formatCurrency(data.expectedIncome)}</span>
               </div>
               <div className="budget-sugg-line budget-sugg-line-neg">
                 <span>
-                  Impegni fissi
-                  {data.ccDueThisMonth > 0 && (
-                    <span className="budget-sugg-subnote">
-                      incl. carta {formatCurrency(data.ccDueThisMonth)}
-                    </span>
-                  )}
+                  Spese fisse e programmate
+                  <span className="budget-sugg-subnote">ricorrenti, pianificate e rate, anche su carta</span>
                 </span>
                 <span>−{formatCurrency(data.fixedCommitments)}</span>
               </div>
               <div className="budget-sugg-line budget-sugg-line-neg">
-                <span>Risparmio ({savingPct}%)</span>
+                <span>Risparmio ({savingPct}% delle entrate)</span>
                 <span>−{formatCurrency(savingTarget)}</span>
               </div>
               <div className="budget-sugg-spendable">
-                <span>Spendibile per {monthLabel(monthOffset)}</span>
+                <span>Spendibile nel periodo</span>
                 <span className="budget-sugg-spendable-amount">{formatCurrency(spendable)}</span>
               </div>
+              {data.offset === 0 && (
+                <div className="budget-sugg-line">
+                  <span>
+                    Già speso in variabili
+                    <span className="budget-sugg-subnote">restano {formatCurrency(spendable - data.variableSpent)}</span>
+                  </span>
+                  <span>{formatCurrency(data.variableSpent)}</span>
+                </div>
+              )}
             </div>
 
             {warnings.length > 0 && (
@@ -352,7 +386,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
             ) : (
               <>
                 <div className="budget-sugg-cats-head">
-                  <span>Budget proposti dalle tue medie</span>
+                  <span>Budget proposti dalla tua spesa variabile media</span>
                   <span className={overspend ? 'budget-sugg-total over' : 'budget-sugg-total'}>
                     {formatCurrency(selectedTotal)} / {formatCurrency(spendable)}
                   </span>
@@ -388,15 +422,22 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                         </label>
 
                         <span className="budget-sugg-meta">
-                          <span className="budget-sugg-avg">media {formatCurrency(c.avgMonthly)}</span>
+                          <span className="budget-sugg-avg">media {formatCurrency(c.avgPerPeriod)} per periodo</span>
                           <span
                             className={
                               c.currentBudgetId
                                 ? 'budget-sugg-badge'
                                 : 'budget-sugg-badge is-new'
                             }
+                            title={
+                              c.currentBudgetId && c.currentPeriod !== data.budgetPeriod
+                                ? `Il budget attuale diventerà ${data.budgetPeriod === 'PAY_PERIOD' ? 'per periodo di paga' : 'mensile'}`
+                                : undefined
+                            }
                           >
-                            {c.currentBudgetId ? 'aggiorna' : 'nuovo'}
+                            {c.currentBudgetId
+                              ? c.currentPeriod !== data.budgetPeriod ? 'aggiorna e cambia periodo' : 'aggiorna'
+                              : 'nuovo'}
                           </span>
                         </span>
 

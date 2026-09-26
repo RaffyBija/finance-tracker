@@ -119,3 +119,31 @@ describe('budgetWindowLabel', () => {
     expect(budgetWindowLabel(w, 'WEEKLY')).toBe('13–19 lug 2026');
   });
 });
+
+describe('PAY_PERIOD', () => {
+  const B = [new Date(2026, 7, 24), new Date(2026, 8, 24), new Date(2026, 9, 23), new Date(2026, 10, 23)];
+
+  it('finestra tra due accrediti (fine = giorno prima del successivo)', () => {
+    const w = budgetWindowFor(new Date(2026, 9, 1, 15), 'PAY_PERIOD', B);
+    expect(w.periodStart).toEqual(new Date(2026, 8, 24, 0, 0, 0, 0));
+    expect(w.periodEnd).toEqual(new Date(2026, 9, 22, 23, 59, 59, 999));
+    expect(budgetWindowLabel(w, 'PAY_PERIOD')).toBe('24 set – 22 ott 2026');
+  });
+
+  it('il giorno dell\'accredito apre il periodo nuovo', () => {
+    const w = budgetWindowFor(new Date(2026, 9, 23, 8), 'PAY_PERIOD', B);
+    expect(w.periodStart).toEqual(new Date(2026, 9, 23, 0, 0, 0, 0));
+  });
+
+  it('finestre recenti in ordine cronologico', () => {
+    const ws = recentBudgetWindows('PAY_PERIOD', 2, new Date(2026, 9, 1), B);
+    expect(ws.map((w) => w.periodStart.getDate())).toEqual([24, 24]);
+    expect(ws[0].periodStart.getMonth()).toBe(7);
+  });
+
+  it('senza confini (periodo di paga non impostato) si comporta come MONTHLY', () => {
+    const w = budgetWindowFor(new Date(2026, 9, 10), 'PAY_PERIOD', null);
+    expect(w).toEqual(budgetWindowFor(new Date(2026, 9, 10), 'MONTHLY'));
+    expect(budgetWindowLabel(w, 'PAY_PERIOD')).toBe('ottobre 2026');
+  });
+});

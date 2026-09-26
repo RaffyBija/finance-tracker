@@ -285,3 +285,76 @@ export function payPeriodsForAnalysis(info: PayPeriodInfo): AnalysisPeriod[] {
     { start: info.start, end: info.nextPayday, isCurrent: true },
   ];
 }
+
+// ── Calendario dei periodi di paga (per le finestre dei budget PAY_PERIOD) ───
+//
+//   Una sequenza ordinata di "confini" (giorni di accredito, 00:00): la finestra
+//   i-esima è [confine_i, confine_i+1). Confini = accrediti reali passati +
+//   prossimo accredito atteso; i buchi (> MAX_PERIOD_DAYS, es. mesi senza
+//   stipendio) e gli estremi fino a [from, to] si completano col payDay (o, senza
+//   payDay, con lo stesso giorno del mese precedente/successivo).
+
+// Passo avanti di un periodo da un confine.
+const stepForward = (b: Date, payDay: number | null): Date =>
+  payDay !== null
+    ? nextPayDayAfter(addDays(b, MIN_PERIOD_DAYS - 1), payDay)
+    : clampedDate(b.getFullYear(), b.getMonth() + 1, b.getDate());
+
+// Passo indietro di un periodo da un confine.
+const stepBack = (b: Date, payDay: number | null): Date =>
+  payDay !== null
+    ? prevPayDayOnOrBefore(addDays(b, -MIN_PERIOD_DAYS), payDay)
+    : clampedDate(b.getFullYear(), b.getMonth() - 1, b.getDate());
+
+// Funzione PURA (testabile).
+export function buildPayBoundaries(input: {
+  paydays: Date[];     // accrediti reali passati (già accorpati)
+  nextPayday: Date;
+  payDay: number | null;
+  from: Date;
+  to: Date;
+}): Date[] {
+  const payDay = input.payDay && input.payDay >= 1 && input.payDay <= 31 ? input.payDay : null;
+  const base = [...input.paydays.map(startOfDay), startOfDay(input.nextPayday)]
+    .sort((a, b) => a.getTime() - b.getTime())
+    .filter((d, i, arr) => i === 0 || daysBetween(arr[i - 1], d) > SAME_PAYDAY_DAYS);
+
+  // Riempie i buchi troppo lunghi tra confini consecutivi.
+  const filled: Date[] = [];
+  for (let i = 0; i < base.length; i++) {
+    filled.push(base[i]);
+    const next = base[i + 1];
+    if (!next) break;
+    let cur = base[i];
+    while (daysBetween(cur, next) > MAX_PERIOD_DAYS) {
+      const step = stepForward(cur, payDay);
+      if (daysBetween(step, next) < MIN_PERIOD_DAYS) break;
+      filled.push(step);
+      cur = step;
+    }
+  }
+
+  const from = startOfDay(input.from);
+  const to = startOfDay(input.to);
+  while (filled[0] > from) filled.unshift(stepBack(filled[0], payDay));
+  while (filled[filled.length - 1] <= to) filled.push(stepForward(filled[filled.length - 1], payDay));
+  return filled;
+}
+
+// Confini dal DB. null = periodo di paga non configurato (chi lo usa ricade sul mese).
+export async function loadPayBoundaries(userId: string, from: Date, to: Date, now: Date = new Date()): Promise<Date[] | null> {
+  const info = await loadPayPeriod(userId, now);
+  if (!info.configured) return null;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { salaryCategoryId: true, payDay: true } });
+  const salaryDates = user?.salaryCategoryId
+    ? (await prisma.transaction.findMany({
+        where: {
+          userId, type: 'INCOME', categoryId: user.salaryCategoryId, transferId: null,
+          date: { gte: addDays(from, -MAX_PERIOD_DAYS), lte: now },
+        },
+        select: { date: true },
+      })).map((t) => t.date)
+    : [];
+  const paydays = clusterPaydays(salaryDates).filter((d) => d <= startOfDay(now) && d < info.nextPayday);
+  return buildPayBoundaries({ paydays, nextPayday: info.nextPayday, payDay: user?.payDay ?? null, from, to });
+}

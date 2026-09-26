@@ -7,6 +7,7 @@ import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export default function BudgetFormModal({
   const createMutation = useCreateBudget();
   const updateMutation = useUpdateBudget();
   const toast = useToast();
+  const { user } = useAuth();
+  const payConfigured = !!user?.salaryCategoryId || !!user?.payDay;
 
   const [formData, setFormData] = useState<CreateBudgetDTO>({
     name: '',
@@ -176,10 +179,14 @@ export default function BudgetFormModal({
             <option value="WEEKLY">Settimanale</option>
             <option value="MONTHLY">Mensile</option>
             <option value="YEARLY">Annuale</option>
+            <option value="PAY_PERIOD">Periodo di paga</option>
           </select>
           <p className="form-help">
-            Il budget si azzera automaticamente a ogni periodo. Lo storico di ogni
-            periodo resta consultabile dal dettaglio.
+            {formData.period === 'PAY_PERIOD'
+              ? payConfigured
+                ? 'Si azzera a ogni stipendio: il periodo va da un accredito al successivo.'
+                : 'Periodo di paga non impostato (Impostazioni → Preferenze): finché non lo imposti il budget segue il mese solare.'
+              : 'Il budget si azzera automaticamente a ogni periodo. Lo storico di ogni periodo resta consultabile dal dettaglio.'}
           </p>
         </div>
 
