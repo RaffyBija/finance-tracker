@@ -3,6 +3,9 @@ import prisma from '../utils/prisma';
 import { AuthRequest, CreateInstallmentPlanDTO, PayInstallmentsDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser } from '../utils/ownership';
+import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+
+class AlreadyPaidError extends Error {}
 
 // La direzione del piano determina il tipo delle rate:
 // DEBT → EXPENSE (uscite future), CREDIT → INCOME (entrate attese).
@@ -151,7 +154,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
       notes,
       categoryId,
       accountId,
-      ccAccountId,
       installments,
     }: CreateInstallmentPlanDTO = req.body;
 
@@ -180,10 +182,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
     if (accountId && !(await accountBelongsToUser(accountId, userId))) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
-    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
-      return res.status(404).json({ error: 'Carta di credito non trovata' });
-    }
-
     const cleanTitle = title.trim();
     const total = installments.length;
     const totalAmount = installments.reduce((s, r) => s + Number(r.amount), 0);
@@ -198,7 +196,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
           notes: notes ?? null,
           categoryId: categoryId ?? null,
           accountId: accountId ?? null,
-          ccAccountId: ccAccountId ?? null,
         },
       });
 
@@ -212,7 +209,6 @@ export const createInstallmentPlan = async (req: AuthRequest, res: Response) => 
           notes: r.notes ?? null,
           userId,
           accountId: accountId ?? null,
-          ccAccountId: ccAccountId ?? null,
           planId: plan.id,
           counterparty: r.counterparty ?? null,
         })),
@@ -240,7 +236,7 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
   try {
     const userId = req.userId!;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { title, notes, categoryId, accountId, ccAccountId, installments } = req.body;
+    const { title, notes, categoryId, accountId, installments } = req.body;
 
     const existing = await prisma.installmentPlan.findFirst({
       where: { id, userId },
@@ -260,10 +256,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
     if (accountId && !(await accountBelongsToUser(accountId, userId))) {
       return res.status(404).json({ error: 'Conto non trovato' });
     }
-    if (ccAccountId && !(await accountBelongsToUser(ccAccountId, userId))) {
-      return res.status(404).json({ error: 'Carta di credito non trovata' });
-    }
-
     // Se vengono passate nuove rate, validale prima di toccare il DB.
     if (installments !== undefined) {
       if (!Array.isArray(installments) || installments.length === 0) {
@@ -287,7 +279,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
           ...(notes !== undefined && { notes: notes ?? null }),
           ...(categoryId !== undefined && { categoryId: categoryId || null }),
           ...(accountId !== undefined && { accountId: accountId || null }),
-          ...(ccAccountId !== undefined && { ccAccountId: ccAccountId || null }),
         },
       });
 
@@ -306,7 +297,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
             notes: r.notes ?? null,
             userId,
             accountId: accountId !== undefined ? (accountId || null) : existing.accountId,
-            ccAccountId: ccAccountId !== undefined ? (ccAccountId || null) : existing.ccAccountId,
             planId: id,
             counterparty: r.counterparty ?? null,
           })),
@@ -316,7 +306,6 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
         const propagate: Record<string, unknown> = {};
         if (categoryId !== undefined) propagate.categoryId = categoryId || null;
         if (accountId !== undefined) propagate.accountId = accountId || null;
-        if (ccAccountId !== undefined) propagate.ccAccountId = ccAccountId || null;
         if (Object.keys(propagate).length > 0) {
           await tx.plannedTransaction.updateMany({ where: { planId: id, isPaid: false }, data: propagate });
         }
@@ -423,10 +412,13 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      await tx.plannedTransaction.updateMany({
-        where: { id: { in: plannedIds } },
+      // Guard isPaid:false: un pagamento concorrente delle stesse rate annulla
+      // l'intera operazione (niente seconda transazione per rate già pagate).
+      const marked = await tx.plannedTransaction.updateMany({
+        where: { id: { in: plannedIds }, isPaid: false },
         data: { isPaid: true },
       });
+      if (marked.count !== plannedIds.length) throw new AlreadyPaidError();
 
       const remaining = await tx.plannedTransaction.count({ where: { planId, isPaid: false } });
       if (remaining === 0) {
@@ -435,6 +427,16 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
 
       return created;
     });
+
+    // Rate su CC datate in un ciclo già chiuso → aggiorna l'addebito del ciclo.
+    if (transaction.accountId) {
+      const ccTouched = await reconcileCcChanges(userId, [{
+        accountId: transaction.accountId,
+        date: transaction.date,
+        signed: debtContribution(transaction.type, Number(transaction.amount)),
+      }]);
+      if (ccTouched) analyticsCache.onPlannedMutated(userId);
+    }
 
     analyticsCache.onPlannedPaid(userId);
     res.json({
@@ -446,6 +448,9 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
           : `${rate.length} rate pagate in un'unica transazione`,
     });
   } catch (error) {
+    if (error instanceof AlreadyPaidError) {
+      return res.status(409).json({ error: 'Alcune rate risultano già pagate' });
+    }
     console.error('Pay installments error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }

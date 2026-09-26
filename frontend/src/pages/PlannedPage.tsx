@@ -4,11 +4,14 @@ import {
   usePlannedTransactions,
   useSuspendedTransactions,
   useDeletePlanned,
-  useMarkAsPaid,
 } from "../hooks/usePlannedTransactions";
 import { useCategories } from "../hooks/useCategories";
 import { useFormModal } from "../hooks/useFormModal";
 import PageHeader from "../components/shared/PageHeader";
+import DueBanner from "../components/due/DueBanner";
+import { useDueReview } from "../components/due/DueReviewProvider";
+import { plannedToEntry, todayLocal } from "../components/due/dueEntries";
+import { useAccounts } from "../hooks/useAccounts";
 import {
   SkeletonPageHeader,
   SkeletonList,
@@ -17,19 +20,26 @@ import PlannedFilters from "../components/planned/PlannedFilters";
 import PlannedList from "../components/planned/PlannedList";
 import SuspendedList from "../components/planned/SuspendedList";
 import PlannedFormModal from "../components/planned/PlannedFormModal";
-import PlannedMarkAsPaidModal from "../components/planned/PlannedMarkAsPaidModal";
 import ConfirmModal from "../components/shared/ConfirmModal";
 import type { PlannedTransaction } from "../types";
 import { useToast } from "../contexts/ToastContext";
+
+// "Segna come pagata" (pianificate, Sospesi, anche future) apre il popup unico
+// "Scadenze da registrare" su quella voce: stessa UI e stessa scelta della data
+// effettiva ovunque si registri una scadenza.
+function useOpenPlannedRegistration() {
+  const { openDueEntries } = useDueReview();
+  const { data: accounts = [] } = useAccounts();
+  return (item: PlannedTransaction) => openDueEntries([plannedToEntry(item, accounts, todayLocal())]);
+}
 
 export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { planned, categories, isLoading, filterStatus, setFilterStatus } =
     usePlannedTransactions();
   const deleteMutation = useDeletePlanned();
-  const markAsPaidMutation = useMarkAsPaid();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<PlannedTransaction>();
-  const [markingPaidItem, setMarkingPaidItem] = useState<PlannedTransaction | null>(null);
+  const openMarkAsPaid = useOpenPlannedRegistration();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
@@ -45,17 +55,6 @@ export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean }
     }
   };
 
-  const handleConfirmMarkAsPaid = async (date?: string) => {
-    if (!markingPaidItem) return;
-    try {
-      await markAsPaidMutation.mutateAsync({ id: markingPaidItem.id, date });
-      toast.success("Segnata come pagata");
-      setMarkingPaidItem(null);
-    } catch {
-      toast.error("Errore nel salvataggio");
-    }
-  };
-
   const body = (
     <>
       {isLoading ? (
@@ -66,6 +65,7 @@ export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean }
       ) : (
         <>
           {!embedded && <PageHeader title="Pianificati" />}
+          <DueBanner kinds={['planned', 'cc']} noun={['pianificata', 'pianificate']} />
           <PlannedFilters
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
@@ -74,7 +74,7 @@ export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean }
             planned={planned}
             onEdit={openEditModal}
             onDelete={setDeletingId}
-            onMarkAsPaid={setMarkingPaidItem}
+            onMarkAsPaid={openMarkAsPaid}
             onOpenModal={openModal}
           />
         </>
@@ -94,13 +94,6 @@ export const PlannedTransactions = ({ embedded = false }: { embedded?: boolean }
         categories={categories}
         onClose={closeModal}
         onSuccess={() => {}}
-      />
-
-      <PlannedMarkAsPaidModal
-        item={markingPaidItem}
-        isPending={markAsPaidMutation.isPending}
-        onConfirm={handleConfirmMarkAsPaid}
-        onClose={() => setMarkingPaidItem(null)}
       />
 
       <ConfirmModal
@@ -125,10 +118,9 @@ export const SuspendedTransactions = ({ embedded = false }: { embedded?: boolean
   const { data: planned = [], isLoading } = useSuspendedTransactions();
   const { data: categories = [] } = useCategories();
   const deleteMutation = useDeletePlanned();
-  const markAsPaidMutation = useMarkAsPaid();
   const { isOpen, editingItem, openModal, openEditModal, closeModal } =
     useFormModal<PlannedTransaction>();
-  const [markingPaidItem, setMarkingPaidItem] = useState<PlannedTransaction | null>(null);
+  const openMarkAsPaid = useOpenPlannedRegistration();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
@@ -141,17 +133,6 @@ export const SuspendedTransactions = ({ embedded = false }: { embedded?: boolean
       setDeletingId(null);
     } catch {
       toast.error("Errore nell'eliminazione");
-    }
-  };
-
-  const handleConfirmMarkAsPaid = async (date?: string) => {
-    if (!markingPaidItem) return;
-    try {
-      await markAsPaidMutation.mutateAsync({ id: markingPaidItem.id, date });
-      toast.success("Segnata come pagata");
-      setMarkingPaidItem(null);
-    } catch {
-      toast.error("Errore nel salvataggio");
     }
   };
 
@@ -169,7 +150,7 @@ export const SuspendedTransactions = ({ embedded = false }: { embedded?: boolean
             planned={planned}
             onEdit={openEditModal}
             onDelete={setDeletingId}
-            onMarkAsPaid={setMarkingPaidItem}
+            onMarkAsPaid={openMarkAsPaid}
             onOpenModal={openModal}
           />
         </>
@@ -189,13 +170,6 @@ export const SuspendedTransactions = ({ embedded = false }: { embedded?: boolean
         onClose={closeModal}
         onSuccess={() => {}}
         defaultNoDate
-      />
-
-      <PlannedMarkAsPaidModal
-        item={markingPaidItem}
-        isPending={markAsPaidMutation.isPending}
-        onConfirm={handleConfirmMarkAsPaid}
-        onClose={() => setMarkingPaidItem(null)}
       />
 
       <ConfirmModal

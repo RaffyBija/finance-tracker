@@ -67,6 +67,10 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [accountId, setAccountId] = useState('');
+  // Modalità di pagamento: DIRECT = domiciliazione su un conto fisso (entra nella
+  // proiezione di quel conto); MANUAL = bollettino/F24/bonifico, il conto si
+  // sceglie a ogni registrazione. Nel DB: MANUAL ⇔ accountId null sul piano.
+  const [payMode, setPayMode] = useState<'DIRECT' | 'MANUAL'>('DIRECT');
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<RateRow[]>([blankRow()]);
   // Generatore rate (solo creazione): totale da dividere, numero rate, prima
@@ -91,6 +95,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
       setTitle(editingItem.title);
       setCategoryId(editingItem.categoryId ?? '');
       setAccountId(editingItem.accountId ?? defaultAccount?.id ?? '');
+      setPayMode(editingItem.accountId ? 'DIRECT' : 'MANUAL');
       setNotes(editingItem.notes ?? '');
       const unpaid = editingItem.installments
         .filter((r) => !r.isPaid)
@@ -106,6 +111,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
       setTitle('');
       setCategoryId('');
       setAccountId(defaultAccount?.id ?? '');
+      setPayMode('DIRECT');
       setNotes('');
       setRows([blankRow()]);
     }
@@ -180,7 +186,8 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
           data: {
             title: title.trim(),
             categoryId: categoryId || undefined,
-            accountId: accountId || undefined,
+            // '' (non undefined) azzera il conto passando a pagamento manuale.
+            accountId: payMode === 'DIRECT' ? accountId : '',
             notes: notes.trim() || undefined,
             installments,
           },
@@ -191,7 +198,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
           direction,
           title: title.trim(),
           categoryId: categoryId || undefined,
-          accountId: accountId || undefined,
+          accountId: payMode === 'DIRECT' ? accountId || undefined : undefined,
           notes: notes.trim() || undefined,
           installments,
         });
@@ -249,30 +256,55 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
           />
         </div>
 
-        <div className="modal-form-row">
-          <div className="form-group">
-            <label className="form-label">Categoria (opzionale)</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="form-select"
-            >
-              <option value="">Nessuna categoria</option>
-              {filteredCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {accounts.length > 1 && (
-            <AccountSelector
-              accounts={accounts}
-              value={accountId}
-              onChange={setAccountId}
-              label={direction === 'CREDIT' ? 'Conto di accredito' : 'Conto di addebito'}
-            />
-          )}
+        <div className="form-group">
+          <label className="form-label">Categoria (opzionale)</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="form-select"
+          >
+            <option value="">Nessuna categoria</option>
+            {filteredCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+            ))}
+          </select>
         </div>
+
+        <div className="form-group">
+          <label className="form-label">Pagamento</label>
+          <div className="form-button-group">
+            <button
+              type="button"
+              onClick={() => setPayMode('DIRECT')}
+              className={`btn-toggle ${payMode === 'DIRECT' ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}
+            >
+              {direction === 'CREDIT' ? 'Accredito diretto' : 'Addebito diretto'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPayMode('MANUAL')}
+              className={`btn-toggle ${payMode === 'MANUAL' ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}
+            >
+              {direction === 'CREDIT' ? 'Incasso manuale' : 'Pagamento manuale'}
+            </button>
+          </div>
+          <p className="form-help">
+            {payMode === 'DIRECT'
+              ? direction === 'CREDIT'
+                ? 'Le rate arrivano sempre sullo stesso conto (es. bonifico periodico).'
+                : 'Le rate vengono addebitate sempre sullo stesso conto (es. finanziamento con domiciliazione).'
+              : 'Nessun conto fisso (es. bollettino, F24): lo indichi ogni volta che registri il pagamento.'}
+          </p>
+        </div>
+
+        {payMode === 'DIRECT' && accounts.length > 1 && (
+          <AccountSelector
+            accounts={accounts}
+            value={accountId}
+            onChange={setAccountId}
+            label={direction === 'CREDIT' ? 'Conto di accredito' : 'Conto di addebito'}
+          />
+        )}
 
         {/* ── Editor rate ── */}
         <div className="form-group">

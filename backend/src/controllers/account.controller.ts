@@ -13,7 +13,6 @@ import {
   closeConcludedCycles,
 } from '../utils/billingCycle';
 import { getAccountsWithBalances } from '../utils/balance';
-import { ensureSettlementCategory } from '../utils/settlementCategory';
 
 const MAX_FREE_ACCOUNTS = 3;
 const MAX_PRO_ACCOUNTS  = 10;
@@ -310,84 +309,6 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const settleAccount = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-
-    const account = await prisma.account.findFirst({ where: { id, userId } });
-    if (!account) return res.status(404).json({ error: 'Conto non trovato' });
-    if (account.type !== 'CREDIT_CARD') return res.status(400).json({ error: 'Solo le carte di credito possono essere saldate' });
-    if (!account.linkedAccountId) return res.status(400).json({ error: 'Nessun conto bancario collegato per l\'addebito' });
-
-    const linkedAccount = await prisma.account.findFirst({ where: { id: account.linkedAccountId, userId } });
-    if (!linkedAccount) return res.status(400).json({ error: 'Conto collegato non trovato' });
-
-    const now = new Date();
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-    // Salda i pagamenti dovuti: le pianificate di billing dei cicli CHIUSI non
-    // ancora pagate e scadute (plannedDate ≤ oggi).
-    const duePlanned = await prisma.plannedTransaction.findMany({
-      where: { userId, ccAccountId: account.id, isPaid: false, plannedDate: { lte: endOfToday } },
-    });
-
-    const debtAmount = duePlanned.reduce((sum, p) => sum + Number(p.amount), 0);
-    if (debtAmount <= 0) return res.status(400).json({ error: 'Nessun addebito da saldare' });
-
-    const monthYear = now.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-
-    // L'addebito reale usa di DEFAULT la categoria di sistema "Pagamento Carta"
-    // (così è sempre categorizzato e tracciabile); il categoryId del body resta un
-    // override esplicito facoltativo, validato come categoria EXPENSE dell'utente.
-    const { categoryId } = req.body;
-    if (categoryId) {
-      const category = await prisma.category.findFirst({ where: { id: categoryId, userId } });
-      if (!category) return res.status(404).json({ error: 'Categoria non trovata' });
-      if (category.type !== 'EXPENSE') return res.status(400).json({ error: 'La categoria deve essere di tipo Uscita' });
-    }
-    const settlementCategoryId = categoryId || (await ensureSettlementCategory(userId));
-
-    // Crea l'addebito reale sul conto bancario e marca pagate le pianificate.
-    const [bankTransaction] = await prisma.$transaction([
-      prisma.transaction.create({
-        data: {
-          amount: debtAmount,
-          type: 'EXPENSE',
-          description: `Addebito ${account.name} - ${monthYear}`,
-          date: now,
-          userId,
-          accountId: linkedAccount.id,
-          categoryId: settlementCategoryId,
-        },
-      }),
-      prisma.plannedTransaction.updateMany({
-        where: { id: { in: duePlanned.map((p) => p.id) } },
-        data: { isPaid: true },
-      }),
-    ]);
-
-    analyticsCache.onTransactionMutated(userId);
-    analyticsCache.onPlannedMutated(userId);
-
-    res.status(201).json({
-      transaction: { ...bankTransaction, amount: Number(bankTransaction.amount) },
-      settledAmount: debtAmount,
-    });
-  } catch (error) {
-    console.error('Settle account error:', error);
-    res.status(500).json({ error: 'Errore del server' });
-  }
-};
-
-// Chiude il ciclo di billing della CC.
-//   • Determina il ciclo che si conclude (quello che chiude oggi sul closingDay,
-//     o il ciclo già concluso ancora aperto se chiamato dopo).
-//   • Calcola il debito dalle transazioni nella finestra del ciclo.
-//   • Crea/collega la PlannedTransaction (pagamento) dovuta al billingDay.
-//   • Marca il ciclo CLOSED e apre il ciclo successivo.
-// Non manipola più openingBalance: il saldo carta si ricalcola dal solo ciclo aperto.
-// Idempotente: se il ciclo è già chiuso non duplica nulla.
 export const closeBillingCycle = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;

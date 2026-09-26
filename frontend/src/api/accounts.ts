@@ -30,11 +30,6 @@ export const accountsAPI = {
     await api.patch(`/accounts/${id}/default`);
   },
 
-  settle: async (id: string, categoryId?: string): Promise<{ settledAmount: number }> => {
-    const { data } = await api.post<{ settledAmount: number }>(`/accounts/${id}/settle`, { categoryId });
-    return data;
-  },
-
   closeBillingCycle: async (id: string): Promise<{ cycled: boolean; debtAmount?: number; billingDate?: string; cycleLabel?: string; alreadyClosed?: boolean }> => {
     const { data } = await api.post(`/accounts/${id}/close-billing-cycle`);
     return data;
