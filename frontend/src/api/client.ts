@@ -10,6 +10,8 @@ import type {
   CreateTransferDTO,
   Category,
   CreateCategoryDTO,
+  CategoryUsage,
+  OrganizePreview,
   UpdateCategoryDTO,
   Summary,
   CategoryStat,
@@ -201,7 +203,7 @@ export const transactionAPI = {
 
 // Category API
 export const categoryAPI = {
-  getAll: async (params?: { type?: string }): Promise<Category[]> => {
+  getAll: async (params?: { type?: string; includeArchived?: boolean }): Promise<Category[]> => {
     const { data } = await api.get<Category[]>("/categories", { params });
     return data;
   },
@@ -224,8 +226,44 @@ export const categoryAPI = {
     return data;
   },
 
-  delete: async (id: string): Promise<void> => {
-    await api.delete(`/categories/${id}`);
+  // targetId: dove spostare movimenti, scadenze e budget (obbligatorio se in uso).
+  delete: async (id: string, targetId?: string): Promise<{ message: string }> => {
+    const { data } = await api.delete(`/categories/${id}`, { params: targetId ? { targetId } : undefined });
+    return data;
+  },
+
+  usage: async (id: string): Promise<CategoryUsage> => {
+    const { data } = await api.get<CategoryUsage>(`/categories/${id}/usage`);
+    return data;
+  },
+
+  merge: async (id: string, targetId: string): Promise<{ message: string }> => {
+    const { data } = await api.post(`/categories/${id}/merge`, { targetId });
+    return data;
+  },
+
+  archive: async (id: string): Promise<{ message: string }> => {
+    const { data } = await api.post(`/categories/${id}/archive`);
+    return data;
+  },
+
+  restore: async (id: string): Promise<{ message: string }> => {
+    const { data } = await api.post(`/categories/${id}/restore`);
+    return data;
+  },
+
+  reorder: async (ids: string[]): Promise<void> => {
+    await api.post('/categories/reorder', { ids });
+  },
+
+  organizePreview: async (): Promise<OrganizePreview> => {
+    const { data } = await api.get<OrganizePreview>('/categories/organize');
+    return data;
+  },
+
+  organizeApply: async (body: { assignments: { categoryId: string; macroKey: string | null }[]; addDefaults: boolean }): Promise<{ message: string }> => {
+    const { data } = await api.post('/categories/organize', body);
+    return data;
   },
 };
 

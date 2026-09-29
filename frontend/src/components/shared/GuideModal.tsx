@@ -38,6 +38,19 @@ const SECTIONS: Section[] = [
     ),
   },
   {
+    title: 'Categorie',
+    emoji: '🏷️',
+    content: (
+      <>
+        <p>Le categorie hanno due livelli: le <strong>macro-categorie</strong> (es. Casa, Trasporti, Ristoranti e bar) e le loro <strong>sotto-categorie</strong> (es. Bollette, Carburante, Bar e caffè). Un movimento può stare su una sotto-categoria o direttamente sulla macro. Chi si registra trova già un set di <strong>categorie predefinite</strong>, uguale per tutti, da rinominare, spostare o archiviare liberamente.</p>
+        <p>La pagina <strong>Categorie</strong> mostra l'albero per Uscite ed Entrate, con la <strong>spesa del periodo in corso</strong> rispetto alla media, il <strong>budget</strong> se c'è e quanti movimenti usano ciascuna categoria. Dal menu di ogni riga puoi <strong>modificarla</strong> (anche spostarla sotto un'altra macro), aggiungere una sotto-categoria, <strong>riordinarla</strong>, <strong>unirla</strong> a un'altra, <strong>archiviarla</strong> (sparisce dalle scelte, lo storico resta; si ripristina dalla sezione in fondo) o <strong>eliminarla</strong>: se è in uso scegli dove spostare movimenti, scadenze e budget, così niente resta senza categoria.</p>
+        <p>Sulle macro di uscita puoi indicare la <strong>natura</strong>: <strong>essenziale</strong> (casa, spesa, salute) o <strong>discrezionale</strong> (svago, ristoranti). L'Analisi mostra quanto spendi per ciascuna e le proposte di budget tagliano solo il discrezionale.</p>
+        <p>Hai categorie create prima delle macro? Usa <strong>«Organizza»</strong>: l'app propone sotto quale macro mettere ciascuna in base al nome, tu confermi, e puoi aggiungere le predefinite mancanti. Nei form la categoria si sceglie con un selettore con <strong>ricerca</strong>, le <strong>recenti</strong> in cima e la possibilità di <strong>crearne una al volo</strong>.</p>
+        <p>Un <strong>budget su una macro</strong> conta anche le sue sotto-categorie; il grafico <strong>Spese per categoria</strong> in dashboard e la scheda Categorie dell'Analisi ragionano per macro, con la possibilità di scendere nel dettaglio.</p>
+      </>
+    ),
+  },
+  {
     title: 'Budget',
     emoji: '🎯',
     content: (

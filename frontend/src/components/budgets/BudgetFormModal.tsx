@@ -7,6 +7,7 @@ import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
+import CategoryPicker from '../categories/CategoryPicker';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface BudgetFormModalProps {
@@ -149,22 +150,20 @@ export default function BudgetFormModal({
             <FieldError message={errors.amount} />
           </div>
           <div className="form-group">
-            <label className="form-label">Categoria (opzionale)</label>
-            <select
-              value={formData.categoryId}
-              onChange={(e) => {
-                setFormData({ ...formData, categoryId: e.target.value })
+            <CategoryPicker
+              categories={categories}
+              type="EXPENSE"
+              value={formData.categoryId ?? ''}
+              onChange={(id) => {
+                setFormData({ ...formData, categoryId: id });
                 clearError('categoryId');
               }}
-              className="form-select"
-            >
-              <option value="">--Seleziona--</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              label="Categoria (opzionale)"
+              allowEmpty
+              emptyLabel="Tutte le spese (budget globale)"
+              allowCreate={false}
+            />
+            <p className="form-help">Un budget su una macro-categoria conta anche le sue sotto-categorie.</p>
             <FieldError message={errors.categoryId} />
           </div>
         </div>

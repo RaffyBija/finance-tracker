@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, AlertTriangle } from 'lucide-react';
 import type { ExpenseKind, SpendingAnalysis } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
-import { KINDS, UNCATEGORIZED, categoryRows, frequentDescriptions, isNotable, linesIn, type CategoryRow } from './model';
+import { KINDS, UNCATEGORIZED, categoryRows, frequentDescriptions, isNotable, linesIn, macroIdOf, type CategoryRow } from './model';
 import { spendTone, pct, dayLabel } from './ui';
 import { signOf } from '../patrimonio/tone';
 
@@ -20,6 +20,7 @@ interface Props {
 
 type KindFilter = 'all' | ExpenseKind;
 type SortBy = 'total' | 'delta';
+type Level = 'macro' | 'leaf';
 
 const isValidColor = (c?: string | null) => !!c && /^#[0-9A-Fa-f]{3,8}$/.test(c);
 
@@ -58,6 +59,8 @@ export default function CategoryAnalysis({ data, selected }: Props) {
   const { formatCurrency } = useFormatCurrency();
   const [kind, setKind] = useState<KindFilter>('all');
   const [sortBy, setSortBy] = useState<SortBy>('total');
+  // Per macro-categoria (default, pochi gruppi leggibili) o per singola categoria.
+  const [level, setLevel] = useState<Level>('macro');
   const [open, setOpen] = useState<string | null>(null);
 
   const filtered = useMemo(
@@ -65,16 +68,23 @@ export default function CategoryAnalysis({ data, selected }: Props) {
     [data, kind],
   );
   const rows = useMemo(() => {
-    const r = categoryRows(filtered, selected);
+    const r = categoryRows(filtered, selected, level);
     return sortBy === 'delta'
       ? [...r].sort((a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0))
       : r;
-  }, [filtered, selected, sortBy]);
+  }, [filtered, selected, sortBy, level]);
+  // Righe delle singole categorie: per il dettaglio di una macro.
+  const leafRows = useMemo(() => (level === 'macro' ? categoryRows(filtered, selected, 'leaf') : []), [filtered, selected, level]);
   const period = data.periods[selected];
   const notable = rows.filter(isNotable);
 
   const lineMatches = (row: CategoryRow) => (l: { categoryId: string | null }) =>
-    (l.categoryId ?? UNCATEGORIZED) === row.id;
+    level === 'macro'
+      ? (macroIdOf(data, l.categoryId) ?? UNCATEGORIZED) === row.id
+      : (l.categoryId ?? UNCATEGORIZED) === row.id;
+  const childRowsOf = (row: CategoryRow) =>
+    leafRows.filter((r) => r.id !== row.id && (r.total > 0 || (r.avg ?? 0) > 0)
+      && data.categories.find((c) => c.id === r.id)?.parentId === row.id);
 
   return (
     <div className="lens-stack">
@@ -86,6 +96,10 @@ export default function CategoryAnalysis({ data, selected }: Props) {
               {k.label}
             </button>
           ))}
+        </div>
+        <div className="projection-pills" role="group" aria-label="Livello">
+          <button type="button" className={`projection-pill${level === 'macro' ? ' is-active' : ''}`} aria-pressed={level === 'macro'} onClick={() => { setLevel('macro'); setOpen(null); }}>Per macro</button>
+          <button type="button" className={`projection-pill${level === 'leaf' ? ' is-active' : ''}`} aria-pressed={level === 'leaf'} onClick={() => { setLevel('leaf'); setOpen(null); }}>Per categoria</button>
         </div>
         <div className="projection-pills" role="group" aria-label="Ordina">
           <button type="button" className={`projection-pill${sortBy === 'total' ? ' is-active' : ''}`} aria-pressed={sortBy === 'total'} onClick={() => setSortBy('total')}>Per importo</button>
@@ -156,6 +170,23 @@ export default function CategoryAnalysis({ data, selected }: Props) {
                           {biggest > 0 && <span>più alto <strong>{formatCurrency(biggest)}</strong></span>}
                           {r.avg !== null && <span>media {period.isCurrent ? 'alla stessa data' : 'per periodo'} <strong>{formatCurrency(r.avg)}</strong></span>}
                         </div>
+
+                        {level === 'macro' && childRowsOf(r).length > 0 && (
+                          <div className="analysis-drill-frequent">
+                            <span className="analysis-subtitle">Sotto-categorie</span>
+                            <ul>
+                              {childRowsOf(r).map((c) => (
+                                <li key={c.id}>
+                                  <span className="analysis-drill-desc">{c.icon ? `${c.icon} ` : ''}{c.name}</span>
+                                  <span className={`analysis-drill-kind analysis-col-delta is-${spendTone(c.delta)}`}>
+                                    {c.delta === null ? 'n.d.' : `${signOf(c.delta)}${formatCurrency(Math.abs(c.delta))} vs media`}
+                                  </span>
+                                  <span className="analysis-drill-amount">{formatCurrency(c.total)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {catLines.length > 0 ? (
                           <ul className="analysis-drill-list">

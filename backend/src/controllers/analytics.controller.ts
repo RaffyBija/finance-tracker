@@ -233,7 +233,8 @@ export const getSpendingAnalysis = async (req: AuthRequest, res: Response) => {
       }),
       prisma.category.findMany({
         where: { userId },
-        select: { id: true, name: true, color: true, icon: true, type: true },
+        select: { id: true, name: true, color: true, icon: true, type: true, parentId: true, nature: true, sortOrder: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       }),
       prisma.account.findMany({
         where: { userId },

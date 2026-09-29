@@ -3,14 +3,19 @@ import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { CreateCategoryDTO, TransactionType } from '../types';
 
-const CATEGORY_KEYS        = ['categories'];
-const CATEGORY_DELETE_KEYS = ['categories', 'transactions', 'dashboard'];
+const CATEGORY_KEYS        = ['categories', 'dashboard'];
+// Eliminare/unire sposta movimenti, scadenze e budget: tutto ciò che li mostra.
+const CATEGORY_DELETE_KEYS = ['categories', 'transactions', 'dashboard', 'budgets', 'recurring', 'planned', 'installments', 'calendar'];
 
-export const useCategories = (filterType?: TransactionType | 'ALL') => {
-  const params = filterType !== 'ALL' ? { type: filterType } : {};
-  
+// Categorie attive (le archiviate sono escluse, salvo includeArchived).
+export const useCategories = (filterType?: TransactionType | 'ALL', includeArchived = false) => {
+  const params = {
+    ...(filterType && filterType !== 'ALL' ? { type: filterType } : {}),
+    ...(includeArchived ? { includeArchived: true } : {}),
+  };
+
   return useQuery({
-    queryKey: ['categories', filterType],
+    queryKey: ['categories', filterType ?? 'ALL', includeArchived ? 'all' : 'active'],
     queryFn: () => categoryAPI.getAll(params),
     staleTime: 10 * 60 * 1000, // 10 minuti - le categorie cambiano raramente
   });
@@ -41,7 +46,59 @@ export const useUpdateCategory = () => {
 export const useDeleteCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => categoryAPI.delete(id),
+    mutationFn: ({ id, targetId }: { id: string; targetId?: string }) => categoryAPI.delete(id, targetId),
+    onSuccess: () => invalidateCategories(queryClient, CATEGORY_DELETE_KEYS),
+  });
+};
+
+export const useMergeCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, targetId }: { id: string; targetId: string }) => categoryAPI.merge(id, targetId),
+    onSuccess: () => invalidateCategories(queryClient, CATEGORY_DELETE_KEYS),
+  });
+};
+
+export const useArchiveCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, restore }: { id: string; restore?: boolean }) =>
+      restore ? categoryAPI.restore(id) : categoryAPI.archive(id),
+    onSuccess: () => invalidateCategories(queryClient, CATEGORY_KEYS),
+  });
+};
+
+export const useReorderCategories = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => categoryAPI.reorder(ids),
+    onSuccess: () => invalidateCategories(queryClient, ['categories']),
+  });
+};
+
+// Utilizzi di una categoria (caricati solo quando si apre la conferma).
+export const useCategoryUsage = (id: string | null) => {
+  return useQuery({
+    queryKey: ['categories', 'usage', id],
+    queryFn: () => categoryAPI.usage(id!),
+    enabled: !!id,
+    staleTime: 0,
+  });
+};
+
+export const useOrganizePreview = (enabled: boolean) => {
+  return useQuery({
+    queryKey: ['categories', 'organize'],
+    queryFn: categoryAPI.organizePreview,
+    enabled,
+    staleTime: 0,
+  });
+};
+
+export const useApplyOrganize = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: categoryAPI.organizeApply,
     onSuccess: () => invalidateCategories(queryClient, CATEGORY_DELETE_KEYS),
   });
 };

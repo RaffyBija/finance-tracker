@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  periodTotals, comparePeriod, periodOutlook, categoryRows, isNotable,
+  periodTotals, comparePeriod, periodOutlook, categoryRows, isNotable, natureTotals,
   weekdayProfile, sizeDistribution, frequentDescriptions, dailySpending, UNCATEGORIZED,
 } from '../../components/analysis/model';
 import type { SpendingAnalysis, SpendingLine } from '../../types';
@@ -140,3 +140,35 @@ describe('abitudini', () => {
     expect(days[9].future).toBe(true);
   });
 });
+
+describe('macro-categorie e natura', () => {
+  const withTree = (lines: SpendingLine[]) => data(lines, {
+    categories: [
+      { id: 'eat', name: 'Ristoranti e bar', color: null, icon: null, parentId: null, nature: 'DISCRETIONARY' },
+      { id: 'bar', name: 'Bar', color: null, icon: null, parentId: 'eat' },
+      { id: 'pizza', name: 'Pizzeria', color: null, icon: null, parentId: 'eat' },
+      { id: 'food', name: 'Spesa', color: null, icon: null, parentId: null, nature: 'ESSENTIAL' },
+    ],
+  });
+
+  it('per macro somma le sotto-categorie; per categoria restano separate', () => {
+    const d = withTree([
+      line('2026-08-22', 5, { categoryId: 'bar' }),
+      line('2026-08-23', 25, { categoryId: 'pizza' }),
+      line('2026-08-23', 40, { categoryId: 'food' }),
+    ]);
+    const macro = categoryRows(d, 2, 'macro');
+    expect(macro.find((r) => r.id === 'eat')).toMatchObject({ name: 'Ristoranti e bar', total: 30, count: 2 });
+    expect(categoryRows(d, 2, 'leaf').map((r) => r.id).sort()).toEqual(['bar', 'food', 'pizza']);
+  });
+
+  it('spesa per natura della macro', () => {
+    const d = withTree([
+      line('2026-08-22', 5, { categoryId: 'bar' }),
+      line('2026-08-23', 40, { categoryId: 'food' }),
+      line('2026-08-23', 10, { categoryId: null }),
+    ]);
+    expect(natureTotals(d, 2)).toEqual({ essential: 40, discretionary: 5, unset: 10 });
+  });
+});
+

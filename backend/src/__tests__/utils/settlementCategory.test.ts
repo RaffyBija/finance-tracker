@@ -18,7 +18,7 @@ beforeEach(() => {
 
 describe('ensureSettlementCategory', () => {
   it('ritorna la categoria di sistema esistente senza crearla', async () => {
-    findFirst.mockResolvedValue({ id: 'cat1', isSystem: true });
+    findFirst.mockResolvedValue({ id: 'cat1', isSystem: true, systemKey: 'CARD_SETTLEMENT' });
 
     const id = await ensureSettlementCategory('u1');
 
@@ -33,7 +33,10 @@ describe('ensureSettlementCategory', () => {
     const id = await ensureSettlementCategory('u1');
 
     expect(id).toBe('cat1');
-    expect(update).toHaveBeenCalledWith({ where: { id: 'cat1' }, data: { isSystem: true } });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'cat1' },
+      data: { isSystem: true, systemKey: 'CARD_SETTLEMENT', parentId: null },
+    });
     expect(create).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Split, Plus, X } from 'lucide-react';
+import { Split, Plus, X } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import { useCreateTransaction, useUpdateTransaction } from '../../hooks/useTransactions';
@@ -9,6 +9,8 @@ import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
+import CategoryPicker from '../categories/CategoryPicker';
+import CategorySelect from '../categories/CategorySelect';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { currencySymbol } from '../../utils/currency';
@@ -100,7 +102,6 @@ export default function TransactionModal({
     setSplitMode(startSplit);
   }, [isOpen, editingTransactionData, defaultAccount]);
 
-  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const isPending = createMutation.isPending || updateMutation.isPending;
 
 const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>({
@@ -195,7 +196,7 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
   // automatico — `suggestEnabled` copre sia il caso vuoto sia quello già
   // auto-suggerito — e l'id suggerito esiste tra quelle del tipo corrente
   // (guard difensivo). Le dipendenze sono input stabili (`categories` dalla
-  // query, `formData.type` primitivo): NON `filteredCategories`, ricreato a
+  // query, `formData.type` primitivo): NON la lista filtrata per tipo, ricreata a
   // ogni render.
   useEffect(() => {
     if (!suggestEnabled) return;
@@ -402,32 +403,20 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
 
         {!splitMode ? (
           <div className="form-group">
-            <label className="form-label form-label-required">
-              Categoria
-              {autoSuggested && formData.categoryId === suggestedCategoryId && (
-                <span className="form-label-suggest">
-                  <Sparkles size={13} aria-hidden="true" /> Suggerito
-                </span>
-              )}
-            </label>
-            <select
-              value={formData.categoryId}
-              onChange={(e) => {
-                setFormData({ ...formData, categoryId: e.target.value })
+            <CategoryPicker
+              categories={categories}
+              type={formData.type}
+              value={formData.categoryId ?? ''}
+              onChange={(id) => {
+                setFormData({ ...formData, categoryId: id });
                 setAutoSuggested(false);
                 clearError('categoryId');
               }}
-              aria-invalid={!!errors.categoryId || undefined}
-              aria-describedby={errors.categoryId ? 'tx-cat-err' : undefined}
-              className="form-select"
-            >
-              <option value="">Seleziona una categoria</option>
-              {filteredCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.icon} {cat.name}
-                </option>
-              ))}
-            </select>
+              required
+              suggested={autoSuggested && formData.categoryId === suggestedCategoryId}
+              invalid={!!errors.categoryId}
+              describedBy={errors.categoryId ? 'tx-cat-err' : undefined}
+            />
             <FieldError id="tx-cat-err" message={errors.categoryId} />
             {formData.type === 'EXPENSE' && (
               <button type="button" onClick={enableSplit} className="split-toggle-btn">
@@ -447,19 +436,14 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
             <div className="split-rows">
               {splitItems.map((row, i) => (
                 <div className="split-row" key={i}>
-                  <select
+                  <CategorySelect
+                    categories={categories}
+                    type={formData.type}
                     value={row.categoryId ?? ''}
-                    onChange={(e) => updateSplitRow(i, { categoryId: e.target.value })}
+                    onChange={(id) => updateSplitRow(i, { categoryId: id })}
                     className="form-select split-row-category"
-                    aria-label={`Categoria riga ${i + 1}`}
-                  >
-                    <option value="">Categoria…</option>
-                    {filteredCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel={`Categoria riga ${i + 1}`}
+                  />
                   <div className="split-row-amount">
                     <InputDecimal
                       setFormData={(updated: { amount: number }) => updateSplitRow(i, { amount: updated.amount })}

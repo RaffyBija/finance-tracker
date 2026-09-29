@@ -62,20 +62,36 @@ export const getSummary = async (req: AuthRequest, res: Response) => {
 export const getCategoryStats = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { startDate, endDate, type } = req.query;
+    const { startDate, endDate, type, level } = req.query;
+    // Livello: macro-categorie (default, torta leggibile) o categorie foglia.
+    const byMacro = level !== 'leaf';
 
     const dateFilter: any = {};
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId, transferId: null, ...(await bankAccountScope(userId)) };
+    // Per competenza, come l'Analisi: acquisti su carta alla loro data (tutti i
+    // conti), esclusi trasferimenti e categoria di sistema "Pagamento Carta".
+    const where: any = {
+      userId, transferId: null,
+      OR: [{ categoryId: null }, { category: { isSystem: false } }],
+    };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
     if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
 
-    const transactions = await prisma.transaction.findMany({
-      where,
-      include: { category: true, items: { include: { category: true } } },
-    });
+    const [transactions, allCategories] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        include: { category: true, items: { include: { category: true } } },
+      }),
+      prisma.category.findMany({ where: { userId }, select: { id: true, name: true, color: true, icon: true, parentId: true } }),
+    ]);
+    const catById = new Map(allCategories.map((c) => [c.id, c]));
+    const macroOf = (id: string | null) => {
+      if (!id) return null;
+      const c = catById.get(id);
+      return c?.parentId && catById.has(c.parentId) ? catById.get(c.parentId)! : c ?? null;
+    };
 
     const categoryMap = new Map<string, any>();
 
@@ -83,12 +99,13 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
     // viene accreditata alla propria categoria, le semplici alla categoria del padre.
     transactions.forEach((t) => {
       expandToCategoryLines(t).forEach((line) => {
-        const key   = line.categoryId || 'uncategorized';
-        const name  = line.category?.name  || 'Senza categoria';
-        const color = line.category?.color || '#gray';
+        const cat   = byMacro ? macroOf(line.categoryId) : line.category ?? null;
+        const key   = cat?.id || 'uncategorized';
+        const name  = cat?.name  || 'Senza categoria';
+        const color = cat?.color || '#a8a29e';
 
         if (!categoryMap.has(key)) {
-          categoryMap.set(key, { categoryId: line.categoryId, categoryName: name, categoryColor: color, type: t.type, total: 0, count: 0 });
+          categoryMap.set(key, { categoryId: cat?.id ?? null, categoryName: name, categoryColor: color, type: t.type, total: 0, count: 0 });
         }
 
         const stat = categoryMap.get(key);

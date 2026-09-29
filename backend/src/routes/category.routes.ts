@@ -5,6 +5,13 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
+  archiveCategory,
+  restoreCategory,
+  getCategoryUsage,
+  mergeCategories,
+  getOrganizePreview,
+  applyOrganize,
 } from '../controllers/category.controller';
 import { authenticate } from '../middleware/auth';
 
@@ -16,8 +23,17 @@ router.use(authenticate);
 // GET /api/categories - Ottieni tutte le categorie
 router.get('/', getCategories);
 
+// Organizza categorie (prima di /:id per non essere catturate come id)
+router.get('/organize', getOrganizePreview);
+router.post('/organize', applyOrganize);
+router.post('/reorder', reorderCategories);
+
 // GET /api/categories/:id - Ottieni una categoria
 router.get('/:id', getCategory);
+router.get('/:id/usage', getCategoryUsage);
+router.post('/:id/archive', archiveCategory);
+router.post('/:id/restore', restoreCategory);
+router.post('/:id/merge', mergeCategories);
 
 // POST /api/categories - Crea una categoria
 router.post('/', createCategory);

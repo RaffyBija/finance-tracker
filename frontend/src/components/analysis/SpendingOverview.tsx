@@ -5,7 +5,7 @@ import {
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { SpendingAnalysis } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
-import { KINDS, comparePeriod, periodOutlook, periodTotals } from './model';
+import { KINDS, comparePeriod, natureTotals, periodOutlook, periodTotals } from './model';
 import { useChartTheme, spendTone, periodAxisLabel, periodLabel, pct } from './ui';
 import { signOf } from '../patrimonio/tone';
 
@@ -42,6 +42,8 @@ export default function SpendingOverview({ data, selected, onSelect }: Props) {
   const cmp = useMemo(() => comparePeriod(data, selected), [data, selected]);
   const outlook = useMemo(() => periodOutlook(data, selected, cmp), [data, selected, cmp]);
   const t = totals[selected];
+  const nature = useMemo(() => natureTotals(data, selected), [data, selected]);
+  const hasNature = nature.essential + nature.discretionary > 0;
   const period = data.periods[selected];
 
   const delta = cmp.avgTotal === null ? null : cmp.total - cmp.avgTotal;
@@ -96,6 +98,13 @@ export default function SpendingOverview({ data, selected, onSelect }: Props) {
                 </li>
               ))}
             </ul>
+            {hasNature && (
+              <p className="analysis-nature-line">
+                Essenziali <strong>{formatCurrency(nature.essential)}</strong> ({pct(nature.essential / t.total)})
+                {' · '}Discrezionali <strong>{formatCurrency(nature.discretionary)}</strong> ({pct(nature.discretionary / t.total)})
+                {nature.unset > 0.005 && <> · senza natura {formatCurrency(nature.unset)}</>}
+              </p>
+            )}
           </>
         )}
       </div>

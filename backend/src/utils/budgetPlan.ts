@@ -235,7 +235,7 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
   const from = windows[0].periodStart;
   const to = windows[windows.length - 1].periodEnd;
   const now = new Date();
-  const [lines, activity, firstTxn, activeBudgets] = await Promise.all([
+  const [lines, activity, firstTxn, activeBudgets, categories] = await Promise.all([
     loadClassifiedExpenses(userId, from, to, null),
     prisma.transaction.findMany({ where: { userId, date: { gte: from, lte: to } }, select: { date: true } }),
     prisma.transaction.findFirst({ where: { userId }, orderBy: { date: 'asc' }, select: { date: true } }),
@@ -245,6 +245,10 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
         OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
       select: { id: true, categoryId: true, amount: true, period: true },
+    }),
+    prisma.category.findMany({
+      where: { userId },
+      select: { id: true, name: true, icon: true, color: true, parentId: true, nature: true },
     }),
   ]);
   // Periodi usabili: iniziati dopo il primo movimento registrato (un periodo in cui
@@ -256,12 +260,21 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
   const inData = (d: Date) => withData.some((w) => d >= w.periodStart && d <= w.periodEnd);
 
   type Acc = { name: string; icon: string | null; color: string | null; total: number };
+  // Tetti per MACRO-categoria: pochi budget sensati (es. "Ristoranti e bar")
+  // invece di uno per ogni sotto-categoria. Una categoria senza macro è la macro.
+  const catById = new Map(categories.map((c) => [c.id, c]));
+  const macroOf = (id: string) => {
+    const c = catById.get(id);
+    return c?.parentId && catById.has(c.parentId) ? catById.get(c.parentId)! : c;
+  };
   const byCat = new Map<string, Acc>();
   for (const l of lines) {
     if (l.kind !== 'variable' || !l.categoryId || !inData(l.date)) continue;
-    const e = byCat.get(l.categoryId) ?? { name: l.categoryName, icon: l.icon, color: l.color, total: 0 };
+    const macro = macroOf(l.categoryId);
+    if (!macro) continue;
+    const e = byCat.get(macro.id) ?? { name: macro.name, icon: macro.icon, color: macro.color, total: 0 };
     e.total += l.amount;
-    byCat.set(l.categoryId, e);
+    byCat.set(macro.id, e);
   }
   const budgetByCat = new Map(activeBudgets.map((b) => [b.categoryId!, b]));
 
@@ -276,7 +289,8 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
       icon: e.icon,
       color: e.color,
       avgPerPeriod: round2(avg),
-      suggestedCap: round2(avg * (1 - STANDARD_CUT)),
+      // Sulle spese essenziali niente taglio: il tetto è la media.
+      suggestedCap: round2(avg * (catById.get(categoryId)?.nature === 'ESSENTIAL' ? 1 : 1 - STANDARD_CUT)),
       currentBudgetId: existing?.id ?? null,
       currentAmount: existing ? Number(existing.amount) : null,
       currentPeriod: existing?.period ?? null,
