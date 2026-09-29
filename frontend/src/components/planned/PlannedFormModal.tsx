@@ -8,6 +8,7 @@ import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
+import CategoryPicker from '../categories/CategoryPicker';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { currencySymbol } from '../../utils/currency';
@@ -91,7 +92,6 @@ export default function PlannedFormModal({
     guard.capture(init);
   }, [editingItem, isOpen]);
 
-  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const { errors, validate, clearError } = useFormValidation<CreatePlannedTransactionDTO>({
@@ -259,20 +259,18 @@ export default function PlannedFormModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label form-label-required">Categoria</label>
-            <select value={formData.categoryId}
-              onChange={(e) => {
-                setFormData({ ...formData, categoryId: e.target.value })
+            <CategoryPicker
+              categories={categories}
+              type={formData.type}
+              value={formData.categoryId ?? ''}
+              onChange={(id) => {
+                setFormData({ ...formData, categoryId: id });
                 clearError('categoryId');
               }}
-              aria-invalid={!!errors.categoryId || undefined}
-              aria-describedby={errors.categoryId ? 'pl-cat-err' : undefined}
-              className="form-select">
-              <option value="">Seleziona una categoria</option>
-              {filteredCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-              ))}
-            </select>
+              required
+              invalid={!!errors.categoryId}
+              describedBy={errors.categoryId ? 'pl-cat-err' : undefined}
+            />
             <FieldError id="pl-cat-err" message={errors.categoryId} />
           </div>
         </div>

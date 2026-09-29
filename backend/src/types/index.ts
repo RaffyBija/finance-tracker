@@ -45,6 +45,8 @@ export interface CreateCategoryDTO {
   type: 'INCOME' | 'EXPENSE';
   color?: string;
   icon?: string;
+  parentId?: string | null;
+  nature?: 'ESSENTIAL' | 'DISCRETIONARY' | null;
 }
 
 // Response JWT

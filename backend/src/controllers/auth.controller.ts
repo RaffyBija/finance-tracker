@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { analyticsCache } from "../utils/analyticsCache";
+import { seedDefaultCategories } from "../utils/defaultCategories";
 import prisma from "../utils/prisma";
 import { RegisterDTO, LoginDTO, AuthResponse } from "../types";
 import crypto from "crypto";
@@ -54,6 +55,9 @@ export const register = async (req: Request, res: Response) => {
         emailVerifyExpires: verifyExpires,
       },
     });
+
+    // Categorie predefinite (uguali per tutti) + categoria stipendio del periodo di paga.
+    await seedDefaultCategories(user.id, { setSalary: true });
 
     // Crea automaticamente il conto principale per il nuovo utente
     await prisma.account.create({

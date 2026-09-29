@@ -143,6 +143,14 @@
 .analysis-kind-value { font-weight: 600; color: #292524; }
 .analysis-kind-share { color: #a8a29e; }
 
+.analysis-nature-line {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: #78716c;
+  font-variant-numeric: tabular-nums;
+}
+.analysis-nature-line strong { color: #292524; font-weight: 600; }
+
 /* Toni sulle meta delle tessere (es. variabili al giorno rispetto alla media) */
 .patrimonio-stat-meta.is-negative { color: #dc2626; }
 .patrimonio-stat-meta.is-positive { color: #059669; }
@@ -574,3 +582,5 @@
 .dark .analysis-calendar-day.level-3, .dark .analysis-calendar-swatch.level-3 { background: #b45309; color: #fffbeb; }
 .dark .analysis-calendar-day.level-4, .dark .analysis-calendar-swatch.level-4 { background: #f59e0b; color: #1c1917; }
 .dark .analysis-calendar-day.level-future { background: transparent; border-color: #44403c; color: #57534e; }
+.dark .analysis-nature-line { color: #a8a29e; }
+.dark .analysis-nature-line strong { color: #f5f5f4; }

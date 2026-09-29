@@ -3,6 +3,7 @@ import { ChevronDown, Plus, Trash2, Wand2 } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
 import AccountSelector from '../accounts/AccountSelector';
+import CategoryPicker from '../categories/CategoryPicker';
 import FormError from '../shared/FormError';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
@@ -118,7 +119,6 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
   }, [isOpen, editingItem, defaultAccount]);
 
   const catType = direction === 'CREDIT' ? 'INCOME' : 'EXPENSE';
-  const filteredCategories = categories.filter((c) => c.type === catType);
   const isPending = createMutation.isPending || updateMutation.isPending;
   const total = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
 
@@ -257,17 +257,15 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
         </div>
 
         <div className="form-group">
-          <label className="form-label">Categoria (opzionale)</label>
-          <select
+          <CategoryPicker
+            categories={categories}
+            type={catType}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="form-select"
-          >
-            <option value="">Nessuna categoria</option>
-            {filteredCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-            ))}
-          </select>
+            onChange={setCategoryId}
+            label="Categoria (opzionale)"
+            allowEmpty
+            emptyLabel="Nessuna categoria"
+          />
         </div>
 
         <div className="form-group">

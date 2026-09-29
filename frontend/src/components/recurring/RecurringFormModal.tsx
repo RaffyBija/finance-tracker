@@ -8,6 +8,7 @@ import { useFormValidation } from '../../hooks/useFormValidation';
 import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
+import CategoryPicker from '../categories/CategoryPicker';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { formatWeekday, formatDayMonthLong, isoWeekdayIndex, setIsoWeekday } from '../../utils/date';
 import { Repeat } from 'lucide-react';
@@ -102,7 +103,6 @@ export default function RecurringFormModal({
     guard.capture(init);
   }, [editingItem, isOpen]);
 
-  const filteredCategories = categories.filter((cat) => cat.type === formData.type);
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   // Riepilogo in linguaggio naturale di quando la ricorrente verrà eseguita.
@@ -308,20 +308,18 @@ export default function RecurringFormModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label form-label-required">Categoria</label>
-            <select value={formData.categoryId}
-              onChange={(e) => {
-                setFormData({ ...formData, categoryId: e.target.value })
+            <CategoryPicker
+              categories={categories}
+              type={formData.type}
+              value={formData.categoryId ?? ''}
+              onChange={(id) => {
+                setFormData({ ...formData, categoryId: id });
                 clearError('categoryId');
               }}
-              aria-invalid={!!errors.categoryId || undefined}
-              aria-describedby={errors.categoryId ? 'rec-cat-err' : undefined}
-              className="form-select">
-              <option value="">Seleziona una categoria</option>
-              {filteredCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-              ))}
-            </select>
+              required
+              invalid={!!errors.categoryId}
+              describedBy={errors.categoryId ? 'rec-cat-err' : undefined}
+            />
             <FieldError id="rec-cat-err" message={errors.categoryId} />
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
 import { CURRENCY_OPTIONS } from '../utils/currency';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCategories } from '../hooks/useCategories';
+import CategorySelect from '../components/categories/CategorySelect';
 import { usePayPeriod } from '../hooks/useAnalytics';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { PayPeriodSource } from '../types';
@@ -355,18 +356,15 @@ function PayPeriodSettings() {
           </span>
         </div>
         <div className="settings-pref-control">
-          <select
-            className="form-select"
+          <CategorySelect
+            categories={incomeCategories}
+            type="INCOME"
             value={user?.salaryCategoryId ?? ''}
-            onChange={(e) => save({ salaryCategoryId: e.target.value || null })}
+            onChange={(id) => save({ salaryCategoryId: id || null })}
+            placeholder="Nessuna"
+            ariaLabel="Categoria stipendio"
             disabled={isPending}
-            aria-label="Categoria stipendio"
-          >
-            <option value="">Nessuna</option>
-            {incomeCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 

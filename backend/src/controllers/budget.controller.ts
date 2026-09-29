@@ -9,6 +9,7 @@ import {
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
 import { computeBudgetPlan, applySaving, type BudgetPlan } from '../utils/budgetPlan';
+import { categoryWithChildren } from '../utils/categoryOps';
 import { loadPayBoundaries, addDays } from '../utils/payPeriod';
 import { analyticsCache } from '../utils/analyticsCache';
 
@@ -50,13 +51,15 @@ const computeBudgetSpent = async (
     return Number(agg._sum.amount || 0);
   }
 
+  // Budget su una macro-categoria: conta anche le sue sotto-categorie.
+  const categoryIds = await categoryWithChildren(budget.categoryId);
   const [simple, splitItems] = await Promise.all([
     prisma.transaction.aggregate({
-      where: { ...baseWhere, categoryId: budget.categoryId },
+      where: { ...baseWhere, categoryId: { in: categoryIds } },
       _sum: { amount: true },
     }),
     prisma.transactionItem.aggregate({
-      where: { categoryId: budget.categoryId, transaction: baseWhere },
+      where: { categoryId: { in: categoryIds }, transaction: baseWhere },
       _sum: { amount: true },
     }),
   ]);

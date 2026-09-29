@@ -98,10 +98,27 @@ model Category {
   // assegnata automaticamente, non rinominabile/eliminabile dall'utente ed esclusa
   // dalle medie/proposte di budget. Le categorie utente restano isSystem = false.
   isSystem  Boolean  @default(false)
+  // Gerarchia a 2 livelli: macro-categoria (parentId null) → sotto-categorie. Una
+  // transazione può stare su una sotto-categoria o direttamente sulla macro.
+  parentId    String?
+  // Ordine scelto dall'utente tra fratelli (stessa macro o stesso livello).
+  sortOrder   Int             @default(0)
+  // Archiviata: nascosta dai selettori, storico e aggregati intatti (come i conti).
+  archivedAt  DateTime?
+  // Natura della spesa (sulle macro): essenziale o discrezionale. Usata da Analisi
+  // e proposte budget (i tagli solo sul discrezionale).
+  nature      CategoryNature?
+  // Categorie speciali riconosciute per chiave, non per nome (es. CARD_SETTLEMENT
+  // = "Pagamento Carta").
+  systemKey   String?
+  // Categoria predefinita da cui deriva (utils/defaultCategories.ts).
+  templateKey String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent                Category?              @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children              Category[]             @relation("CategoryTree")
   transactions          Transaction[]
   transactionItems      TransactionItem[]
   budgets               Budget[]
@@ -111,7 +128,14 @@ model Category {
   salaryOfUsers         User[]                 @relation("UserSalaryCategory")
 
   @@unique([userId, name, type])
+  @@unique([userId, systemKey])
+  @@index([userId, parentId])
   @@map("categories")
+}
+
+enum CategoryNature {
+  ESSENTIAL
+  DISCRETIONARY
 }
 
 model Transaction {

@@ -141,12 +141,25 @@ export interface CategoryRow {
   series: number[];            // totale per periodo (tutti i periodi)
 }
 
-export function categoryRows(data: SpendingAnalysis, selected: number): CategoryRow[] {
+// Macro-categoria di una categoria (la categoria stessa se è una macro).
+export function macroIdOf(data: SpendingAnalysis, categoryId: string | null): string | null {
+  if (!categoryId) return null;
+  const c = data.categories.find((x) => x.id === categoryId);
+  return c?.parentId && data.categories.some((x) => x.id === c.parentId) ? c.parentId : categoryId;
+}
+
+// level 'leaf' = categoria di ciascun movimento; 'macro' = raggruppato per macro.
+export function categoryRows(data: SpendingAnalysis, selected: number, level: 'leaf' | 'macro' = 'leaf'): CategoryRow[] {
   const p = data.periods[selected];
   const cutoff = cutoffFor(p);
   const others = comparisonIndexes(data.periods, selected);
   const catById = new Map(data.categories.map((c) => [c.id, c]));
-  const keyOf = (l: SpendingLine) => l.categoryId ?? UNCATEGORIZED;
+  const macroCache = new Map<string | null, string | null>();
+  const keyOf = (l: SpendingLine) => {
+    if (level === 'leaf') return l.categoryId ?? UNCATEGORIZED;
+    if (!macroCache.has(l.categoryId)) macroCache.set(l.categoryId, macroIdOf(data, l.categoryId));
+    return macroCache.get(l.categoryId) ?? UNCATEGORIZED;
+  };
 
   const keys = new Set(data.lines.map(keyOf));
   const periodTotal = sum(linesIn(data.lines, p));
@@ -176,6 +189,19 @@ export function categoryRows(data: SpendingAnalysis, selected: number): Category
     });
   }
   return rows.sort((a, b) => b.total - a.total || (b.avg ?? 0) - (a.avg ?? 0));
+}
+
+// Spesa del periodo per natura della macro (essenziale / discrezionale / non indicata).
+export function natureTotals(data: SpendingAnalysis, selected: number): { essential: number; discretionary: number; unset: number } {
+  const out = { essential: 0, discretionary: 0, unset: 0 };
+  const natureOfMacro = new Map(data.categories.map((c) => [c.id, c.nature ?? null]));
+  for (const l of linesIn(data.lines, data.periods[selected])) {
+    const nature = natureOfMacro.get(macroIdOf(data, l.categoryId) ?? '') ?? null;
+    if (nature === 'ESSENTIAL') out.essential += l.amount;
+    else if (nature === 'DISCRETIONARY') out.discretionary += l.amount;
+    else out.unset += l.amount;
+  }
+  return { essential: round2(out.essential), discretionary: round2(out.discretionary), unset: round2(out.unset) };
 }
 
 // Scostamento "notevole": almeno ±25% e almeno 15 € rispetto alla media, oppure

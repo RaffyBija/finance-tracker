@@ -112,24 +112,75 @@ export interface Category {
   userId: string;
   // Categoria gestita dal sistema (es. "Pagamento Carta"): non modificabile/eliminabile.
   isSystem?: boolean;
+  // Gerarchia a 2 livelli: null = macro-categoria.
+  parentId?: string | null;
+  sortOrder?: number;
+  archivedAt?: string | null;
+  // Natura della spesa (solo sulle macro).
+  nature?: CategoryNature | null;
+  systemKey?: string | null;
+  templateKey?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
     transactions: number;
+    transactionItems?: number;
+    recurringTransactions?: number;
+    plannedTransactions?: number;
+    budgets?: number;
+    children?: number;
   };
 }
+
+export type CategoryNature = 'ESSENTIAL' | 'DISCRETIONARY';
 
 export interface CreateCategoryDTO {
   name: string;
   type: TransactionType;
   color?: string;
   icon?: string;
+  parentId?: string | null;
+  nature?: CategoryNature | null;
 }
 
 export interface UpdateCategoryDTO {
   name?: string;
   color?: string;
   icon?: string;
+  parentId?: string | null;
+  nature?: CategoryNature | null;
+}
+
+// Cosa usa una categoria (conferma di eliminazione/unione).
+export interface CategoryUsage {
+  transactions: number;
+  splitLines: number;
+  recurring: number;
+  planned: number;
+  plans: number;
+  budgets: number;
+  children: number;
+  salary: boolean;
+}
+
+export interface OrganizeSuggestion {
+  role: 'macro' | 'child' | null;
+  macroKey: string | null;
+  childKey: string | null;
+}
+
+export interface OrganizePreview {
+  categories: {
+    id: string;
+    name: string;
+    type: TransactionType;
+    icon: string | null;
+    color: string | null;
+    hasChildren: boolean;
+    suggestion: OrganizeSuggestion;
+  }[];
+  macros: { key: string; name: string; type: TransactionType; icon: string }[];
+  missingDefaults: number;
 }
 
 // Dashboard types
@@ -687,7 +738,14 @@ export interface SpendingAnalysis {
   income: number[];           // per periodo
   knownRemaining: number;     // impegni attesi nel periodo in corso
   lines: SpendingLine[];
-  categories: { id: string; name: string; color: string | null; icon: string | null }[];
+  categories: {
+    id: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+    parentId?: string | null;
+    nature?: CategoryNature | null;
+  }[];
   accounts: { id: string; name: string; color: string; type: AccountType; archived: boolean }[];
 }
 
