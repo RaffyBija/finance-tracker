@@ -12,6 +12,7 @@ import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
 import type { CreateTransferDTO, Transaction } from '../../types';
+import { apiError } from '../../utils/apiError';
 
 const DESCRIPTION_MAX = 200;
 
@@ -116,8 +117,8 @@ export default function TransferModal({
         toast.success('Trasferimento creato con successo');
       }
       onClose();
-    } catch (error: any) {
-      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (error) {
+      setSubmitError(apiError(error, 'Errore nel salvataggio. Riprova.'));
     }
   };
 

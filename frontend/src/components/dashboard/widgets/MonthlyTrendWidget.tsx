@@ -6,14 +6,15 @@ import { useMonthlyTrend } from '../../../hooks/useDashboard';
 import { formatMonthShort } from '../../../utils/date';
 import { useFormatCurrency } from '../../../hooks/useFormatCurrency';
 import { SkeletonChart } from '../../shared/Skeleton';
+import type { ChartTooltipProps } from '../../../types/chart';
 
-const CustomBarTooltip = memo(({ active, payload, label }: any) => {
+const CustomBarTooltip = memo(({ active, payload, label }: ChartTooltipProps) => {
   const { formatCurrency } = useFormatCurrency();
   if (!active || !payload?.length) return null;
   return (
     <div className="card card-md dashboard-tooltip">
       <p className="dashboard-tooltip-label">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }} className="dashboard-tooltip-value">
           {p.name}: {formatCurrency(Number(p.value))}
         </p>

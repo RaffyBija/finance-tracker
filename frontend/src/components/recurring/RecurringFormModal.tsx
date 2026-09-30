@@ -17,6 +17,7 @@ import { currencySymbol } from '../../utils/currency';
 import CharCount from '../shared/CharCount';
 import ConfirmModal from '../shared/ConfirmModal';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
+import { apiError } from '../../utils/apiError';
 
 const DESCRIPTION_MAX = 100;
 
@@ -206,8 +207,8 @@ export default function RecurringFormModal({
         toast.success('Spesa ricorrente creata con successo');
       }
       return true;
-    } catch (error: any) {
-      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (error) {
+      setSubmitError(apiError(error, 'Errore nel salvataggio. Riprova.'));
       return false;
     }
   };

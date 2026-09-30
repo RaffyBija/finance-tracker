@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../api/client';
 import { useToast } from '../../contexts/ToastContext';
 import { usePayPeriod } from '../../hooks/useAnalytics';
+import { apiError } from '../../utils/apiError';
 
 interface BudgetSuggestionsModalProps {
   isOpen: boolean;
@@ -200,8 +201,8 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
 
       toast.success(`${items.length} budget applicati`);
       onClose();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Errore nell'applicazione dei budget");
+    } catch (error) {
+      toast.error(apiError(error, "Errore nell'applicazione dei budget"));
     }
   };
 
@@ -444,7 +445,7 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                         <div className="budget-sugg-cap">
                           <InputDecimal
                             formData={{ amount: row?.cap ?? c.suggestedCap }}
-                            setFormData={(d: any) => setCap(c.categoryId, d.amount)}
+                            setFormData={(d) => setCap(c.categoryId, d.amount)}
                             label={`Tetto per ${c.name}`}
                             hideLabel
                           />

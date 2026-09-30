@@ -6,6 +6,7 @@ import type { NetWorthByAccountSeries } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useTheme } from '../../contexts/ThemeContext';
 import { formatMonthShort, formatMonth } from '../../utils/date';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 // Andamento del patrimonio scomposto per conto: una curva indipendente per
 // conto BANK, ognuna parte da zero (nessuno stacking: impilare le aree fa
@@ -20,13 +21,13 @@ interface Props {
   height?: number;
 }
 
-function StackTooltip({ active, payload, label, formatCurrency }: any) {
+function StackTooltip({ active, payload, label, formatCurrency }: ChartTooltipProps & { formatCurrency: FormatCurrency }) {
   if (!active || !payload?.length) return null;
-  const total = payload.reduce((s: number, p: any) => s + Number(p.value), 0);
+  const total = payload.reduce((s: number, p) => s + Number(p.value), 0);
   return (
     <div className="card card-md dashboard-tooltip">
-      <p className="dashboard-tooltip-label">{formatMonth(label + '-01')}</p>
-      {payload.map((p: any) => (
+      <p className="dashboard-tooltip-label">{formatMonth(`${String(label)}-01`)}</p>
+      {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }} className="dashboard-tooltip-value">
           {p.name}: {formatCurrency(Number(p.value))}
         </p>

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { CategoryNature } from '@prisma/client';
+import { CategoryNature, Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateCategoryDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
@@ -43,7 +43,7 @@ export const getCategories = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { type, includeArchived } = req.query;
 
-    const where: any = { userId };
+    const where: Prisma.CategoryWhereInput = { userId };
     if (type && (type === 'INCOME' || type === 'EXPENSE')) where.type = type;
     if (includeArchived !== 'true') where.archivedAt = null;
 
@@ -356,7 +356,7 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
     const { assignments, addDefaults } = req.body || {};
     if (!Array.isArray(assignments)) return res.status(400).json({ error: 'Dati non validi' });
 
-    const ids = assignments.map((a: any) => a?.categoryId).filter((x: unknown) => typeof x === 'string');
+    const ids = (assignments as { categoryId?: unknown }[]).map((a) => a?.categoryId).filter((x: unknown) => typeof x === 'string');
     const cats = await prisma.category.findMany({
       where: { userId, id: { in: ids }, isSystem: false },
       include: { _count: { select: { children: true } } },

@@ -5,6 +5,7 @@ import CategorySelect from './CategorySelect';
 import type { Category } from '../../types';
 import { useCategoryUsage, useDeleteCategory, useArchiveCategory } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
+import { apiError } from '../../utils/apiError';
 
 // Elimina o unisci una categoria. Se è in uso non si lascia nulla di orfano:
 // movimenti, righe divise, ricorrenti, pianificate, piani, budget, sotto-categorie
@@ -53,8 +54,8 @@ export default function CategoryDeleteModal({ category, categories, mode, onClos
       const res = await deleteMutation.mutateAsync({ id: category.id, targetId: needsTarget ? targetId : undefined });
       toast.success(mode === 'merge' ? 'Categorie unite' : res.message);
       onClose();
-    } catch (e: any) {
-      setError(e.response?.data?.error || 'Operazione non riuscita');
+    } catch (e) {
+      setError(apiError(e, 'Operazione non riuscita'));
     }
   };
 
@@ -63,8 +64,8 @@ export default function CategoryDeleteModal({ category, categories, mode, onClos
       const res = await archiveMutation.mutateAsync({ id: category.id });
       toast.success(res.message);
       onClose();
-    } catch (e: any) {
-      setError(e.response?.data?.error || 'Operazione non riuscita');
+    } catch (e) {
+      setError(apiError(e, 'Operazione non riuscita'));
     }
   };
 

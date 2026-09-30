@@ -18,6 +18,7 @@ import { categoryRows } from '../components/analysis/model';
 import { periodLabel, spendTone } from '../components/analysis/ui';
 import { signOf } from '../components/patrimonio/tone';
 import type { Category, TransactionType } from '../types';
+import { apiError } from '../utils/apiError';
 
 // Categorie come strumento: albero macro → sotto-categorie con la spesa del
 // periodo in corso (rispetto alla media), il budget se c'è e gli utilizzi; azioni
@@ -150,7 +151,7 @@ export default function CategoriesPage() {
 
   const needsOrganizing = active.some((c) => !c.isSystem && !c.parentId && !c.templateKey && !active.some((x) => x.parentId === c.id));
 
-  const toggle = (id: string) => setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggle = (id: string) => setExpanded((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const move = async (siblings: Category[], index: number, dir: -1 | 1) => {
     const ids = siblings.map((c) => c.id);
@@ -171,7 +172,7 @@ export default function CategoriesPage() {
       try {
         const res = await archiveMutation.mutateAsync({ id: category.id });
         toast.success(res.message);
-      } catch (e: any) { toast.error(e.response?.data?.error || 'Impossibile archiviare'); }
+      } catch (e) { toast.error(apiError(e, 'Impossibile archiviare')); }
     }
   };
 
@@ -179,7 +180,7 @@ export default function CategoriesPage() {
     try {
       const res = await archiveMutation.mutateAsync({ id: c.id, restore: true });
       toast.success(res.message);
-    } catch (e: any) { toast.error(e.response?.data?.error || 'Impossibile ripristinare'); }
+    } catch (e) { toast.error(apiError(e, 'Impossibile ripristinare')); }
   };
 
   const renderRow = (c: Category, siblings: Category[], index: number, node?: CategoryNode) => {

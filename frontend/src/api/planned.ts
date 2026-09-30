@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { PlannedTransaction, CreatePlannedTransactionDTO } from '../types/index';
+import type { PlannedTransaction, CreatePlannedTransactionDTO, Transaction } from '../types/index';
 
 export const plannedApi = {
   getAll: async (params?: { unpaidOnly?: boolean; upcoming?: boolean; suspendedOnly?: boolean }): Promise<PlannedTransaction[]> => {
@@ -32,7 +32,7 @@ export const plannedApi = {
   },
 
   // accountId: conto su cui registrare, solo se la pianificata non ne ha uno.
-  markAsPaid: async (id: string, date?: string, accountId?: string): Promise<{ planned: PlannedTransaction; transaction: any; message: string }> => {
+  markAsPaid: async (id: string, date?: string, accountId?: string): Promise<{ planned: PlannedTransaction; transaction: Transaction; message: string }> => {
     const response = await apiClient.patch(`/planned/${id}/mark-paid`, {
       ...(date ? { date } : {}),
       ...(accountId ? { accountId } : {}),

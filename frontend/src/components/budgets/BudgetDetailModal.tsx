@@ -9,6 +9,7 @@ import { useBudgetHistory } from '../../hooks/useBudgets';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SkeletonChart } from '../shared/Skeleton';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 interface BudgetDetailModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ function barFill(percentage: number, isDark: boolean): string {
   return isDark ? '#34d399' : '#10b981'; // success
 }
 
-function HistoryTooltip({ active, payload, formatCurrency, baseAmount, showRollover }: any) {
+function HistoryTooltip({ active, payload, formatCurrency, baseAmount, showRollover }: ChartTooltipProps<{ label: string; spent: number; budgeted: number; exceeded?: boolean }> & { formatCurrency: FormatCurrency; baseAmount: number; showRollover: boolean }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   const carry = row.budgeted - baseAmount;

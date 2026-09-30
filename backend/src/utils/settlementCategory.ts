@@ -46,9 +46,9 @@ export async function ensureSettlementCategory(userId: string): Promise<string> 
       select: { id: true },
     });
     return created.id;
-  } catch (e: any) {
+  } catch (e) {
     // Corsa concorrente: un'altra richiesta l'ha creata nel frattempo → rileggi.
-    if (e?.code === 'P2002') {
+    if ((e as { code?: string } | null)?.code === 'P2002') {
       const again = await prisma.category.findFirst({
         where: settlementWhere(userId),
         select: { id: true },

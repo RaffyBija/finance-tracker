@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
+import { apiError } from '../utils/apiError';
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('');
@@ -22,8 +23,8 @@ export default function LoginPage() {
       setIsLoading(true);
       await login({ email, password, rememberMe });
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il login');
+    } catch (err) {
+      setError(apiError(err, 'Errore durante il login'));
     } finally {
       setIsLoading(false);
     }

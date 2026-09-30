@@ -19,5 +19,24 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // `const { items, ...rest } = obj` per omettere un campo, e `_x` per scarti voluti.
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true, varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+      // Regole React 19 in warning (debito noto, ~50 occorrenze, non bloccanti):
+      //  - set-state-in-effect: reset dei form modali all'apertura (useEffect + setState);
+      //  - only-export-components: hook/costanti esportati accanto a provider e componenti
+      //    (impatta solo il fast-refresh in dev);
+      //  - static-components / refs: Tour e useUnsavedGuard.
+      // Da risanare con un refactor dedicato dei form (key/derivazione dello stato).
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-refresh/only-export-components': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/refs': 'warn',
+    },
+  },
+  {
+    // Nei test i mock e i cast parziali sono legittimi.
+    files: ['src/__tests__/**/*.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
 ])

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 
-interface InputDecimalProps {
-  setFormData: React.Dispatch<React.SetStateAction<any>>;
-  formData: any;
+interface InputDecimalProps<T extends object> {
+  /** Riceve lo stato aggiornato (compatibile con un setState o un handler custom). */
+  setFormData: (next: T) => void;
+  formData: T;
   label: string;
   /** Campo di formData da gestire. Default 'amount' (retro-compatibilità). */
   field?: string;
@@ -26,7 +27,7 @@ interface InputDecimalProps {
   hideLabel?: boolean;
 }
 
-export const InputDecimal = ({
+export const InputDecimal = <T extends object>({
   setFormData,
   formData,
   label,
@@ -39,17 +40,18 @@ export const InputDecimal = ({
   hero = false,
   currency,
   hideLabel = false,
-}: InputDecimalProps) => {
-  const toRaw = (v: any) =>
+}: InputDecimalProps<T>) => {
+  const current = (formData as Record<string, unknown>)[field];
+  const toRaw = (v: unknown) =>
     v !== 0 && v != null && v !== '' ? String(v).replace('.', ',') : '';
 
-  const [rawAmount, setRawAmount] = useState<string>(toRaw(formData[field]));
+  const [rawAmount, setRawAmount] = useState<string>(toRaw(current));
 
   // Ultimo valore esterno di formData[field] effettivamente sincronizzato.
   // Serve a distinguere una modifica ESTERNA (apertura modale, reset, cambio
   // elemento in edit) dalla digitazione dell'utente: mentre si digita cambia
   // solo `rawAmount`, NON formData[field] (committato solo onBlur).
-  const lastSyncedRef = useRef(formData[field]);
+  const lastSyncedRef = useRef(current);
 
   // Sincronizza solo quando formData[field] cambia davvero dall'esterno, a
   // prescindere dal focus. Necessario perché ModalBase auto-foca il primo
@@ -57,24 +59,24 @@ export const InputDecimal = ({
   // resterebbe bloccato sul valore stale registrato al mount (formData del
   // parent viene popolato in un effect DOPO il mount dei figli).
   useEffect(() => {
-    if (formData[field] !== lastSyncedRef.current) {
-      lastSyncedRef.current = formData[field];
-      setRawAmount(toRaw(formData[field]));
+    if (current !== lastSyncedRef.current) {
+      lastSyncedRef.current = current;
+      setRawAmount(toRaw(current));
     }
-  }, [formData[field]]);
+  }, [current]);
 
   // Handle per correggere l'input numerico decimale al blur
   const handleFixNumberInput = () => {
     let value = rawAmount.trim();
     if (!value || value === '-') {
-      setFormData({ ...formData, [field]: 0 });
+      setFormData({ ...formData, [field]: 0 } as T);
       setRawAmount('');
       return;
     }
     value = value.replace(',', '.');
     const parsed = Number(value);
     if (!Number.isNaN(parsed)) {
-      setFormData({ ...formData, [field]: parsed });
+      setFormData({ ...formData, [field]: parsed } as T);
       setRawAmount(parsed.toString().replace('.', ','));
     }
   };

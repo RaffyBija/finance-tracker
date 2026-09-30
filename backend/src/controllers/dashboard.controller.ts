@@ -8,6 +8,7 @@ import { listOccurrenceDates, countOccurrences } from '../utils/occurrences';
 import { dayKey, buildProjectedPoints, buildRhythmEvents, collectProjectionEvents } from '../utils/projection';
 import { loadPayPeriod, serializePayPeriod, addDays, startOfDay } from '../utils/payPeriod';
 import { loadSpendingRhythm } from '../utils/spendingRhythm';
+import { Prisma } from '@prisma/client';
 
 type ProjectedPoint = {
   date: string;
@@ -25,11 +26,11 @@ export const getSummary = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { startDate, endDate } = req.query;
 
-    const dateFilter: any = {};
+    const dateFilter: Prisma.DateTimeFilter = {};
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
-    const where: any = { userId, transferId: null, ...(await bankAccountScope(userId)) };
+    const where: Prisma.TransactionWhereInput = { userId, transferId: null, ...(await bankAccountScope(userId)) };
     if (Object.keys(dateFilter).length > 0) where.date = dateFilter;
 
     const [totalIncome, totalExpense, transactionCount] = await Promise.all([
@@ -66,13 +67,13 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
     // Livello: macro-categorie (default, torta leggibile) o categorie foglia.
     const byMacro = level !== 'leaf';
 
-    const dateFilter: any = {};
+    const dateFilter: Prisma.DateTimeFilter = {};
     if (startDate) dateFilter.gte = new Date(startDate as string);
     if (endDate)   dateFilter.lte = new Date(endDate as string);
 
     // Per competenza, come l'Analisi: acquisti su carta alla loro data (tutti i
     // conti), esclusi trasferimenti e categoria di sistema "Pagamento Carta".
-    const where: any = {
+    const where: Prisma.TransactionWhereInput = {
       userId, transferId: null,
       OR: [{ categoryId: null }, { category: { isSystem: false } }],
     };
@@ -507,7 +508,7 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     // NB: qui NON si filtra `transferId: null`. Questa query ricostruisce il saldo
     // reale all'indietro a partire da currentBalance (getAccountsWithBalances), che
     // include i trasferimenti: per coerenza il netto storico deve includerli anch'esso.
-    const histWhere: any = {
+    const histWhere: Prisma.TransactionWhereInput = {
       userId,
       date: { gte: pastStart, lte: histEnd },
     };
@@ -656,7 +657,7 @@ export const getNetWorthSeries = async (req: AuthRequest, res: Response) => {
 
     const bankAccounts = accounts.filter((a) => a.type === 'BANK');
     const bankIds = bankAccounts.map((a) => a.id);
-    const where: any = { userId, date: { gte: firstMonthStart } };
+    const where: Prisma.TransactionWhereInput = { userId, date: { gte: firstMonthStart } };
     // Con conti presenti filtra ai soli BANK. Se l'utente ha SOLO carte (nessun
     // BANK) bankIds è vuoto → nessun movimento conteggiato e serie costante a 0,
     // coerente con getLiquidBalance (la liquidità è 0). Senza alcun conto si cade

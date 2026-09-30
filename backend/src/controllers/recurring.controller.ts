@@ -4,6 +4,10 @@ import { AuthRequest, CreateRecurringTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+import { Prisma } from '@prisma/client';
+
+// Voce del promemoria: la ricorrente arricchita con scadenza e ritardo.
+type DueItem = { daysOverdue: number } & Record<string, unknown>;
 
 // ── Due date helpers ─────────────────────────────────────────────────────────
 
@@ -175,7 +179,7 @@ export const getRecurringTransactions = async (req: AuthRequest, res: Response) 
     const userId = req.userId!;
     const { active } = req.query;
 
-    const where: any = { userId };
+    const where: Prisma.RecurringTransactionWhereInput = { userId };
     
     if (active === 'true') {
       where.isActive = true;
@@ -416,8 +420,8 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
       include: { category: true },
     });
 
-    const dueToday: object[] = [];
-    const overdue: object[] = [];
+    const dueToday: DueItem[] = [];
+    const overdue: DueItem[] = [];
     const MS_DAY = 24 * 60 * 60 * 1000;
 
     for (const r of recurring) {
@@ -442,7 +446,7 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
       else overdue.push(item);
     }
 
-    overdue.sort((a: any, b: any) => b.daysOverdue - a.daysOverdue);
+    overdue.sort((a, b) => b.daysOverdue - a.daysOverdue);
 
     const result = { dueToday, overdue };
     analyticsCache.set(cacheKey, result);

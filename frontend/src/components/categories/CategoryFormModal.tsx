@@ -7,6 +7,7 @@ import { useCreateCategory, useUpdateCategory } from '../../hooks/useCategories'
 import { useToast } from '../../contexts/ToastContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import { buildCategoryTree } from '../../utils/categoryTree';
+import { apiError } from '../../utils/apiError';
 
 // Crea / modifica una categoria: nome, tipo (solo alla creazione), macro di
 // appartenenza (nessuna = è una macro), natura (solo macro di uscita), colore e
@@ -112,8 +113,8 @@ export default function CategoryFormModal({
         toast.success('Categoria creata');
       }
       onClose();
-    } catch (error: any) {
-      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (error) {
+      setSubmitError(apiError(error, 'Errore nel salvataggio. Riprova.'));
     }
   };
 

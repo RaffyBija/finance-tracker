@@ -4,7 +4,7 @@ type ValidationRules<T> = {
   [K in keyof T]?: (value: T[K], formData: T) => string | null;
 };
 
-export function useFormValidation<T extends Record<string, any>>(
+export function useFormValidation<T extends object>(
   rules: ValidationRules<T>
 ) {
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});

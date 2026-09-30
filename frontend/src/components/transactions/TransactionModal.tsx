@@ -19,6 +19,7 @@ import ConfirmModal from '../shared/ConfirmModal';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { useSuggestedCategory } from '../../hooks/useSuggestedCategory';
 import { isTransactionUnchanged } from '../../utils/transactionCompare';
+import { apiError } from '../../utils/apiError';
 
 const DESCRIPTION_MAX = 200;
 
@@ -278,8 +279,8 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
         toast.success('Transazione creata con successo');
       }
       return true;
-    } catch (error: any) {
-      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (error) {
+      setSubmitError(apiError(error, 'Errore nel salvataggio. Riprova.'));
       return false;
     }
   };

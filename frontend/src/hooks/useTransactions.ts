@@ -19,7 +19,7 @@ interface TransactionFilters {
 export const useTransactions = (filters: TransactionFilters = {}) => {
   const { type, startDate, endDate, search, page = 0, accountId } = filters;
 
-  const params: Record<string, any> = {
+  const params: Record<string, string | number> = {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   };

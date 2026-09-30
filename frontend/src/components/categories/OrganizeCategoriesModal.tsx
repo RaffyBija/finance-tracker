@@ -4,6 +4,7 @@ import FormError from '../shared/FormError';
 import { useOrganizePreview, useApplyOrganize } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
 import type { TransactionType } from '../../types';
+import { apiError } from '../../utils/apiError';
 
 // "Organizza categorie": per chi ha categorie senza macro (o creata prima dei
 // predefiniti). L'app propone dove collocare ciascuna (per nome e parole chiave);
@@ -43,8 +44,8 @@ export default function OrganizeCategoriesModal({ isOpen, onClose }: Props) {
       });
       toast.success('Categorie organizzate');
       onClose();
-    } catch (e: any) {
-      setError(e.response?.data?.error || 'Operazione non riuscita');
+    } catch (e) {
+      setError(apiError(e, 'Operazione non riuscita'));
     }
   };
 

@@ -5,6 +5,7 @@ import { AuthRequest, CreateTransactionDTO, TransactionItemDTO } from '../types'
 import { analyticsCache } from '../utils/analyticsCache';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
+import { Prisma } from '@prisma/client';
 
 // Include standard per restituire una transazione completa di righe split.
 const txInclude = {
@@ -74,7 +75,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     const { type, categoryId, accountId, startDate, endDate, search, limit, offset } = req.query;
 
     // Build filter
-    const where: any = { userId };
+    const where: Prisma.TransactionWhereInput = { userId };
 
     if (type && (type === 'INCOME' || type === 'EXPENSE')) {
       where.type = type;
