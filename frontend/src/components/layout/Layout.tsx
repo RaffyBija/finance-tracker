@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import { CookieBanner } from '../CookieConsent';
@@ -14,6 +15,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const { pathname } = useLocation();
   return (
     <TourProvider total={TOUR_STEPS.length}>
       <PendingProvider>
@@ -21,7 +23,8 @@ export default function Layout({ children }: LayoutProps) {
         <div className="app-shell">
           <Navbar />
           <main className="layout-main">
-            <ErrorBoundary>
+            {/* key: un crash non deve bloccare le pagine successive */}
+            <ErrorBoundary key={pathname}>
               <Suspense fallback={<LoadingSpinner size="lg" />}>{children}</Suspense>
             </ErrorBoundary>
           </main>

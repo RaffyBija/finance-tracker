@@ -637,3 +637,41 @@ button.dashboard-tile:hover {
 .dark .customize-item-desc { color: #a8a29e; }
 .dark .customize-switch-track { background-color: #57534e; }
 .dark .customize-switch input:checked + .customize-switch-track { background-color: #0d9488; }
+
+/* ── Checklist di configurazione iniziale ── */
+.onboarding-card { margin-bottom: 1.5rem; }
+.onboarding-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.onboarding-title { font-size: 1rem; font-weight: 600; color: #1c1917; }
+.onboarding-progress { font-size: 0.8125rem; color: #78716c; }
+.onboarding-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.onboarding-step { display: flex; align-items: center; gap: 0.75rem; }
+.onboarding-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  color: #78716c;
+  background: #f5f5f4;
+}
+.onboarding-step.is-done .onboarding-step-icon { color: #0d9488; background: #ccfbf1; }
+.onboarding-step-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.onboarding-step-label { font-size: 0.875rem; font-weight: 500; color: #1c1917; }
+.onboarding-step.is-done .onboarding-step-label { color: #78716c; text-decoration: line-through; }
+.onboarding-step-hint { font-size: 0.8125rem; color: #78716c; }
+
+.dark .onboarding-title,
+.dark .onboarding-step-label { color: #f5f5f4; }
+.dark .onboarding-progress,
+.dark .onboarding-step-hint,
+.dark .onboarding-step.is-done .onboarding-step-label { color: #a8a29e; }
+.dark .onboarding-step-icon { color: #a8a29e; background: #44403c; }
+.dark .onboarding-step.is-done .onboarding-step-icon { color: #5eead4; background: #134e4a; }

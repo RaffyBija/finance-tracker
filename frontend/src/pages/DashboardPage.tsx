@@ -8,6 +8,7 @@ import { useAccounts } from '../hooks/useAccounts';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { WIDGET_MAP } from '../components/dashboard/widgets/registry';
+import OnboardingChecklist from '../components/dashboard/OnboardingChecklist';
 import CustomizeDashboardModal from '../components/dashboard/CustomizeDashboardModal';
 
 export default function DashboardPage() {
@@ -59,6 +60,8 @@ export default function DashboardPage() {
           Personalizza
         </button>
       </div>
+
+      <OnboardingChecklist />
 
       {/* ── Hero (fisso, mese corrente) ── */}
       <div className="dashboard-hero mb-6" data-tour="dashboard-hero">

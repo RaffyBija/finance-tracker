@@ -117,6 +117,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     queryClient.clear();
   };
 
+  // 401 a metà sessione (token scaduto/revocato): allinea lo stato React, altrimenti
+  // la UI resta "loggata" con dati stantii finché non si ricarica la pagina.
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+      queryClient.clear();
+    };
+    window.addEventListener("auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+  }, [queryClient]);
+
   const updateUser = useCallback((updatedData: Partial<User>) => {
   setUser((prev) => prev ? { ...prev, ...updatedData } : prev);
 }, []);

@@ -92,9 +92,9 @@ describe('useDashboardLayout — comportamento hook', () => {
   it('move non attraversa i confini di zona (no-op cross-slot)', () => {
     const { result } = renderHook(() => useDashboardLayout());
     const before = result.current.items.map((i) => i.id);
-    // 'cc-tiles' è la prima tessera: muoverla "su" non deve scambiare con la
+    // 'can-spend' è la prima tessera: muoverla "su" non deve scambiare con la
     // barra azioni (slot diverso) → nessun cambiamento.
-    act(() => result.current.move('cc-tiles', 'up'));
+    act(() => result.current.move('can-spend', 'up'));
     expect(result.current.items.map((i) => i.id)).toEqual(before);
   });
 

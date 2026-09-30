@@ -9,7 +9,7 @@ import { executeRecurring } from '../../controllers/recurring.controller';
 vi.mock('../../utils/prisma', () => {
   const client: any = {
     plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), delete: vi.fn() },
-    recurringTransaction: { findMany: vi.fn(), update: vi.fn() },
+    recurringTransaction: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     transaction: { create: vi.fn() },
     account: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(),
@@ -39,6 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   p.$transaction.mockImplementation(async (cb: any) => cb(p));
   p.transaction.create.mockImplementation(async ({ data }: any) => ({ id: 'tx1', ...data }));
+  p.recurringTransaction.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe('markAsPaid', () => {
@@ -95,10 +96,39 @@ describe('executeRecurring', () => {
 
     const txData = p.transaction.create.mock.calls[0][0].data;
     expect(txData.date).toEqual(new Date('2026-09-03'));
-    const lastExecuted: Date = p.recurringTransaction.update.mock.calls[0][0].data.lastExecutedDate;
+    const lastExecuted: Date = p.recurringTransaction.updateMany.mock.calls[0][0].data.lastExecutedDate;
     expect(lastExecuted.getDate()).toBe(1);
     expect(res.status).toHaveBeenCalledWith(201);
     expect(reconcileCcChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it('non duplica se la scadenza è già stata eseguita', async () => {
+    const now = new Date();
+    p.recurringTransaction.findMany.mockResolvedValue([
+      { ...recurring, lastExecutedDate: new Date(now.getFullYear(), now.getMonth(), 1) },
+    ]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['r1'] } } as any, res);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ created: [], count: 0 });
+  });
+
+  it('non duplica se una richiesta concorrente ha già preso la scadenza', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([recurring]);
+    p.recurringTransaction.updateMany.mockResolvedValue({ count: 0 });
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['r1'] } } as any, res);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('registra anche le occorrenze arretrate', async () => {
+    const now = new Date();
+    p.recurringTransaction.findMany.mockResolvedValue([
+      { ...recurring, lastExecutedDate: new Date(now.getFullYear(), now.getMonth() - 3, 1) },
+    ]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['r1'] } } as any, res);
+    expect(p.transaction.create).toHaveBeenCalledTimes(3); // 2 arretrate + corrente
   });
 
   it('400 se una data non è valida', async () => {
