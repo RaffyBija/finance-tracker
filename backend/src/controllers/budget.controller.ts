@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateBudgetDTO } from '../types';
-import { BudgetPeriod, BudgetRollover } from '@prisma/client';
+import { BudgetPeriod, BudgetRollover, Prisma } from '@prisma/client';
 import {
   BudgetWindow,
   currentBudgetWindow,
@@ -119,7 +119,7 @@ const computeCarryIn = async (
     categoryId: string | null;
     startDate: Date;
     endDate: Date | null;
-    amount: any;
+    amount: Prisma.Decimal | number;
     rollover: BudgetRollover;
     period: BudgetPeriod;
   },
@@ -163,7 +163,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { active } = req.query;
 
-    const where: any = { userId };
+    const where: Prisma.BudgetWhereInput = { userId };
     
     // Filtra solo budget attivi
     if (active === 'true') {

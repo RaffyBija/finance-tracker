@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authAPI } from '../api/client';
 import { getToken, setToken as persistToken, clearToken } from '../utils/tokenStorage';
 import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../types';
+import axios from 'axios';
 
 
 interface AuthContextType {
@@ -49,9 +50,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setToken(savedToken);
         }
         return 'ok';
-      } catch (error: any) {
+      } catch (error) {
         // Token cancellato SOLO se davvero non valido/scaduto (401).
-        if (error?.response?.status === 401) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
           if (!cancelled) {
             clearToken();
             setToken(null);

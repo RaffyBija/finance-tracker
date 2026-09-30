@@ -43,7 +43,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test -- --run
-      # Lint ha debito pregresso noto (126 problemi, audit/REPORT.md): visibile
-      # in CI ma non bloccante finché non viene risanato in una sessione dedicata.
+      # Errori di lint bloccanti; le regole React 19 rimaste in warning sono debito noto (eslint.config.js).
       - run: npm run lint
-        continue-on-error: true

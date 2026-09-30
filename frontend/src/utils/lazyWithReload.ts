@@ -9,6 +9,7 @@ import { lazy, type ComponentType } from 'react';
  * recupera index.html con gli hash nuovi. Se anche dopo il reload l'import
  * fallisce, l'errore viene propagato all'ErrorBoundary più vicino.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- React.lazy richiede ComponentType<any>
 export function lazyWithReload<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
 ) {

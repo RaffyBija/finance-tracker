@@ -7,6 +7,8 @@ import { useCategoryStats } from '../../../hooks/useDashboard';
 import { formatMonth } from '../../../utils/date';
 import { useFormatCurrency } from '../../../hooks/useFormatCurrency';
 import { SkeletonPieChart } from '../../shared/Skeleton';
+import type { CategoryStat } from '../../../types';
+import type { ChartTooltipProps } from '../../../types/chart';
 
 const FALLBACK_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
@@ -21,7 +23,7 @@ const isValidColor = (color?: string) =>
 const getCategoryColor = (entry: { categoryColor?: string }, index: number) =>
   isValidColor(entry.categoryColor) ? entry.categoryColor! : FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 
-const CustomPieTooltip = memo(({ active, payload }: any) => {
+const CustomPieTooltip = memo(({ active, payload }: ChartTooltipProps) => {
   const { formatCurrency } = useFormatCurrency();
   if (!active || !payload?.length) return null;
   return (
@@ -32,7 +34,7 @@ const CustomPieTooltip = memo(({ active, payload }: any) => {
   );
 });
 
-const CustomPieLegend = memo(({ data }: { data: any[] }) => {
+const CustomPieLegend = memo(({ data }: { data: CategoryStat[] }) => {
   const { formatCurrency } = useFormatCurrency();
   return (
     <div className="dashboard-legend">

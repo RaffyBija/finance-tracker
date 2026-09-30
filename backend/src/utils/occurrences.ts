@@ -17,7 +17,7 @@ export type OccurrenceRule = {
   dayOfMonth: number | null;
   startDate: Date;
   endDate: Date | null;
-  amount: any;
+  amount: unknown;
 };
 
 // Elenca le DATE esatte in cui una ricorrente cade nel range [rangeStart, rangeEnd].

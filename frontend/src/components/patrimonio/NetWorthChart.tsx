@@ -6,6 +6,7 @@ import type { NetWorthPoint } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useTheme } from '../../contexts/ThemeContext';
 import { formatMonthShort, formatMonth } from '../../utils/date';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 // Andamento storico del patrimonio netto — stessa estetica teal di ProjectionChart
 // (area con gradiente), ma guarda all'indietro: tutto "reale", granularità mensile.
@@ -19,9 +20,9 @@ interface NetWorthChartProps {
 
 const axisLabel = (month: string) => formatMonthShort(month + '-01');
 
-function NetWorthTooltip({ active, payload, formatCurrency }: any) {
+function NetWorthTooltip({ active, payload, formatCurrency }: ChartTooltipProps<NetWorthPoint> & { formatCurrency: FormatCurrency }) {
   if (!active || !payload?.length) return null;
-  const p = payload[0].payload as NetWorthPoint;
+  const p = payload[0].payload;
   return (
     <div className="card card-md dashboard-tooltip">
       <p className="dashboard-tooltip-label">{formatMonth(p.month + '-01')}</p>

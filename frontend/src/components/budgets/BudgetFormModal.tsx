@@ -9,6 +9,7 @@ import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import CategoryPicker from '../categories/CategoryPicker';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiError } from '../../utils/apiError';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -110,8 +111,8 @@ export default function BudgetFormModal({
       }
       onClose();
       onSuccess();
-    } catch (error: any) {
-      setSubmitError(error.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (error) {
+      setSubmitError(apiError(error, 'Errore nel salvataggio. Riprova.'));
     }
   };
 

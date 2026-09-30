@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { SkeletonPieChart } from '../shared/Skeleton';
+import type { ChartTooltipProps } from '../../types/chart';
 
 // "Dove sono i tuoi soldi": composizione della liquidità per conto BANK.
 // La CC è debito, non patrimonio → esclusa (coerente con project-account-semantics).
@@ -11,7 +12,7 @@ const FALLBACK = '#0d9488';
 
 const isValidColor = (c?: string) => !!c && /^#[0-9A-Fa-f]{3,6}$/.test(c);
 
-function CompositionTooltip({ active, payload }: any) {
+function CompositionTooltip({ active, payload }: ChartTooltipProps) {
   const { formatCurrency } = useFormatCurrency();
   if (!active || !payload?.length) return null;
   return (

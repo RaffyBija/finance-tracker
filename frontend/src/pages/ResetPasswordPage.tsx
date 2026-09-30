@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import AuthLayout from '../components/layout/AuthLayout';
+import { apiError } from '../utils/apiError';
 
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function ResetPasswordPage() {
   const [searchParams]  = useSearchParams();
@@ -46,8 +47,8 @@ export default function ResetPasswordPage() {
       await axios.post(`${API_URL}/auth/reset-password`, { token, newPassword: password });
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il reset della password');
+    } catch (err) {
+      setError(apiError(err, 'Errore durante il reset della password'));
     } finally {
       setIsLoading(false);
     }

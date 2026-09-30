@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import AuthLayout from '../components/layout/AuthLayout';
+import { apiError } from '../utils/apiError';
 
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail]       = useState('');
@@ -19,8 +20,8 @@ export default function ForgotPasswordPage() {
     try {
       await axios.post(`${API_URL}/auth/request-password-reset`, { email });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante la richiesta');
+    } catch (err) {
+      setError(apiError(err, 'Errore durante la richiesta'));
     } finally {
       setIsLoading(false);
     }

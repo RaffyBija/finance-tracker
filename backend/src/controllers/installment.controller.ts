@@ -12,6 +12,9 @@ class AlreadyPaidError extends Error {}
 const typeForDirection = (direction: 'DEBT' | 'CREDIT'): 'INCOME' | 'EXPENSE' =>
   direction === 'CREDIT' ? 'INCOME' : 'EXPENSE';
 
+// Rata così come arriva dal body di creazione/modifica del piano.
+type RataInput = { amount: number | string; plannedDate: string; counterparty?: string | null; notes?: string | null };
+
 // Include standard: piano + rate (ordinate per data) + relazioni leggere.
 const planInclude = {
   installments: {
@@ -288,7 +291,7 @@ export const updateInstallmentPlan = async (req: AuthRequest, res: Response) => 
         await tx.plannedTransaction.deleteMany({ where: { planId: id, isPaid: false } });
         const total = paidRate.length + installments.length;
         await tx.plannedTransaction.createMany({
-          data: installments.map((r: any, i: number) => ({
+          data: installments.map((r: RataInput, i: number) => ({
             amount: Number(r.amount),
             type,
             description: rataLabel(cleanTitle, r.counterparty, paidRate.length + i + 1, total),

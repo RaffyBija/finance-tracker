@@ -3,8 +3,9 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
 import axios from 'axios';
 import AuthLayout from '../components/layout/AuthLayout';
+import { apiError } from '../utils/apiError';
 
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function VerifyEmailChangePage() {
   const [searchParams] = useSearchParams();
@@ -24,9 +25,9 @@ export default function VerifyEmailChangePage() {
         const res = await axios.post(`${API_URL}/auth/verify-email-change`, { token });
         setStatus('success');
         setMessage(res.data.message);
-      } catch (err: any) {
+      } catch (err) {
         setStatus('error');
-        setMessage(err.response?.data?.error || 'Errore durante la verifica');
+        setMessage(apiError(err, 'Errore durante la verifica'));
       }
     };
     verify();

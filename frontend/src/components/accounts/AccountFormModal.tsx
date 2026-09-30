@@ -8,6 +8,8 @@ import { useFormValidation } from '../../hooks/useFormValidation';
 import { useCreateAccount, useUpdateAccount, useAccounts } from '../../hooks/useAccounts';
 import { useToast } from '../../contexts/ToastContext';
 import type { Account, CreateAccountDTO, AccountType } from '../../types';
+import { apiError } from '../../utils/apiError';
+import axios from 'axios';
 
 const COLORS = [
   '#0d9488', // teal — primary
@@ -106,7 +108,7 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
 
   const set = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    clearError(field as any);
+    clearError(field as Parameters<typeof clearError>[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,17 +137,18 @@ export default function AccountFormModal({ isOpen, onClose, editingAccount }: Ac
         toast.success('Conto creato');
       }
       onClose();
-    } catch (err: any) {
-      if (err.response?.status === 403 && err.response?.data?.error?.includes('Limite')) {
-        const limit = err.response.data.limit ?? 3;
-        const canUpgrade = err.response.data.upgrade;
+    } catch (err) {
+      const data = axios.isAxiosError<{ error?: string; limit?: number; upgrade?: boolean }>(err) ? err.response?.data : undefined;
+      if (axios.isAxiosError(err) && err.response?.status === 403 && data?.error?.includes('Limite')) {
+        const limit = data.limit ?? 3;
+        const canUpgrade = data.upgrade;
         setSubmitError(
           canUpgrade
             ? `Limite di ${limit} conti raggiunto. Passa a Pro per aggiungerne altri.`
             : `Hai raggiunto il limite massimo di ${limit} conti del piano Pro.`
         );
       } else {
-        setSubmitError(err.response?.data?.error ?? 'Errore nel salvataggio. Riprova.');
+        setSubmitError(apiError(err, 'Errore nel salvataggio. Riprova.'));
       }
     }
   };

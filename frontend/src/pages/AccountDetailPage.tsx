@@ -18,6 +18,7 @@ import Skeleton, { SkeletonPageHeader, SkeletonCardGrid } from '../components/sh
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { daysUntilBilling } from '../utils/billing';
 import type { Account } from '../types';
+import { apiError } from '../utils/apiError';
 
 export default function AccountDetailPage() {
   const { formatCurrency } = useFormatCurrency();
@@ -67,8 +68,8 @@ export default function AccountDetailPage() {
       const result = await deleteMutation.mutateAsync(account.id);
       toast.success(result?.message ?? 'Conto eliminato');
       navigate('/accounts');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Errore nella eliminazione');
+    } catch (err) {
+      toast.error(apiError(err, 'Errore nella eliminazione'));
     } finally {
       setConfirmDelete(false);
     }
@@ -226,7 +227,7 @@ export default function AccountDetailPage() {
           <h2 className="account-detail-section-title">Carte collegate</h2>
           <div className="account-linked-cards">
             {account.linkedCC!.map((cc) => {
-              const ccDebt = Math.abs((cc as any).balance ?? 0);
+              const ccDebt = Math.abs(cc.balance ?? 0);
               return (
                 <button
                   key={cc.id}

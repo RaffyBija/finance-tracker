@@ -4,6 +4,7 @@ import { AuthRequest, CreatePlannedTransactionDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
+import { Prisma } from '@prisma/client';
 
 class AlreadyPaidError extends Error {}
 
@@ -45,7 +46,7 @@ export const getPlannedTransactions = async (req: AuthRequest, res: Response) =>
 
     // Esclude le rate dei piani a rate (planId valorizzato): quelle vivono nel
     // loro piano, non nella lista delle pianificate singole (niente doppioni).
-    const where: any = { userId, planId: null };
+    const where: Prisma.PlannedTransactionWhereInput = { userId, planId: null };
 
     // Sospesi (plannedDate null) e Pianificate (plannedDate valorizzata) sono
     // mutuamente esclusivi: senza suspendedOnly la lista "Pianificate" non deve

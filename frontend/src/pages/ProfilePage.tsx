@@ -17,6 +17,7 @@ import CategorySelect from '../components/categories/CategorySelect';
 import { usePayPeriod } from '../hooks/useAnalytics';
 import { broadcastInvalidation } from '../utils/syncChannel';
 import type { PayPeriodSource } from '../types';
+import { apiError } from '../utils/apiError';
 
 // ── Sezione: Generale (identità + dati account) ──────────────────────────────
 
@@ -75,8 +76,8 @@ function GeneralSection() {
         toast.success(res.message || 'Profilo aggiornato con successo');
       }
       setIsEditing(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } catch (error) {
+      toast.error(apiError(error, 'Errore nel salvataggio'));
     } finally {
       setIsPending(false);
     }
@@ -192,8 +193,8 @@ function PreferencesSection() {
       const res = await authAPI.updateProfile({ currency });
       updateUser(res.user ?? res);
       toast.success('Valuta aggiornata');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } catch (error) {
+      toast.error(apiError(error, 'Errore nel salvataggio'));
     } finally {
       setIsPending(false);
     }
@@ -206,8 +207,8 @@ function PreferencesSection() {
       const res = await authAPI.updateProfile({ savingRate: rate });
       updateUser(res.user ?? res);
       toast.success('Percentuale di risparmio aggiornata');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } catch (error) {
+      toast.error(apiError(error, 'Errore nel salvataggio'));
     } finally {
       setIsPending(false);
     }
@@ -339,8 +340,8 @@ function PayPeriodSettings() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       broadcastInvalidation(['dashboard']);
       toast.success('Periodo di paga aggiornato');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel salvataggio');
+    } catch (error) {
+      toast.error(apiError(error, 'Errore nel salvataggio'));
     } finally {
       setIsPending(false);
     }
@@ -443,8 +444,8 @@ function SecuritySection() {
       setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       resetErrors();
       setIsOpen(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Errore nel cambio password');
+    } catch (error) {
+      toast.error(apiError(error, 'Errore nel cambio password'));
     } finally {
       setIsPending(false);
     }
@@ -641,8 +642,8 @@ function DangerSection() {
       toast.success('Account eliminato');
       logout();
       navigate('/');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Errore nell'eliminazione dell'account");
+    } catch (error) {
+      toast.error(apiError(error, "Errore nell'eliminazione dell'account"));
       setIsPending(false);
     }
   };

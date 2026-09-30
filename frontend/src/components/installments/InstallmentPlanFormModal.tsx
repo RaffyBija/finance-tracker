@@ -19,6 +19,7 @@ import type {
   PlanDirection,
   InstallmentInput,
 } from '../../types';
+import { apiError } from '../../utils/apiError';
 
 const TITLE_MAX = 80;
 
@@ -205,8 +206,8 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
         toast.success('Piano a rate creato con successo');
       }
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore nel salvataggio. Riprova.');
+    } catch (err) {
+      setError(apiError(err, 'Errore nel salvataggio. Riprova.'));
     }
   };
 
@@ -386,7 +387,7 @@ export default function InstallmentPlanFormModal({ isOpen, editingItem, categori
                 <InputDecimal
                   formData={row}
                   field="amount"
-                  setFormData={(next: any) => updateRow(i, { amount: next.amount })}
+                  setFormData={(next) => updateRow(i, { amount: next.amount })}
                   label={`Importo rata ${i + 1}`}
                   hideLabel
                   currency={currencySymbol(currency)}

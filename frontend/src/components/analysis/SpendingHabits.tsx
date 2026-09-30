@@ -4,6 +4,7 @@ import type { SpendingAnalysis } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { WEEKDAYS, dailySpending, frequentDescriptions, sizeDistribution, weekdayProfile } from './model';
 import { useChartTheme, dayLabel, pct, periodLabel } from './ui';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 // Scheda "Abitudini": COME si spende, non solo quanto.
 //   • giorno della settimana (spesa variabile media, su tutti i periodi caricati);
@@ -16,7 +17,7 @@ interface Props {
   selected: number;
 }
 
-function WeekdayTooltip({ active, payload, formatCurrency }: any) {
+function WeekdayTooltip({ active, payload, formatCurrency }: ChartTooltipProps<{ day: string; avg: number; total: number }> & { formatCurrency: FormatCurrency }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (

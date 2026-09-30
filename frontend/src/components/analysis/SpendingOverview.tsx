@@ -3,11 +3,12 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import type { SpendingAnalysis } from '../../types';
+import type { ExpenseKind, SpendingAnalysis } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { KINDS, comparePeriod, natureTotals, periodOutlook, periodTotals } from './model';
 import { useChartTheme, spendTone, periodAxisLabel, periodLabel, pct } from './ui';
 import { signOf } from '../patrimonio/tone';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 // Scheda "Spese": quanto ho speso nel periodo, rispetto al solito, di che natura
 // (fisse / programmate / variabili), quanto ho risparmiato e, per il periodo in
@@ -19,7 +20,7 @@ interface Props {
   onSelect: (index: number) => void;
 }
 
-function PeriodTooltip({ active, payload, formatCurrency }: any) {
+function PeriodTooltip({ active, payload, formatCurrency }: ChartTooltipProps<{ label: string; total: number; income: number } & Record<ExpenseKind, number>> & { formatCurrency: FormatCurrency }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
@@ -164,8 +165,9 @@ export default function SpendingOverview({ data, selected, onSelect }: Props) {
               data={chartData}
               margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
               barCategoryGap="28%"
-              onClick={(e: any) => {
-                const i = e?.activePayload?.[0]?.payload?.index;
+              onClick={(e) => {
+                // Recharts non tipizza activePayload nell'evento click del grafico.
+                const i = (e as unknown as { activePayload?: { payload?: { index?: number } }[] } | null)?.activePayload?.[0]?.payload?.index;
                 if (typeof i === 'number') onSelect(i);
               }}
             >

@@ -4,6 +4,7 @@ import { User, Mail, Lock, Eye, EyeOff, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import { detectBrowserCurrency, CURRENCY_OPTIONS } from '../utils/currency';
+import { apiError } from '../utils/apiError';
 
 export default function RegisterPage() {
   const location = useLocation();
@@ -39,8 +40,8 @@ export default function RegisterPage() {
     try {
       await register({ email, password, name, currency });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante la registrazione');
+    } catch (err) {
+      setError(apiError(err, 'Errore durante la registrazione'));
     } finally {
       setIsLoading(false);
     }

@@ -4,6 +4,7 @@ import type { Category, TransactionType } from '../../types';
 import { buildCategoryTree, categoryPath, matchesCategory, normalizeSearch } from '../../utils/categoryTree';
 import { useCreateCategory } from '../../hooks/useCategories';
 import { useToast } from '../../contexts/ToastContext';
+import { apiError } from '../../utils/apiError';
 
 // Selettore di categoria unico per tutti i form: ricerca, voci raggruppate per
 // macro-categoria, recenti in cima, creazione al volo. Il pannello si apre DENTRO
@@ -112,8 +113,8 @@ export default function CategoryPicker({
         pushRecent(type, created.id);
         onChange(created.id);
         toast.success(`Categoria "${created.name}" creata`);
-      } catch (error: any) {
-        toast.error(error.response?.data?.error || 'Impossibile creare la categoria');
+      } catch (error) {
+        toast.error(apiError(error, 'Impossibile creare la categoria'));
         return;
       }
     }

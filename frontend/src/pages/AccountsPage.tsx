@@ -10,6 +10,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import { SkeletonCardGrid, SkeletonPageHeader } from '../components/shared/Skeleton';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import type { Account } from '../types';
+import { apiError } from '../utils/apiError';
 
 export default function AccountsPage() {
   const { formatCurrency } = useFormatCurrency();
@@ -33,8 +34,8 @@ export default function AccountsPage() {
     try {
       const res = await restoreMutation.mutateAsync(id);
       toast.success(res.message);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Errore nel ripristino');
+    } catch (err) {
+      toast.error(apiError(err, 'Errore nel ripristino'));
     }
   };
 
@@ -66,8 +67,8 @@ export default function AccountsPage() {
     try {
       const result = await deleteMutation.mutateAsync(deletingId);
       toast.success(result?.message ?? 'Conto eliminato');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error ?? 'Errore nella eliminazione');
+    } catch (err) {
+      toast.error(apiError(err, 'Errore nella eliminazione'));
     } finally {
       setDeletingId(null);
     }

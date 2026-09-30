@@ -6,6 +6,7 @@ import {
 import type { ProjectionPoint } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useTheme } from '../../contexts/ThemeContext';
+import type { ChartTooltipProps, FormatCurrency } from '../../types/chart';
 
 // Grafico dell'andamento del saldo nel look della landing (FragChart):
 //   • tratto pieno  = storia recente reale (serie "actual")
@@ -36,9 +37,9 @@ interface ChartDatum {
 const shortDate = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
 
-function ProjectionTooltip({ active, payload, formatCurrency }: any) {
+function ProjectionTooltip({ active, payload, formatCurrency }: ChartTooltipProps<ChartDatum> & { formatCurrency: FormatCurrency }) {
   if (!active || !payload?.length) return null;
-  const datum = payload[0].payload as ChartDatum;
+  const datum = payload[0].payload;
   const value = datum.actual ?? datum.projected ?? 0;
   const isProjected = datum.actual == null;
   return (
