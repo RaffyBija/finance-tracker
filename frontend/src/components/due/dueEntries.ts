@@ -66,7 +66,8 @@ export function recurringToEntry(r: RecurringDueItem, today: string): DueEntry {
     kind: 'recurring',
     id: r.id,
     title: r.description,
-    subtitle: r.category?.name ?? 'Senza categoria',
+    subtitle: (r.category?.name ?? 'Senza categoria')
+      + (r.missedCount ? ` · +${r.missedCount} ${r.missedCount === 1 ? 'occorrenza arretrata' : 'occorrenze arretrate'}` : ''),
     amount: Number(r.amount),
     type: r.type,
     scheduledDate,

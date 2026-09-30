@@ -18,7 +18,7 @@ function clampDay(year: number, month: number, day: number): Date {
   return new Date(year, month, Math.min(day, lastDay));
 }
 
-function computeNextDueDate(
+export function computeNextDueDate(
   recurring: {
     frequency: string;
     dayOfMonth: number | null;
@@ -67,6 +67,55 @@ function computeNextDueDate(
   }
 
   return dueDate;
+}
+
+// Occorrenze SALTATE: quelle dopo lastExecutedDate e prima di `latest` (la scadenza
+// corrente, già gestita da computeNextDueDate). Senza lastExecutedDate niente storico
+// arretrato: una ricorrente creata con startDate nel passato non deve generare
+// mesi di movimenti retroattivi.
+const MAX_MISSED = 60;
+export function computeMissedDueDates(
+  recurring: {
+    frequency: string;
+    dayOfMonth: number | null;
+    startDate: Date;
+    endDate: Date | null;
+    lastExecutedDate: Date | null;
+  },
+  latest: Date
+): Date[] {
+  if (!recurring.lastExecutedDate) return [];
+  const last = normalizeDate(recurring.lastExecutedDate);
+  const start = normalizeDate(recurring.startDate);
+  const end = recurring.endDate ? normalizeDate(recurring.endDate) : null;
+  const before = latest.getTime() - 12 * 60 * 60 * 1000; // tolleranza DST
+  const out: Date[] = [];
+  const push = (d: Date) => {
+    if (d > last && d >= start && d.getTime() < before && (!end || d <= end)) out.push(d);
+  };
+
+  if (recurring.frequency === 'MONTHLY') {
+    const day = recurring.dayOfMonth || 1;
+    for (let i = 0; i < 1200 && out.length < MAX_MISSED; i++) {
+      const d = clampDay(last.getFullYear(), last.getMonth() + i, day);
+      if (d.getTime() >= before) break;
+      push(d);
+    }
+  } else if (recurring.frequency === 'WEEKLY') {
+    const skip = Math.max(0, Math.floor((last.getTime() - start.getTime()) / (7 * 86_400_000)) - 1);
+    for (let i = skip; i < skip + 5200 && out.length < MAX_MISSED; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7 * i);
+      if (d.getTime() >= before) break;
+      push(d);
+    }
+  } else {
+    for (let i = 0; i < 200 && out.length < MAX_MISSED; i++) {
+      const d = clampDay(last.getFullYear() + i, start.getMonth(), start.getDate());
+      if (d.getTime() >= before) break;
+      push(d);
+    }
+  }
+  return out;
 }
 
 // Ritorna la prossima occorrenza >= oggi (usata per execute-now)
@@ -385,6 +434,8 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
         amount: Number(r.amount),
         nextDueDate: dueDate.toISOString().split('T')[0],
         daysOverdue,
+        // occorrenze arretrate, registrate insieme alla scadenza corrente
+        missedCount: computeMissedDueDates(r, dueDate).length,
       };
 
       if (daysOverdue === 0) dueToday.push(item);
@@ -447,28 +498,42 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
     for (const r of recurring) {
       const dueDate = computeNextDueDate(r, today);
       if (!dueDate) continue;
-      const txDate = dates?.[r.id] ? new Date(dates[r.id]) : dueDate;
+      // Già eseguita (doppio click, secondo tab, retry): niente duplicato.
+      if (r.lastExecutedDate && normalizeDate(r.lastExecutedDate) >= dueDate) continue;
 
-      const transaction = await prisma.transaction.create({
-        data: {
-          amount: r.amount,
-          type: r.type,
-          description: r.description,
-          categoryId: r.categoryId,
-          date: txDate,
-          userId,
-          fromRecurringId: r.id,
-          ...(r.accountId && { accountId: r.accountId }),
-        },
-        include: { category: true },
+      const occurrences = [
+        ...computeMissedDueDates(r, dueDate).map((d) => ({ due: d, date: d })),
+        { due: dueDate, date: dates?.[r.id] ? new Date(dates[r.id]) : dueDate },
+      ];
+
+      // Tutto o niente per ricorrente; l'update condizionale su lastExecutedDate
+      // fa perdere la gara a una seconda richiesta concorrente.
+      const txs = await prisma.$transaction(async (tx) => {
+        const claimed = await tx.recurringTransaction.updateMany({
+          where: { id: r.id, lastExecutedDate: r.lastExecutedDate },
+          data: { lastExecutedDate: dueDate },
+        });
+        if (claimed.count === 0) return [];
+        const rows = [];
+        for (const o of occurrences) {
+          rows.push(await tx.transaction.create({
+            data: {
+              amount: r.amount,
+              type: r.type,
+              description: r.description,
+              categoryId: r.categoryId,
+              date: o.date,
+              userId,
+              fromRecurringId: r.id,
+              ...(r.accountId && { accountId: r.accountId }),
+            },
+            include: { category: true },
+          }));
+        }
+        return rows;
       });
 
-      await prisma.recurringTransaction.update({
-        where: { id: r.id },
-        data: { lastExecutedDate: dueDate },
-      });
-
-      created.push({ ...transaction, amount: Number(transaction.amount) });
+      for (const t of txs) created.push({ ...t, amount: Number(t.amount) });
     }
 
     // Una ricorrente su CC datata in un ciclo già chiuso deve aggiornarne l'addebito
@@ -513,24 +578,34 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
     const nextFuture = computeNextFutureDueDate(recurring, today);
     const dateToMark = nextFuture ?? today;
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: recurring.amount,
-        type: recurring.type,
-        description: recurring.description,
-        categoryId: recurring.categoryId,
-        date: today,
-        userId,
-        fromRecurringId: recurringId,
-        ...(recurring.accountId && { accountId: recurring.accountId }),
-      },
-      include: { category: true },
-    });
+    // Occorrenza già registrata (doppio click, secondo tab): niente duplicato.
+    if (recurring.lastExecutedDate && normalizeDate(recurring.lastExecutedDate) >= normalizeDate(dateToMark)) {
+      return res.status(409).json({ error: 'Occorrenza già registrata' });
+    }
 
-    await prisma.recurringTransaction.update({
-      where: { id: recurringId },
-      data: { lastExecutedDate: dateToMark },
+    const transaction = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.recurringTransaction.updateMany({
+        where: { id: recurringId, lastExecutedDate: recurring.lastExecutedDate },
+        data: { lastExecutedDate: dateToMark },
+      });
+      if (claimed.count === 0) return null;
+      return tx.transaction.create({
+        data: {
+          amount: recurring.amount,
+          type: recurring.type,
+          description: recurring.description,
+          categoryId: recurring.categoryId,
+          date: today,
+          userId,
+          fromRecurringId: recurringId,
+          ...(recurring.accountId && { accountId: recurring.accountId }),
+        },
+        include: { category: true },
+      });
     });
+    if (!transaction) {
+      return res.status(409).json({ error: 'Occorrenza già registrata' });
+    }
 
     analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ ...transaction, amount: Number(transaction.amount) });

@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import QuickActionsWidget from './QuickActionsWidget';
 import CCTilesWidget from './CCTilesWidget';
+import CanSpendTile from './CanSpendTile';
 import NextExpenseTile from './NextExpenseTile';
 import BudgetRiskTile from './BudgetRiskTile';
 import DueSoonWidget from './DueSoonWidget';
@@ -13,6 +14,7 @@ import RecentTransactionsWidget from './RecentTransactionsWidget';
 
 export type WidgetId =
   | 'quick-actions'
+  | 'can-spend'
   | 'cc-tiles'
   | 'next-expense'
   | 'budget-risk'
@@ -54,6 +56,15 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     slot: 'bar',
     size: 'full',
     component: QuickActionsWidget,
+  },
+  {
+    id: 'can-spend',
+    title: 'Puoi spendere',
+    description: 'Quanto puoi spendere al giorno fino al prossimo stipendio.',
+    defaultEnabled: true,
+    slot: 'tile',
+    size: 'half',
+    component: CanSpendTile,
   },
   {
     id: 'cc-tiles',

@@ -61,7 +61,10 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
+      // Solo se c'era una sessione: un 401 di login (credenziali errate) non è una scadenza.
+      const hadSession = !!getToken();
       clearToken();
+      if (hadSession) window.dispatchEvent(new Event("auth:unauthorized"));
     }
     return Promise.reject(error);
   },

@@ -470,6 +470,8 @@ export interface RecurringTransaction {
 export interface RecurringDueItem extends RecurringTransaction {
   nextDueDate: string;
   daysOverdue: number;
+  /** Occorrenze arretrate, registrate insieme a quella corrente. */
+  missedCount?: number;
 }
 
 export interface RecurringDueResponse {
