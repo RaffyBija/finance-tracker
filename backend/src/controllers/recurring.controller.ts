@@ -579,8 +579,13 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
     }
 
     const today = new Date();
-    const nextFuture = computeNextFutureDueDate(recurring, today);
-    const dateToMark = nextFuture ?? today;
+    // Se la scadenza corrente non è ancora registrata (cache client vecchia, card non
+    // marcata come "da eseguire"), questo click la salda: segnare la prossima futura
+    // la farebbe sparire dai promemoria insieme a quella del mese dopo.
+    const pending = computeNextDueDate(recurring, today);
+    const hasPending = !!pending
+      && (!recurring.lastExecutedDate || normalizeDate(recurring.lastExecutedDate) < pending);
+    const dateToMark = hasPending ? pending : (computeNextFutureDueDate(recurring, today) ?? today);
 
     // Occorrenza già registrata (doppio click, secondo tab): niente duplicato.
     if (recurring.lastExecutedDate && normalizeDate(recurring.lastExecutedDate) >= normalizeDate(dateToMark)) {

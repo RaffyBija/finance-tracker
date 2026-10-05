@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import prisma from '../../utils/prisma';
 import { reconcileCcChanges } from '../../utils/billingCycle';
 import { markAsPaid, deletePlannedTransaction, updatePlannedTransaction } from '../../controllers/planned.controller';
-import { executeRecurring } from '../../controllers/recurring.controller';
+import { executeRecurring, executeRecurringNow } from '../../controllers/recurring.controller';
 
 // Registrazione delle scadenze dal popup "Scadenze da registrare":
 // pianificate (markAsPaid) e ricorrenti (executeRecurring) con data effettiva.
 vi.mock('../../utils/prisma', () => {
   const client: any = {
     plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), delete: vi.fn() },
-    recurringTransaction: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    recurringTransaction: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     transaction: { create: vi.fn() },
-    account: { findMany: vi.fn().mockResolvedValue([]) },
+    account: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     $transaction: vi.fn(),
   };
   return { default: client };
@@ -154,5 +154,28 @@ describe('/planned/:id sulle rate di un piano (guard planId)', () => {
     expect(p.transaction.create).not.toHaveBeenCalled();
     expect(p.plannedTransaction.update).not.toHaveBeenCalled();
     expect(p.plannedTransaction.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('executeRecurringNow', () => {
+  const base = {
+    id: 'r1', userId: 'u1', amount: 20, type: 'EXPENSE', description: 'Abbonamento', categoryId: 'c1',
+    accountId: null, frequency: 'MONTHLY', dayOfMonth: 4, startDate: new Date(2026, 2, 4), endDate: null,
+  };
+  const run = async (lastExecutedDate: Date) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 5, 9, 0)); // 5 ottobre
+    p.recurringTransaction.findFirst.mockResolvedValue({ ...base, lastExecutedDate });
+    await executeRecurringNow({ userId: 'u1', params: { id: 'r1' } } as any, mockRes());
+    vi.useRealTimers();
+    return p.recurringTransaction.updateMany.mock.calls[0][0].data.lastExecutedDate;
+  };
+
+  it('scadenza del 4 non registrata: salda quella, non salta al 4 novembre', async () => {
+    expect(await run(new Date(2026, 8, 4))).toEqual(new Date(2026, 9, 4));
+  });
+
+  it('scadenza corrente già registrata: esecuzione anticipata, segna la prossima futura', async () => {
+    expect(await run(new Date(2026, 9, 4))).toEqual(new Date(2026, 10, 4));
   });
 });

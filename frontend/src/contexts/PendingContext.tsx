@@ -43,6 +43,9 @@ export function PendingProvider({ children }: { children: ReactNode }) {
     queryKey: ['pending-recurring'],
     queryFn: recurringApi.getDue,
     staleTime: 5 * 60 * 1000,
+    // Default globale = false: l'app lasciata aperta/in background per giorni
+    // non rileggerebbe mai le scadenze nuove.
+    refetchOnWindowFocus: true,
     retry: false,
   });
 
@@ -54,6 +57,9 @@ export function PendingProvider({ children }: { children: ReactNode }) {
     queryKey: ['pending-planned'],
     queryFn: plannedApi.getDue,
     staleTime: 5 * 60 * 1000,
+    // Default globale = false: l'app lasciata aperta/in background per giorni
+    // non rileggerebbe mai le scadenze nuove.
+    refetchOnWindowFocus: true,
     retry: false,
   });
 
@@ -65,6 +71,9 @@ export function PendingProvider({ children }: { children: ReactNode }) {
     queryKey: ['pending-installments'],
     queryFn: installmentsApi.getDue,
     staleTime: 5 * 60 * 1000,
+    // Default globale = false: l'app lasciata aperta/in background per giorni
+    // non rileggerebbe mai le scadenze nuove.
+    refetchOnWindowFocus: true,
     retry: false,
   });
 
