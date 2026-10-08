@@ -364,6 +364,10 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
     const catById = new Map(cats.map((c) => [c.id, c]));
 
     await prisma.$transaction(async (tx) => {
+      // Una sola lettura: macro esistenti e templateKey già occupate si risolvono in
+      // memoria, così il numero di query della transazione non cresce per categoria.
+      const all = await tx.category.findMany({ where: { userId }, select: { id: true, name: true, type: true, parentId: true, templateKey: true } });
+      const takenKeys = new Set(all.map((c) => c.templateKey).filter(Boolean));
       const macroIds = new Map<string, string>();
       // Macro predefinita per chiave: una categoria dell'utente con quella templateKey
       // o con lo stesso nome (senza macro); altrimenti la crea.
@@ -371,10 +375,7 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
         if (macroIds.has(key)) return macroIds.get(key)!;
         const tpl = templateByKey(key);
         if (!tpl) return null;
-        const found = await tx.category.findFirst({
-          where: { userId, type: tpl.type, parentId: null, OR: [{ templateKey: key }, { name: tpl.name }] },
-          select: { id: true },
-        });
+        const found = all.find((c) => c.type === tpl.type && !c.parentId && (c.templateKey === key || c.name === tpl.name));
         const id = found
           ? found.id
           : (await tx.category.create({
@@ -386,6 +387,9 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
         return id;
       };
 
+      // Spostamenti senza templateKey raggruppati per macro: una updateMany a macro,
+      // non una query per categoria.
+      const plainByMacro = new Map<string, string[]>();
       for (const a of assignments as Array<{ categoryId: string; macroKey: string | null }>) {
         const cat = catById.get(a.categoryId);
         if (!cat || !a.macroKey) continue;
@@ -395,6 +399,7 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
           // Stesso nome della macro: è la macro.
           await tx.category.update({ where: { id: cat.id }, data: { templateKey: tpl.key, parentId: null, nature: cat.nature ?? tpl.nature ?? null } });
           macroIds.set(tpl.key, cat.id);
+          takenKeys.add(tpl.key);
           continue;
         }
         if (cat._count.children > 0) continue; // una macro personale con figli resta macro
@@ -404,11 +409,16 @@ export const applyOrganize = async (req: AuthRequest, res: Response) => {
         // chiave), se ancora libera: evita il doppione aggiungendo le predefinite.
         const guess = suggestPlacement(cat.name, cat.type);
         const childKey = guess.macroKey === tpl.key ? guess.childKey : null;
-        const taken = childKey ? await tx.category.findFirst({ where: { userId, templateKey: childKey }, select: { id: true } }) : null;
-        await tx.category.update({
-          where: { id: cat.id },
-          data: { parentId: macroId, nature: null, ...(childKey && !taken && { templateKey: childKey }) },
-        });
+        const useKey = childKey && !takenKeys.has(childKey) ? childKey : null;
+        if (useKey) takenKeys.add(useKey);
+        if (useKey) {
+          await tx.category.update({ where: { id: cat.id }, data: { parentId: macroId, nature: null, templateKey: useKey } });
+        } else {
+          plainByMacro.set(macroId, [...(plainByMacro.get(macroId) ?? []), cat.id]);
+        }
+      }
+      for (const [parentId, catIds] of plainByMacro) {
+        await tx.category.updateMany({ where: { id: { in: catIds }, userId }, data: { parentId, nature: null } });
       }
 
       if (addDefaults) await seedDefaultCategories(userId, {}, tx);
