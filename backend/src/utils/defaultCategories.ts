@@ -1,4 +1,5 @@
 import { Prisma, CategoryNature, TransactionType } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import prisma from './prisma';
 
 // ── Categorie predefinite (uguali per tutti) ─────────────────────────────────
@@ -171,32 +172,30 @@ export async function seedDefaultCategories(
   // Una categoria dell'utente che ha già preso il posto di una predefinita (stessa
   // templateKey, es. "Affitto" per "Affitto e mutuo") evita il duplicato.
   const byTemplate = new Map(existing.filter((c) => c.templateKey).map((c) => [c.templateKey!, c.id]));
-  let created = 0;
-
+  // Un solo INSERT (id generati qui): niente query per riga, quindi nessun rischio di
+  // superare il timeout delle transazioni su DB remoto. Macro prima dei figli.
+  const macros: Prisma.CategoryCreateManyInput[] = [];
+  const children: Prisma.CategoryCreateManyInput[] = [];
   for (const [mi, macro] of DEFAULT_CATEGORIES.entries()) {
     let macroId = byTemplate.get(macro.key) ?? byName.get(`${macro.type}:${macro.name.toLowerCase()}`);
     if (!macroId) {
-      const m = await db.category.create({
-        data: {
-          userId, name: macro.name, type: macro.type, icon: macro.icon, color: macro.color,
-          nature: macro.nature ?? null, templateKey: macro.key, sortOrder: mi,
-        },
-        select: { id: true },
+      macroId = randomUUID();
+      macros.push({
+        id: macroId, userId, name: macro.name, type: macro.type, icon: macro.icon, color: macro.color,
+        nature: macro.nature ?? null, templateKey: macro.key, sortOrder: mi,
       });
-      macroId = m.id;
-      created += 1;
     }
     for (const [ci, child] of macro.children.entries()) {
       if (byTemplate.has(child.key) || byName.has(`${macro.type}:${child.name.toLowerCase()}`)) continue;
-      await db.category.create({
-        data: {
-          userId, name: child.name, type: macro.type, icon: child.icon, color: macro.color,
-          parentId: macroId, templateKey: child.key, sortOrder: ci,
-        },
+      children.push({
+        userId, name: child.name, type: macro.type, icon: child.icon, color: macro.color,
+        parentId: macroId, templateKey: child.key, sortOrder: ci,
       });
-      created += 1;
     }
   }
+  const toCreate = [...macros, ...children];
+  if (toCreate.length) await db.category.createMany({ data: toCreate });
+  const created = toCreate.length;
 
   if (opts.setSalary) {
     const user = await db.user.findUnique({ where: { id: userId }, select: { salaryCategoryId: true } });
@@ -266,10 +265,14 @@ export async function normalizeCategoryOrder(userId: string, db: Prisma.Transact
     const k = c.parentId ?? 'root';
     groups.set(k, [...(groups.get(k) ?? []), c]);
   }
+  const changes: { id: string; i: number }[] = [];
   for (const list of groups.values()) {
     const ordered = [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'it'));
-    for (const [i, c] of ordered.entries()) {
-      if (c.sortOrder !== i) await db.category.update({ where: { id: c.id }, data: { sortOrder: i } });
-    }
+    for (const [i, c] of ordered.entries()) if (c.sortOrder !== i) changes.push({ id: c.id, i });
   }
+  if (!changes.length) return;
+  // Un solo UPDATE ... FROM (VALUES ...) invece di una query per categoria.
+  await db.$executeRaw`UPDATE "categories" AS c SET "sortOrder" = v.o FROM (VALUES ${Prisma.join(
+    changes.map((x) => Prisma.sql`(${x.id}, ${x.i}::int)`),
+  )}) AS v(id, o) WHERE c.id = v.id`;
 }
