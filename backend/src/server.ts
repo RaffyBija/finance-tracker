@@ -12,10 +12,12 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
-// Render: 1 proxy davanti → req.ip è l'IP reale del client (rate limit per IP)
-// ponytail: verificare nei log di Render che non compaiano ERR_ERL_UNEXPECTED_X_FORWARDED_FOR / ERR_ERL_PERMISSIVE_TRUST_PROXY;
-// se req.ip risulta l'IP di Cloudflare/proxy, alzare il numero di hop.
-app.set('trust proxy', 1);
+// Render sta dietro Cloudflare (risposte con `server: cloudflare` e `cf-ray`): 2 proxy davanti
+// all'app (Cloudflare → load balancer Render), quindi req.ip è l'IP reale del client solo con 2.
+// Con 1 si leggeva l'IP del bordo Cloudflare, che cambia a ogni richiesta (contatori del rate limit
+// sparsi su più bucket e condivisi con altri utenti). Valore più alto del reale = X-Forwarded-For falsificabile.
+// ponytail: se Render cambia infrastruttura, rifare la prova: `curl -si <url>/api/x` ripetuto, `ratelimit-remaining` deve scendere di 1 a ogni richiesta.
+app.set('trust proxy', 2);
 const PORT = process.env.PORT || 3000;
 
 // ✅ Security headers (helmet copre X-Frame-Options, CSP, HSTS, ecc.)
