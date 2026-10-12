@@ -183,17 +183,17 @@ describe('changePassword', () => {
 
 describe('deleteAccount', () => {
   it('400 se l\'email di conferma non coincide: nessuna cancellazione', async () => {
-    u.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.it' });
+    u.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.it', password: bcrypt.hashSync('pw-segreta', 4) });
     const res = mockRes();
-    await deleteAccount({ userId: 'u1', body: { confirmEmail: 'altra@b.it' } } as any, res);
+    await deleteAccount({ userId: 'u1', body: { confirmEmail: 'altra@b.it', currentPassword: 'pw-segreta' } } as any, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(u.delete).not.toHaveBeenCalled();
   });
 
   it('cancella solo l\'utente autenticato (confronto case-insensitive)', async () => {
-    u.findUnique.mockResolvedValue({ id: 'u1', email: 'A@B.it' });
+    u.findUnique.mockResolvedValue({ id: 'u1', email: 'A@B.it', password: bcrypt.hashSync('pw-segreta', 4) });
     const res = mockRes();
-    await deleteAccount({ userId: 'u1', body: { confirmEmail: ' a@b.IT ' } } as any, res);
+    await deleteAccount({ userId: 'u1', body: { confirmEmail: ' a@b.IT ', currentPassword: 'pw-segreta' } } as any, res);
     expect(u.delete).toHaveBeenCalledWith({ where: { id: 'u1' } });
   });
 });

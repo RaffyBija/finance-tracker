@@ -15,6 +15,8 @@ import { AuthRequest } from "../types";
 // Valute supportate (codici ISO 4217). Tieni allineato col frontend (utils/currency).
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
 
+// Il frontend distingue questo 401 (password errata, l'utente resta loggato) da un 401 di sessione scaduta.
+const WRONG_PASSWORD = 'WRONG_PASSWORD';
 const EMAIL_SEND_ERROR = "Impossibile inviare l'email, riprova più tardi";
 
 // Registrazione utente
@@ -524,7 +526,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
-      return res.status(401).json({ error: 'Password attuale non corretta' });
+      return res.status(401).json({ error: 'Password attuale non corretta', code: WRONG_PASSWORD });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -544,10 +546,15 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 export const deleteAccount = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { confirmEmail } = req.body;
+    const { confirmEmail, currentPassword } = req.body || {};
 
-    if (!confirmEmail) {
+    if (typeof confirmEmail !== 'string' || !confirmEmail.trim()) {
       return res.status(400).json({ error: 'Inserisci la tua email per confermare' });
+    }
+    // La sola email non basta: è leggibile da GET /me, quindi con un token rubato si
+    // cancellerebbe l'account. Serve la password attuale.
+    if (typeof currentPassword !== 'string' || !currentPassword) {
+      return res.status(400).json({ error: 'Inserisci la tua password per confermare' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -557,6 +564,11 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
 
     if (user.email.toLowerCase() !== confirmEmail.toLowerCase().trim()) {
       return res.status(400).json({ error: 'Email non corretta' });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Password non corretta', code: WRONG_PASSWORD });
     }
 
     // Cascade delete grazie alle relazioni Prisma (onDelete: Cascade)
