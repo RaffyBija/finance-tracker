@@ -584,3 +584,35 @@
 .dark .analysis-calendar-day.level-future { background: transparent; border-color: #44403c; color: #57534e; }
 .dark .analysis-nature-line { color: #a8a29e; }
 .dark .analysis-nature-line strong { color: #f5f5f4; }
+
+/* Focus categoria */
+.analysis-focus-open { display: inline-flex; align-items: center; gap: 0.4rem; }
+.analysis-focus-back,
+.analysis-focus-link {
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.analysis-focus-picker { padding: 1rem 1.25rem; }
+.analysis-focus-picker .analysis-chart-note { padding: 0.5rem 0 0; }
+.analysis-focus-table { padding: 0 1.25rem 1rem; font-size: 0.8125rem; color: #57534e; }
+.analysis-focus-table summary { cursor: pointer; font-weight: 600; color: #78716c; padding: 0.25rem 0; }
+.analysis-focus-table table { width: 100%; margin-top: 0.5rem; border-collapse: collapse; }
+.analysis-focus-table th,
+.analysis-focus-table td {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #f0efed;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.analysis-focus-table th:first-child { text-align: left; font-weight: 500; }
+.analysis-focus-table thead th { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; color: #a8a29e; }
+
+.dark .analysis-focus-table { color: #a8a29e; }
+.dark .analysis-focus-table summary { color: #a8a29e; }
+.dark .analysis-focus-table th,
+.dark .analysis-focus-table td { border-bottom-color: #44403c; }
+.dark .analysis-focus-table tbody th { color: #f5f5f4; }

@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, AlertTriangle } from 'lucide-react';
+import { ChevronDown, AlertTriangle, Target } from 'lucide-react';
 import type { ExpenseKind, SpendingAnalysis } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { KINDS, UNCATEGORIZED, categoryRows, frequentDescriptions, isNotable, linesIn, macroIdOf, type CategoryRow } from './model';
 import { spendTone, pct, dayLabel } from './ui';
 import { signOf } from '../patrimonio/tone';
+import CategoryFocus from './CategoryFocus';
 
 // Scheda "Categorie": dove va il denaro nel periodo, rispetto al solito.
 //   • filtro per natura (es. solo variabili: le fisse non si "decidono");
 //   • ordinamento per importo o per scostamento dalla media;
 //   • scostamenti notevoli evidenziati (±25% e almeno 15 €);
 //   • ogni riga si apre sul dettaglio: movimenti del periodo, voci più frequenti,
-//     scontrino medio e andamento nei periodi.
+//     scontrino medio e andamento nei periodi;
+//   • "Focus categoria" (bottone nella barra o nel dettaglio): quanto spesso e
+//     quanto si spende in una categoria, a pieno pannello (vedi CategoryFocus).
 
 interface Props {
   data: SpendingAnalysis;
@@ -62,6 +65,8 @@ export default function CategoryAnalysis({ data, selected }: Props) {
   // Per macro-categoria (default, pochi gruppi leggibili) o per singola categoria.
   const [level, setLevel] = useState<Level>('macro');
   const [open, setOpen] = useState<string | null>(null);
+  // Focus categoria aperto: '' = da scegliere, altrimenti l'id preselezionato.
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (kind === 'all' ? data : { ...data, lines: data.lines.filter((l) => l.kind === kind) }),
@@ -86,6 +91,10 @@ export default function CategoryAnalysis({ data, selected }: Props) {
     leafRows.filter((r) => r.id !== row.id && (r.total > 0 || (r.avg ?? 0) > 0)
       && data.categories.find((c) => c.id === r.id)?.parentId === row.id);
 
+  if (focusId !== null) {
+    return <CategoryFocus data={data} selected={selected} initialCategoryId={focusId} onBack={() => setFocusId(null)} />;
+  }
+
   return (
     <div className="lens-stack">
       <div className="analysis-toolbar">
@@ -105,6 +114,10 @@ export default function CategoryAnalysis({ data, selected }: Props) {
           <button type="button" className={`projection-pill${sortBy === 'total' ? ' is-active' : ''}`} aria-pressed={sortBy === 'total'} onClick={() => setSortBy('total')}>Per importo</button>
           <button type="button" className={`projection-pill${sortBy === 'delta' ? ' is-active' : ''}`} aria-pressed={sortBy === 'delta'} onClick={() => setSortBy('delta')}>Per scostamento</button>
         </div>
+        <button type="button" className="btn btn-secondary btn-sm analysis-focus-open" onClick={() => setFocusId('')}>
+          <Target size={14} aria-hidden />
+          Focus categoria
+        </button>
       </div>
 
       {notable.length > 0 && (
@@ -170,6 +183,13 @@ export default function CategoryAnalysis({ data, selected }: Props) {
                           {biggest > 0 && <span>più alto <strong>{formatCurrency(biggest)}</strong></span>}
                           {r.avg !== null && <span>media {period.isCurrent ? 'alla stessa data' : 'per periodo'} <strong>{formatCurrency(r.avg)}</strong></span>}
                         </div>
+
+                        {r.id !== UNCATEGORIZED && (
+                          <button type="button" className="outlook-detail-link analysis-focus-link" onClick={() => setFocusId(r.id)}>
+                            <Target size={14} aria-hidden />
+                            Focus su {r.name}: quanto spesso e quanto spendi
+                          </button>
+                        )}
 
                         {level === 'macro' && childRowsOf(r).length > 0 && (
                           <div className="analysis-drill-frequent">
