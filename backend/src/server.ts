@@ -50,6 +50,23 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 
+// TEMP (da rimuovere): diagnostica dell'IP client dietro Cloudflare + Render. Logga solo se la richiesta
+// porta l'header `x-debug-ip`, quindi non registra l'IP degli altri utenti. Dopo la verifica va tolto.
+app.use('/api/', (req, _res, next) => {
+  if (req.headers['x-debug-ip']) {
+    console.log('[debug-ip]', JSON.stringify({
+      ip: req.ip,
+      ips: req.ips,
+      xff: req.headers['x-forwarded-for'],
+      cfConnectingIp: req.headers['cf-connecting-ip'],
+      trueClientIp: req.headers['true-client-ip'],
+      xRealIp: req.headers['x-real-ip'],
+      remote: req.socket.remoteAddress,
+    }));
+  }
+  next();
+});
+
 // ✅ Rate limiting più stretto sugli endpoint di autenticazione
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuti
