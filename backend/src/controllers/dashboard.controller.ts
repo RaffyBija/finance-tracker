@@ -1,3 +1,4 @@
+import { normalizeProjectedRange } from '../utils/projectedRange';
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
@@ -232,13 +233,13 @@ export const getProjectedBalance = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Fornire months oppure startDate e endDate' });
     }
 
-    // Normalizza a inizio/fine giornata per evitare problemi di orario
-    rangeStart.setHours(0, 0, 0, 0);
-    rangeEnd.setHours(23, 59, 59, 999);
-
-    if (rangeStart >= rangeEnd) {
-      return res.status(400).json({ error: 'La data di inizio deve essere precedente a quella di fine' });
+    // Normalizza a inizio/fine giornata e applica il tetto di durata (date non valide → 400)
+    const normalized = normalizeProjectedRange(rangeStart, rangeEnd);
+    if (!normalized) {
+      return res.status(400).json({ error: 'Intervallo di date non valido: la data di inizio deve essere precedente a quella di fine' });
     }
+    rangeStart = normalized.rangeStart;
+    rangeEnd   = normalized.rangeEnd;
 
     // ── Saldo corrente ──
     //   Globale: liquidità reale (solo conti BANK). Per-conto (scopeId): saldo del
