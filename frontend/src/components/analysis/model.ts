@@ -313,3 +313,94 @@ export function dailySpending(data: SpendingAnalysis, selected: number): { date:
     };
   });
 }
+
+// ── Focus categoria ──────────────────────────────────────────────────────────
+//   "Quanto spesso compro X e quanto spendo?" Una macro include le sue sotto-categorie;
+//   una sotto-categoria vale da sola. Le righe di split sono già sulla categoria
+//   giusta (le fornisce il backend); un acquisto = una transazione, anche se ha
+//   più righe nella stessa categoria.
+
+export interface FocusPurchase {
+  txId: string;
+  date: string;
+  amount: number;       // solo la parte che cade nella categoria scelta
+  description: string | null;
+}
+
+export const matchesFocus = (data: SpendingAnalysis, l: SpendingLine, categoryId: string) =>
+  l.categoryId === categoryId || (l.categoryId !== null && macroIdOf(data, l.categoryId) === categoryId);
+
+// Righe → acquisti (una voce per transazione), in ordine di data.
+export function focusPurchases(lines: SpendingLine[]): FocusPurchase[] {
+  const byTx = new Map<string, FocusPurchase>();
+  for (const l of lines) {
+    const e = byTx.get(l.txId);
+    if (e) e.amount += l.amount;
+    else byTx.set(l.txId, { txId: l.txId, date: l.date, amount: l.amount, description: l.description });
+  }
+  return Array.from(byTx.values())
+    .map((p) => ({ ...p, amount: round2(p.amount) }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export interface FocusSummary {
+  count: number;
+  total: number;
+  avgAmount: number | null;
+  avgGapDays: number | null;   // giorni medi tra un acquisto e il successivo (serve ≥ 2 acquisti)
+  lastDate: string | null;
+}
+
+export function focusSummary(purchases: FocusPurchase[]): FocusSummary {
+  const count = purchases.length;
+  const total = round2(purchases.reduce((s, p) => s + p.amount, 0));
+  return {
+    count,
+    total,
+    avgAmount: count ? round2(total / count) : null,
+    avgGapDays: count > 1 ? round2(dayOffset(purchases[0].date, purchases[count - 1].date) / (count - 1)) : null,
+    lastDate: count ? purchases[count - 1].date : null,
+  };
+}
+
+export interface FocusBucket { start: string; end: string; count: number; total: number }
+
+// Intervalli settimanali (7 giorni dall'inizio del periodo, l'ultimo può essere più
+// corto) fino ai giorni trascorsi: nel periodo in corso niente barre nel futuro.
+// `last` = ultimo giorno incluso (end − 1), calcolato in UTC come le altre date del modello.
+export function weekRanges(period: AnalysisPeriod): { start: string; end: string; last: string }[] {
+  const out: { start: string; end: string; last: string }[] = [];
+  const iso = (n: number) => new Date(toDay(period.start) + n * DAY_MS).toISOString().slice(0, 10);
+  for (let d = 0; d < period.elapsedDays; d += 7) {
+    const endOffset = Math.min(d + 7, period.days);
+    out.push({ start: iso(d), end: iso(endOffset), last: iso(endOffset - 1) });
+  }
+  return out;
+}
+
+export function focusBuckets<R extends { start: string; end: string }>(purchases: FocusPurchase[], ranges: R[]): (R & FocusBucket)[] {
+  return ranges.map((r) => {
+    const inR = purchases.filter((p) => p.date >= r.start && p.date < r.end);
+    return { ...r, count: inR.length, total: round2(inR.reduce((s, p) => s + p.amount, 0)) };
+  });
+}
+
+export interface FocusDelta { count: number; total: number }
+
+// Periodo scelto rispetto al precedente (alla stessa data se il periodo è in corso).
+// null se non c'è un periodo precedente caricato.
+export function focusDelta(data: SpendingAnalysis, categoryId: string, selected: number): FocusDelta | null {
+  if (selected <= 0) return null;
+  const p = data.periods[selected];
+  const mine = data.lines.filter((l) => matchesFocus(data, l, categoryId));
+  const cur = focusSummary(focusPurchases(linesIn(mine, p)));
+  const prev = focusSummary(focusPurchases(linesIn(mine, data.periods[selected - 1], cutoffFor(p))));
+  return { count: cur.count - prev.count, total: round2(cur.total - prev.total) };
+}
+
+// Descrizioni più frequenti (normalizzate), per numero di acquisti e poi per spesa.
+export function topDescriptions(lines: SpendingLine[], limit = 8): FrequentItem[] {
+  return frequentDescriptions(lines, 1)
+    .sort((a, b) => b.count - a.count || b.total - a.total)
+    .slice(0, limit);
+}
