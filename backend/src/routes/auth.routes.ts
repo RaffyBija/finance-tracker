@@ -26,7 +26,7 @@ router.post('/reset-password', resetPassword);
 
 router.put('/profile', authenticate, emailChangeLimiter, updateProfile);
 router.put('/change-password', authenticate, passwordCheckLimiter, changePassword);
-router.delete('/account', authenticate, deleteAccount);
+router.delete('/account', authenticate, passwordCheckLimiter, deleteAccount);
 router.post('/tour-complete', authenticate, completeTour);
 
 export default router;

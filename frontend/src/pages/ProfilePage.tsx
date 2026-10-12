@@ -622,8 +622,10 @@ function DangerSection() {
   const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isPending, setIsPending] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleDelete = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -635,15 +637,20 @@ function DangerSection() {
       setEmailError('Email non corretta');
       return;
     }
+    if (!password) {
+      setPasswordError('Inserisci la tua password per confermare');
+      return;
+    }
 
     setIsPending(true);
     try {
-      await authAPI.deleteAccount(confirmEmail);
+      await authAPI.deleteAccount(confirmEmail, password);
       toast.success('Account eliminato');
       logout();
       navigate('/');
     } catch (error) {
       toast.error(apiError(error, "Errore nell'eliminazione dell'account"));
+      setPassword('');
       setIsPending(false);
     }
   };
@@ -695,13 +702,26 @@ function DangerSection() {
             <FieldError message={emailError} />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Password attuale</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+              className={`form-input${passwordError ? ' form-input-error' : ''}`}
+              placeholder="La tua password"
+              autoComplete="current-password"
+            />
+            <FieldError message={passwordError} />
+          </div>
+
           <div className="settings-actions">
             <button type="submit" disabled={isPending} className="btn btn-danger btn-md">
               {isPending ? 'Eliminazione...' : 'Elimina definitivamente'}
             </button>
             <button
               type="button"
-              onClick={() => { setIsOpen(false); setConfirmEmail(''); setEmailError(''); }}
+              onClick={() => { setIsOpen(false); setConfirmEmail(''); setEmailError(''); setPassword(''); setPasswordError(''); }}
               className="btn btn-secondary btn-md"
             >
               Annulla

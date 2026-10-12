@@ -60,9 +60,10 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Il 401 di change-password significa "password attuale errata", non sessione scaduta:
-    // va mostrato all'utente, non deve fare il logout.
-    const isWrongCurrentPassword = String(error.config?.url ?? "").endsWith("/auth/change-password");
+    // Il 401 con code WRONG_PASSWORD (change-password, eliminazione account) significa "password
+    // errata", non sessione scaduta: va mostrato all'utente, non deve fare il logout. Un 401 di
+    // sessione scaduta su quelle stesse route (senza il code) fa invece il logout normale.
+    const isWrongCurrentPassword = error.response?.data?.code === "WRONG_PASSWORD";
     if (error.response?.status === 401 && !isWrongCurrentPassword) {
       // Solo se c'era una sessione: un 401 di login (credenziali errate) non è una scadenza.
       const hadSession = !!getToken();
@@ -114,11 +115,14 @@ export const authAPI = {
     return res;
   },
 
-  deleteAccount: async (confirmEmail: string): Promise<{ message: string }> => {
+  deleteAccount: async (
+    confirmEmail: string,
+    currentPassword: string,
+  ): Promise<{ message: string }> => {
     const { data: res } = await api.delete<{ message: string }>(
       "/auth/account",
       {
-        data: { confirmEmail },
+        data: { confirmEmail, currentPassword },
       },
     );
     return res;
