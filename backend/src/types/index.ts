@@ -3,6 +3,9 @@ import { Request } from 'express';
 // Estendi Request per includere userId dopo autenticazione
 export interface AuthRequest extends Request {
   userId?: string;
+  // Scadenza (epoch s) del token con cui è arrivata la richiesta: serve a riemettere un token
+  // con la stessa durata dopo il cambio password.
+  tokenExp?: number;
 }
 
 // DTO per registrazione
@@ -53,6 +56,9 @@ export interface CreateCategoryDTO {
 export interface JWTPayload {
   userId: string;
   email: string;
+  // Versione delle sessioni dell'utente al momento dell'emissione (assente nei token vecchi = 0)
+  tv?: number;
+  exp?: number;
 }
 
 export interface AuthResponse {

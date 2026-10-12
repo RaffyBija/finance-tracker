@@ -208,6 +208,8 @@ export const resetPassword = async (req: Request, res: Response) => {
         password: hashedPassword,
         passwordResetToken: null,
         passwordResetExpires: null,
+        // Il reset è il percorso di recupero dopo un furto di token: invalida tutte le sessioni
+        tokenVersion: { increment: 1 },
       },
     });
 
@@ -263,7 +265,7 @@ export const login = async (req: Request, res: Response) => {
     // "Resta connesso": sessione lunga e persistente (30g) se spuntato,
     // altrimenti sessione breve (1g) lato client effimera (sessionStorage).
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, tv: user.tokenVersion },
       process.env.JWT_SECRET!, // il fail-fast in server.ts garantisce che esista
       { expiresIn: rememberMe === true ? "30d" : "1d" },
     );
@@ -541,12 +543,22 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
+    // Incrementa la versione delle sessioni: ogni altro dispositivo (o chi avesse rubato il
+    // token) viene disconnesso. Questo dispositivo riceve un token nuovo con la stessa scadenza.
+    const updated = await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
     });
+    const nowS = Math.floor(Date.now() / 1000);
+    const remaining = Math.max((req.tokenExp ?? nowS + 86400) - nowS, 60);
+    const token = jwt.sign(
+      { userId, email: user.email, tv: updated.tokenVersion },
+      process.env.JWT_SECRET!,
+      { expiresIn: remaining },
+    );
 
-    res.json({ message: 'Password aggiornata con successo' });
+    res.json({ message: 'Password aggiornata con successo', token });
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Errore del server' });
