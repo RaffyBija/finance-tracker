@@ -12,6 +12,10 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+// Render: 1 proxy davanti → req.ip è l'IP reale del client (rate limit per IP)
+// ponytail: verificare nei log di Render che non compaiano ERR_ERL_UNEXPECTED_X_FORWARDED_FOR / ERR_ERL_PERMISSIVE_TRUST_PROXY;
+// se req.ip risulta l'IP di Cloudflare/proxy, alzare il numero di hop.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // ✅ Security headers (helmet copre X-Frame-Options, CSP, HSTS, ecc.)
