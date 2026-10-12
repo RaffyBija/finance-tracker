@@ -16,6 +16,7 @@
 @import './components/categories.css';
 @import './components/installments.css';
 @import './components/due-today.css';
+@import './components/recurring-summary.css';
 @import './components/privacy.css';
 
 @import './utilities/utilities.css';
