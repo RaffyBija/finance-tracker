@@ -12,12 +12,14 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
-// Render sta dietro Cloudflare (risposte con `server: cloudflare` e `cf-ray`): 2 proxy davanti
-// all'app (Cloudflare → load balancer Render), quindi req.ip è l'IP reale del client solo con 2.
-// Con 1 si leggeva l'IP del bordo Cloudflare, che cambia a ogni richiesta (contatori del rate limit
-// sparsi su più bucket e condivisi con altri utenti). Valore più alto del reale = X-Forwarded-For falsificabile.
-// ponytail: se Render cambia infrastruttura, rifare la prova: `curl -si <url>/api/x` ripetuto, `ratelimit-remaining` deve scendere di 1 a ogni richiesta.
-app.set('trust proxy', 2);
+// Dietro Render ci sono 3 passaggi prima dell'app: sidecar locale (socket ::1) → load balancer Render
+// (IP interno 10.x) → Cloudflare. X-Forwarded-For arriva come `client, bordo Cloudflare, 10.x`
+// (verificato con log il 2026-10-12): req.ip è l'IP reale solo con 3. Con 1 o 2 si leggeva il bordo
+// Cloudflare, che cambia a ogni richiesta (contatori del rate limit sparsi su più bucket e condivisi con
+// altri utenti). Un valore più alto del reale renderebbe X-Forwarded-For falsificabile.
+// ponytail: se Render cambia infrastruttura, rifare la prova: `curl -si <url>/api/x` ripetuto,
+// `ratelimit-remaining` deve scendere di 1 a ogni richiesta.
+app.set('trust proxy', 3);
 const PORT = process.env.PORT || 3000;
 
 // ✅ Security headers (helmet copre X-Frame-Options, CSP, HSTS, ecc.)
@@ -49,23 +51,6 @@ const globalLimiter = rateLimit({
   message: { error: 'Troppe richieste, riprova tra poco.' },
 });
 app.use('/api/', globalLimiter);
-
-// TEMP (da rimuovere): diagnostica dell'IP client dietro Cloudflare + Render. Logga solo se la richiesta
-// porta l'header `x-debug-ip`, quindi non registra l'IP degli altri utenti. Dopo la verifica va tolto.
-app.use('/api/', (req, _res, next) => {
-  if (req.headers['x-debug-ip']) {
-    console.log('[debug-ip]', JSON.stringify({
-      ip: req.ip,
-      ips: req.ips,
-      xff: req.headers['x-forwarded-for'],
-      cfConnectingIp: req.headers['cf-connecting-ip'],
-      trueClientIp: req.headers['true-client-ip'],
-      xRealIp: req.headers['x-real-ip'],
-      remote: req.socket.remoteAddress,
-    }));
-  }
-  next();
-});
 
 // ✅ Rate limiting più stretto sugli endpoint di autenticazione
 const authLimiter = rateLimit({
