@@ -809,6 +809,15 @@
 .dark .icon-swatch:hover { background: #292524; }
 .dark .icon-swatch.is-selected { background: rgba(19, 78, 74, 0.45); border-color: #14b8a6; }
 
+/* Emoji personalizzata: tasto + input sotto la griglia (nessun colore proprio, vale anche in dark) */
+.icon-custom-toggle { margin-top: 0.5rem; }
+.icon-custom-input {
+  display: block;
+  margin-top: 0.5rem;
+  max-width: 8rem;
+  text-align: center;
+}
+
 .dark .form-error-banner {
   background-color: #450a0a;
   border-color: #7f1d1d;

@@ -91,6 +91,7 @@ export interface CreateRecurringTransactionDTO {
   dayOfMonth?: number;
   startDate: Date;
   endDate?: Date;
+  isVariableAmount?: boolean;
 }
 
 // Planned Transaction DTOs

@@ -3,6 +3,7 @@ import { CategoryNature, Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateCategoryDTO } from '../types';
 import { analyticsCache } from '../utils/analyticsCache';
+import { isSingleEmoji } from '../utils/emoji';
 import {
   assertValidParent, categoryUsage, mergeCategory, usageTotal, CategoryRuleError,
 } from '../utils/categoryOps';
@@ -17,6 +18,7 @@ import {
 // orfani). Vedi utils/categoryOps.ts e utils/defaultCategories.ts.
 
 const NATURES: CategoryNature[] = ['ESSENTIAL', 'DISCRETIONARY'];
+const ICON_ERROR = 'Inserisci una sola emoji';
 
 const handleRuleError = (res: Response, error: unknown, fallback: string) => {
   if (error instanceof CategoryRuleError) return res.status(error.status).json({ error: error.message });
@@ -89,6 +91,7 @@ export const createCategory = async (req: AuthRequest, res: Response) => {
     if (nature !== undefined && nature !== null && !NATURES.includes(nature)) {
       return res.status(400).json({ error: 'Natura non valida' });
     }
+    if (icon != null && !isSingleEmoji(icon)) return res.status(400).json({ error: ICON_ERROR });
 
     const existingCategory = await prisma.category.findFirst({ where: { userId, name: name.trim(), type } });
     if (existingCategory) {
@@ -145,6 +148,10 @@ export const updateCategory = async (req: AuthRequest, res: Response) => {
     }
     if (nature !== undefined && nature !== null && !NATURES.includes(nature)) {
       return res.status(400).json({ error: 'Natura non valida' });
+    }
+    // Icona invariata = accettata (categorie storiche con icone fuori regola).
+    if (icon != null && icon !== existingCategory.icon && !isSingleEmoji(icon)) {
+      return res.status(400).json({ error: ICON_ERROR });
     }
 
     if (name && name.trim() !== existingCategory.name) {

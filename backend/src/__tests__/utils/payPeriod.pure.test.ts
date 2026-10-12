@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolvePayPeriod, clusterPaydays, serializePayPeriod, buildPayBoundaries, type PayPeriodInput } from '../../utils/payPeriod';
+import { resolvePayPeriod, clusterPaydays, isPendingOccurrence, serializePayPeriod, buildPayBoundaries, type PayPeriodInput } from '../../utils/payPeriod';
 
 // now = 26 set 2026. Stipendio reale il 24 set, prossimo pianificato il 23 ott.
 const NOW = new Date(2026, 8, 26, 10, 0, 0);
@@ -14,6 +14,20 @@ const base = (over: Partial<PayPeriodInput> = {}): PayPeriodInput => ({
   plannedSalaryDates: [],
   recurringSalaryDates: [],
   ...over,
+});
+
+describe('isPendingOccurrence', () => {
+  const occ = new Date(2026, 9, 23);
+  it('esclusa se <= lastExecutedDate (stesso giorno incluso)', () => {
+    expect(isPendingOccurrence(occ, new Date(2026, 9, 23, 15, 0))).toBe(false);
+    expect(isPendingOccurrence(occ, new Date(2026, 9, 25))).toBe(false);
+  });
+  it('inclusa se successiva a lastExecutedDate', () => {
+    expect(isPendingOccurrence(occ, new Date(2026, 8, 23))).toBe(true);
+  });
+  it('inclusa se mai eseguita', () => {
+    expect(isPendingOccurrence(occ, null)).toBe(true);
+  });
 });
 
 describe('clusterPaydays', () => {

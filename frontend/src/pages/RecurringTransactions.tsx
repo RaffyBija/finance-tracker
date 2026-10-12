@@ -62,10 +62,10 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
     }
   };
 
-  const handleConfirmExecute = async () => {
+  const handleConfirmExecute = async (amount?: number) => {
     if (!executingItem) return;
     try {
-      await executeNowMutation.mutateAsync(executingItem.id);
+      await executeNowMutation.mutateAsync({ id: executingItem.id, amount });
       toast.success("Transazione registrata con successo");
       setExecutingItem(null);
     } catch {
@@ -120,6 +120,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
       />
 
       <RecurringExecuteModal
+        key={executingItem?.id ?? 'closed'}
         item={executingItem}
         isPending={executeNowMutation.isPending}
         onConfirm={handleConfirmExecute}

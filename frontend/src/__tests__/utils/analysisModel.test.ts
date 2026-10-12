@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   periodTotals, comparePeriod, periodOutlook, categoryRows, isNotable, natureTotals,
   weekdayProfile, sizeDistribution, frequentDescriptions, dailySpending, UNCATEGORIZED,
+  matchesFocus, focusPurchases, focusSummary, focusBuckets, focusDelta, weekRanges, topDescriptions,
 } from '../../components/analysis/model';
 import type { SpendingAnalysis, SpendingLine } from '../../types';
 
@@ -169,6 +170,99 @@ describe('macro-categorie e natura', () => {
       line('2026-08-23', 10, { categoryId: null }),
     ]);
     expect(natureTotals(d, 2)).toEqual({ essential: 40, discretionary: 5, unset: 10 });
+  });
+});
+
+describe('focus categoria', () => {
+  const cats = [
+    { id: 'food', name: 'Spesa', color: null, icon: null },
+    { id: 'bar', name: 'Bar', color: null, icon: null, parentId: 'food' },
+    { id: 'fun', name: 'Svago', color: null, icon: null },
+  ];
+  const lines = [
+    line('2026-08-02', 4, { categoryId: 'bar', description: 'Caffè ', txId: 'a' }),
+    line('2026-08-05', 6, { categoryId: 'bar', description: 'caffè', txId: 'b' }),
+    line('2026-08-05', 30, { categoryId: 'food', description: 'Super', txId: 'c' }),
+    line('2026-08-05', 5, { categoryId: 'fun', description: 'Super', txId: 'c' }),  // split di c su un'altra categoria
+    line('2026-08-12', 10, { categoryId: 'food', description: 'Super', txId: 'd' }),
+    line('2026-08-12', 2, { categoryId: 'food', description: 'Super', txId: 'd' }), // due righe, stessa transazione
+    line('2026-08-22', 8, { categoryId: 'fun', txId: 'e' }),
+  ];
+
+  it('macro include le sotto-categorie, la sotto-categoria vale da sola, split sulla categoria giusta', () => {
+    const d = data(lines, { categories: cats });
+    const macro = focusPurchases(lines.filter((l) => matchesFocus(d, l, 'food')));
+    expect(macro.map((p) => [p.txId, p.amount])).toEqual([['a', 4], ['b', 6], ['c', 30], ['d', 12]]);
+    expect(lines.filter((l) => matchesFocus(d, l, 'bar'))).toHaveLength(2);
+    expect(lines.filter((l) => matchesFocus(d, l, 'fun')).map((l) => l.amount)).toEqual([5, 8]);
+  });
+
+  it('sintesi: conteggio, importo medio, giorni medi tra acquisti, ultimo acquisto', () => {
+    const p = focusPurchases([line('2026-08-02', 10), line('2026-08-06', 20), line('2026-08-12', 30)]);
+    expect(focusSummary(p)).toEqual({ count: 3, total: 60, avgAmount: 20, avgGapDays: 5, lastDate: '2026-08-12' });
+    expect(focusSummary(p.slice(0, 1)).avgGapDays).toBeNull();
+    expect(focusSummary([])).toEqual({ count: 0, total: 0, avgAmount: null, avgGapDays: null, lastDate: null });
+  });
+
+  it("bucket settimanali: 7 giorni dall'inizio, nel periodo in corso solo fino ai giorni trascorsi", () => {
+    const closed = weekRanges(periods[1]); // 10 giorni
+    expect(closed).toEqual([
+      { start: '2026-08-11', end: '2026-08-18', last: '2026-08-17' },
+      { start: '2026-08-18', end: '2026-08-21', last: '2026-08-20' },
+    ]);
+    expect(weekRanges(periods[2])).toHaveLength(1); // 5 giorni trascorsi
+    const b = focusBuckets(focusPurchases([line('2026-08-12', 10), line('2026-08-17', 5), line('2026-08-19', 7)]), closed);
+    expect(b.map((x) => [x.count, x.total])).toEqual([[2, 15], [1, 7]]);
+  });
+
+  it('bucket: riga sul confine (end escluso) va nel bucket successivo; ultimo giorno corretto anche con TZ Europe/Rome; bucket finale di 1 giorno', () => {
+    const prevTZ = process.env.TZ;
+    process.env.TZ = 'Europe/Rome';
+    try {
+      const r = weekRanges({ start: '2026-08-01', end: '2026-08-16', days: 15, elapsedDays: 15, isCurrent: false });
+      expect(r.map((x) => [x.start, x.last])).toEqual([['2026-08-01', '2026-08-07'], ['2026-08-08', '2026-08-14'], ['2026-08-15', '2026-08-15']]);
+      const b = focusBuckets(focusPurchases([line('2026-08-08', 1), line('2026-08-15', 2)]), r);
+      expect(b.map((x) => x.count)).toEqual([0, 1, 1]);
+    } finally {
+      if (prevTZ === undefined) delete process.env.TZ; else process.env.TZ = prevTZ;
+    }
+  });
+
+  it('periodo in corso con più di 7 giorni trascorsi: due settimane, nessuna nel futuro', () => {
+    const r = weekRanges({ ...periods[2], days: 30, elapsedDays: 12 });
+    expect(r.map((x) => x.start)).toEqual(['2026-08-21', '2026-08-28']);
+  });
+
+  it('matchesFocus: righe senza categoria non corrispondono mai', () => {
+    const d = data([], { categories: cats });
+    expect(matchesFocus(d, line('2026-08-02', 1, { categoryId: null }), 'food')).toBe(false);
+  });
+
+  it('topDescrizioni rispetta il limite di 8', () => {
+    const many = Array.from({ length: 10 }, (_, i) => line('2026-08-02', 1 + i, { description: `voce ${i}` }));
+    expect(topDescriptions(many)).toHaveLength(8);
+  });
+
+  it('delta vs periodo precedente, alla stessa data se in corso; null senza precedente', () => {
+    const d = data([
+      line('2026-08-12', 10, { txId: 'p1' }),
+      line('2026-08-20', 10, { txId: 'p2' }),
+      line('2026-08-22', 30, { txId: 'c1' }),
+    ], { categories: cats });
+    // corrente: 1 acquisto da 30; precedente entro i primi 5 giorni: solo p1 (10)
+    expect(focusDelta(d, 'food', 2)).toEqual({ count: 0, total: 20 });
+    expect(focusDelta(d, 'food', 1)).toEqual({ count: 2, total: 20 });
+    expect(focusDelta(d, 'food', 0)).toBeNull();
+  });
+
+  it('top descrizioni: normalizza maiuscole/spazi, ordina per numero di acquisti poi spesa', () => {
+    const top = topDescriptions([
+      line('2026-08-02', 4, { description: 'Caffè ', txId: 'a' }),
+      line('2026-08-03', 6, { description: 'caffè', txId: 'b' }),
+      line('2026-08-04', 50, { description: 'Super', txId: 'c' }),
+      line('2026-08-05', 1, { description: null, txId: 'd' }),
+    ]);
+    expect(top.map((t) => [t.key, t.count, t.total])).toEqual([['caffè', 2, 10], ['super', 1, 50]]);
   });
 });
 

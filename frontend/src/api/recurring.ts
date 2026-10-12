@@ -37,12 +37,17 @@ export const recurringApi = {
   },
 
   // dates: { [id]: 'YYYY-MM-DD' } per registrare una data effettiva diversa da quella prevista.
-  execute: async (ids: string[], dates?: Record<string, string>): Promise<ExecuteRecurringResult> => {
-    const response = await apiClient.post<ExecuteRecurringResult>('/recurring/execute', dates ? { ids, dates } : { ids });
+  // amounts: { [id]: importo } confermato (obbligatorio per le ricorrenti a importo variabile).
+  execute: async (ids: string[], dates?: Record<string, string>, amounts?: Record<string, number>): Promise<ExecuteRecurringResult> => {
+    const response = await apiClient.post<ExecuteRecurringResult>('/recurring/execute', {
+      ids,
+      ...(dates && { dates }),
+      ...(amounts && { amounts }),
+    });
     return response.data;
   },
 
-  executeNow: async (id: string): Promise<void> => {
-    await apiClient.post(`/recurring/${id}/execute-now`);
+  executeNow: async (id: string, amount?: number): Promise<void> => {
+    await apiClient.post(`/recurring/${id}/execute-now`, amount !== undefined ? { amount } : {});
   },
 };

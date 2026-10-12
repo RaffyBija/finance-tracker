@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
+import { InputDecimal } from '../layout/InputNumberDecimal';
 import type { RecurringDueItem } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 
 interface RecurringExecuteModalProps {
   item: RecurringDueItem | null;
   isPending: boolean;
-  onConfirm: () => void;
+  /** amount: importo reale confermato (solo ricorrenti a importo variabile). */
+  onConfirm: (amount?: number) => void;
   onClose: () => void;
 }
 
@@ -17,7 +20,12 @@ export default function RecurringExecuteModal({
   onClose,
 }: RecurringExecuteModalProps) {
   const { formatSignedCurrency } = useFormatCurrency();
+  // Importo reale per le ricorrenti a importo variabile. Il chiamante monta il modal
+  // con key={item.id} (e lo smonta a item null): ogni apertura riparte dalla stima.
+  const [amount, setAmount] = useState<number | null>(null);
   if (!item) return null;
+  const variable = !!item.isVariableAmount;
+  const confirmedAmount = amount ?? Number(item.amount);
 
   const isIncome = item.type === 'INCOME';
 
@@ -45,6 +53,7 @@ export default function RecurringExecuteModal({
           </div>
           <div className="recurring-due-right">
             <span className={isIncome ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
+              {variable && '~'}
               {formatSignedCurrency(Number(item.amount), item.type)}
             </span>
             {isManual
@@ -56,14 +65,24 @@ export default function RecurringExecuteModal({
           </div>
         </div>
 
+        {variable && (
+          <InputDecimal
+            formData={{ amount: confirmedAmount }}
+            setFormData={({ amount: v }) => setAmount(Number(v) || 0)}
+            label={isIncome ? 'Importo ricevuto' : 'Importo pagato'}
+            required
+            invalid={!(confirmedAmount > 0)}
+          />
+        )}
+
         <div className="form-actions">
           <button type="button" onClick={onClose} className="btn btn-ghost btn-md btn-cancel" disabled={isPending}>
             Annulla
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={isPending}
+            onClick={() => onConfirm(variable ? confirmedAmount : undefined)}
+            disabled={isPending || (variable && !(confirmedAmount > 0))}
             className="btn btn-primary btn-md"
           >
             {isPending ? 'Registrazione...' : 'Registra'}
