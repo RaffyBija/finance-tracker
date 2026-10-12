@@ -447,7 +447,9 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
 
-    if (!token) {
+    // typeof: un oggetto (es. {"not": ""}) diventerebbe un filtro Prisma e confermerebbe
+    // il primo cambio email in sospeso trovato.
+    if (!token || typeof token !== 'string') {
       return res.status(400).json({ error: 'Token mancante' });
     }
 
