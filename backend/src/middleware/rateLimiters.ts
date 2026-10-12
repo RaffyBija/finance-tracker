@@ -40,3 +40,25 @@ export const passwordCheckLimiter = rateLimit({
   requestWasSuccessful: (_req, res) => res.statusCode !== 401,
   message: { error: 'Troppi tentativi con la password attuale, riprova tra 15 minuti.' },
 });
+
+// Email transazionali (registrazione, reset password): oltre al limite per IP (`authLimiter`, 10 / 15
+// min condiviso) serve un limite per DESTINATARIO, altrimenti da un solo IP si arriva a centinaia di
+// mail al giorno (quota Resend, casella di una vittima). Chiave = email normalizzata. Conta ogni
+// richiesta, esista o no l'account, così il 429 non rivela se un indirizzo è registrato.
+// Una factory per route: i contatori di registrazione e reset restano separati.
+// ponytail: la chiave è l'indirizzo esatto, quindi gli alias (`nome+1@gmail.com`, `n.ome@gmail.com`)
+// la aggirano su /register (resta il limite per IP); contatore in memoria, azzerato a ogni riavvio.
+// Un attaccante può tenere in 429 il reset di una vittima (5 richieste/ora): per questo il
+// messaggio invita a controllare la posta, dove l'ultimo link inviato resta valido.
+export const perRecipientEmailLimiter = (message: string) => rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => String((req.body as { email?: unknown }).email).trim().toLowerCase().slice(0, 254),
+  skip: (req: Request) => {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    return typeof email !== 'string' || !email.trim();
+  },
+  message: { error: message },
+});
