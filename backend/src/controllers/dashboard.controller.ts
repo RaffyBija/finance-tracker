@@ -1,3 +1,4 @@
+import { clampInt } from '../utils/queryParams';
 import { normalizeProjectedRange } from '../utils/projectedRange';
 import { Response } from 'express';
 import prisma from '../utils/prisma';
@@ -128,7 +129,7 @@ export const getCategoryStats = async (req: AuthRequest, res: Response) => {
 export const getRecentTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const limit  = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const limit  = clampInt(req.query.limit, 10, 1, 100);
 
     const transactions = await prisma.transaction.findMany({
       where: { userId, transferId: null },
@@ -153,7 +154,7 @@ export const getRecentTransactions = async (req: AuthRequest, res: Response) => 
 export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
   try {
     const userId      = req.userId!;
-    const monthsCount = parseInt((req.query.months as string) || '6');
+    const monthsCount = clampInt(req.query.months, 6, 1, 60);
     const cacheKey    = analyticsCache.keys.monthlyTrend(userId, `m${monthsCount}`);
 
     const cached = analyticsCache.get<object[]>(cacheKey);

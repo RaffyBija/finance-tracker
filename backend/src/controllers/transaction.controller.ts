@@ -1,3 +1,4 @@
+import { clampInt } from '../utils/queryParams';
 import { Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import prisma from '../utils/prisma';
@@ -111,7 +112,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     }
 
     const MAX_LIMIT = 200;
-    const parsedLimit = limit ? Math.min(parseInt(limit as string), MAX_LIMIT) : MAX_LIMIT;
+    const parsedLimit = clampInt(limit, MAX_LIMIT, 1, MAX_LIMIT);
 
     const transactions = await prisma.transaction.findMany({
       where,
@@ -121,7 +122,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
         { createdAt: 'desc' },
       ],
       take: parsedLimit,
-      skip: offset ? parseInt(offset as string) : 0,
+      skip: clampInt(offset, 0, 0, 1_000_000),
     });
 
     // Arricchisci le gambe di trasferimento con il conto "peer" (l'altra gamba):

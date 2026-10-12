@@ -1,3 +1,4 @@
+import { errorHandler } from './middleware/errorHandler';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -97,11 +98,8 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/accounts', accountRoutes);
 
-// ✅ Error handler globale (evita che Express esponga stack trace in produzione)
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Errore del server' : err.message });
-});
+// ✅ Error handler globale (evita che Express esponga stack trace in produzione; 4xx del client restano 4xx)
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
