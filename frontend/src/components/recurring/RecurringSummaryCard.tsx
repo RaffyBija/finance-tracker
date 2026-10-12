@@ -20,23 +20,26 @@ export default function RecurringSummaryCard({ recurring }: { recurring: Recurri
       <div className="recurring-summary-grid">
         <div className="recurring-summary-stat">
           <div className="recurring-summary-label">Entrate</div>
-          <div className="recurring-summary-value is-income">{formatCurrency(s.income)}</div>
+          <div className="recurring-summary-value is-income">{s.incomeIsEstimate && '~'}{formatCurrency(s.income)}</div>
         </div>
         <div className="recurring-summary-stat">
           <div className="recurring-summary-label">Uscite</div>
-          <div className="recurring-summary-value is-expense">{formatCurrency(s.expense)}</div>
+          <div className="recurring-summary-value is-expense">{s.expenseIsEstimate && '~'}{formatCurrency(s.expense)}</div>
         </div>
         <div className="recurring-summary-stat">
           <div className="recurring-summary-label">Saldo netto</div>
           <div className={`recurring-summary-value ${netClass}`}>
-            {signed(s.net)}{formatCurrency(Math.abs(s.net))}
+            {s.netIsEstimate && '~'}{signed(s.net)}{formatCurrency(Math.abs(s.net))}
           </div>
         </div>
       </div>
       <div className="recurring-summary-foot">
-        {s.count} {s.count === 1 ? 'voce attiva' : 'voci attive'} · {signed(s.netYearly)}
+        {s.count} {s.count === 1 ? 'voce attiva' : 'voci attive'} · {s.netIsEstimate && '~'}{signed(s.netYearly)}
         {formatCurrency(Math.abs(s.netYearly))} all'anno
       </div>
+      {s.netIsEstimate && (
+        <div className="recurring-summary-foot">~ include importi variabili, stimati</div>
+      )}
     </section>
   );
 }
