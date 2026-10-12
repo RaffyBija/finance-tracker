@@ -6,6 +6,7 @@ import {
   verifyEmailChange, completeTour
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
+import { emailChangeLimiter } from '../middleware/rateLimiters';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.post('/request-password-reset', requestPasswordReset);
 router.post('/verify-email-change', verifyEmailChange);
 router.post('/reset-password', resetPassword);
 
-router.put('/profile', authenticate, updateProfile);
+router.put('/profile', authenticate, emailChangeLimiter, updateProfile);
 router.put('/change-password', authenticate, changePassword);
 router.delete('/account', authenticate, deleteAccount);
 router.post('/tour-complete', authenticate, completeTour);
