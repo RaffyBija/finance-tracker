@@ -1,3 +1,4 @@
+import { clampInt } from '../utils/queryParams';
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../types';
@@ -80,8 +81,8 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const now    = new Date();
-    const year   = req.query.year  ? parseInt(req.query.year  as string) : now.getFullYear();
-    const month1 = req.query.month ? parseInt(req.query.month as string) : now.getMonth() + 1;
+    const year   = clampInt(req.query.year, now.getFullYear(), 2000, 2100);
+    const month1 = clampInt(req.query.month, now.getMonth() + 1, 1, 12);
     const month  = month1 - 1; // 0-indexed for Date constructor
 
     const monthStart = new Date(year, month,     1,  0,  0,  0,   0);

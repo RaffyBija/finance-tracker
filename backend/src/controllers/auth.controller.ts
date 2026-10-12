@@ -22,9 +22,12 @@ const EMAIL_SEND_ERROR = "Impossibile inviare l'email, riprova più tardi";
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, currency }: RegisterDTO = req.body;
-    // Validazione base
-    if (!email.trim() || !password.trim() || !name.trim()) {
+    const { email, password, name, currency }: RegisterDTO = req.body || {};
+    // Validazione base (typeof: un campo mancante o non stringa darebbe 500 su .trim())
+    if (
+      typeof email !== "string" || typeof password !== "string" || typeof name !== "string" ||
+      !email.trim() || !password.trim() || !name.trim()
+    ) {
       return res
         .status(400)
         .json({ error: "Email, password e nome sono obbligatori" });
@@ -95,16 +98,19 @@ export const register = async (req: Request, res: Response) => {
 // Verifica email
 export const verifyEmail = async (req: Request, res: Response) => {
   try {
-    const { token } = req.body;
+    const { token } = req.body || {};
 
     if (!token || typeof token !== 'string') {
       return res.status(400).json({ error: "Token non valido o scaduto" });
     }
 
+    // pendingEmail: null → questo endpoint non deve accettare il token di un cambio email (stesso
+    // campo emailVerifyToken): lascerebbe il cambio in sospeso senza token.
+    // ponytail: il token di registrazione NON scade (nessun endpoint di reinvio: con la scadenza chi non
+    // verifica in tempo resterebbe bloccato, `register` risponde "Email già in uso"); applicare
+    // emailVerifyExpires solo insieme a un reinvio della verifica.
     const user = await prisma.user.findFirst({
-      where: {
-        emailVerifyToken: token,
-      },
+      where: { emailVerifyToken: token, pendingEmail: null },
     });
 
     if (!user) {
@@ -171,13 +177,13 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 // Reset password
 export const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, newPassword } = req.body || {};
 
     if (!token || typeof token !== 'string') {
       return res.status(400).json({ error: "Token non valido o scaduto" });
     }
 
-    if (!newPassword || newPassword.length < 6) {
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
       return res
         .status(400)
         .json({ error: "Password deve essere di almeno 6 caratteri" });
@@ -215,10 +221,10 @@ export const resetPassword = async (req: Request, res: Response) => {
 // Login utente
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password, rememberMe }: LoginDTO = req.body;
+    const { email, password, rememberMe }: LoginDTO = req.body || {};
 
-    // Validazione base
-    if (!email.trim() || !password.trim()) {
+    // Validazione base (typeof: un campo mancante o non stringa darebbe 500 su .trim())
+    if (typeof email !== "string" || typeof password !== "string" || !email.trim() || !password.trim()) {
       return res
         .status(400)
         .json({ error: "Email e password sono obbligatori" });
@@ -449,7 +455,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 // Verifica cambio email — chiamata quando l'utente clicca il link
 export const verifyEmailChange = async (req: Request, res: Response) => {
   try {
-    const { token } = req.body;
+    const { token } = req.body || {};
 
     // typeof: un oggetto (es. {"not": ""}) diventerebbe un filtro Prisma e confermerebbe
     // il primo cambio email in sospeso trovato.
@@ -503,9 +509,12 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
 export const changePassword = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (
+      typeof currentPassword !== 'string' || typeof newPassword !== 'string' || typeof confirmPassword !== 'string' ||
+      !currentPassword || !newPassword || !confirmPassword
+    ) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
