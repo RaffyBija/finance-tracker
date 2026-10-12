@@ -14,6 +14,7 @@ import {
   SkeletonList,
 } from "../components/shared/Skeleton";
 import RecurringList from "../components/recurring/RecurringList";
+import RecurringSummaryCard from "../components/recurring/RecurringSummaryCard";
 import DueBanner from "../components/due/DueBanner";
 import { useDueReview } from "../components/due/DueReviewProvider";
 import { recurringToEntry, todayLocal } from "../components/due/dueEntries";
@@ -83,6 +84,7 @@ export const RecurringTransactions = ({ embedded = false }: { embedded?: boolean
         <>
           {!embedded && <PageHeader title="Ricorrenti" />}
           <DueBanner kinds={['recurring']} noun={['ricorrente', 'ricorrenti']} />
+          <RecurringSummaryCard recurring={recurring} />
           <RecurringList
             recurring={recurring}
             dueItems={dueItems}
