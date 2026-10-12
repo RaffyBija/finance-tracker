@@ -6,6 +6,8 @@ export interface RecurringSummaryItem {
   type: TransactionType;
   frequency: Frequency;
   isActive: boolean;
+  /** Importo variabile: amount è una stima. */
+  isVariableAmount?: boolean;
 }
 
 export interface RecurringSummary {
@@ -19,6 +21,11 @@ export interface RecurringSummary {
   netYearly: number;
   /** Numero di ricorrenti attive considerate. */
   count: number;
+  /** I totali includono almeno una ricorrente attiva a importo variabile (stima). */
+  incomeIsEstimate: boolean;
+  expenseIsEstimate: boolean;
+  /** Netto e annuo: stimati se lo sono entrate o uscite. */
+  netIsEstimate: boolean;
 }
 
 /** Quante occorrenze in un mese medio, per frequenza. */
@@ -35,16 +42,26 @@ export function summarizeRecurring(items: RecurringSummaryItem[]): RecurringSumm
   let income = 0;
   let expense = 0;
   let count = 0;
+  let incomeIsEstimate = false;
+  let expenseIsEstimate = false;
   for (const it of items) {
     if (!it.isActive) continue;
     const monthly = Number(it.amount) * PER_MONTH[it.frequency];
     if (!Number.isFinite(monthly)) continue;
     count++;
-    if (it.type === 'INCOME') income += monthly;
-    else expense += monthly;
+    if (it.type === 'INCOME') {
+      income += monthly;
+      if (it.isVariableAmount) incomeIsEstimate = true;
+    } else {
+      expense += monthly;
+      if (it.isVariableAmount) expenseIsEstimate = true;
+    }
   }
   income = round2(income);
   expense = round2(expense);
   const net = round2(income - expense);
-  return { income, expense, net, netYearly: round2(net * 12), count };
+  return {
+    income, expense, net, netYearly: round2(net * 12), count,
+    incomeIsEstimate, expenseIsEstimate, netIsEstimate: incomeIsEstimate || expenseIsEstimate,
+  };
 }

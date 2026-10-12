@@ -7,7 +7,10 @@ const r = (o: Partial<RecurringSummaryItem>): RecurringSummaryItem => ({
 
 describe('summarizeRecurring', () => {
   it('lista vuota: tutto a zero', () => {
-    expect(summarizeRecurring([])).toEqual({ income: 0, expense: 0, net: 0, netYearly: 0, count: 0 });
+    expect(summarizeRecurring([])).toEqual({
+      income: 0, expense: 0, net: 0, netYearly: 0, count: 0,
+      incomeIsEstimate: false, expenseIsEstimate: false, netIsEstimate: false,
+    });
   });
 
   it('normalizza le frequenze a mensile', () => {
@@ -49,5 +52,36 @@ describe('summarizeRecurring', () => {
     const s = summarizeRecurring([r({ amount: 0.1 }), r({ amount: 0.2 })]);
     expect(s.expense).toBe(0.3);
     expect(summarizeRecurring([r({ amount: '19.99', frequency: 'WEEKLY' })]).expense).toBe(86.62);
+  });
+
+  describe('flag stima (importo variabile)', () => {
+    const flags = (items: RecurringSummaryItem[]) => {
+      const { incomeIsEstimate, expenseIsEstimate, netIsEstimate } = summarizeRecurring(items);
+      return { incomeIsEstimate, expenseIsEstimate, netIsEstimate };
+    };
+
+    it('nessuna variabile (o campo assente): tutti false', () => {
+      expect(flags([r({}), r({ type: 'INCOME' })])).toEqual({
+        incomeIsEstimate: false, expenseIsEstimate: false, netIsEstimate: false,
+      });
+    });
+
+    it('variabile entrata: solo income e net', () => {
+      expect(flags([r({ type: 'INCOME', isVariableAmount: true }), r({})])).toEqual({
+        incomeIsEstimate: true, expenseIsEstimate: false, netIsEstimate: true,
+      });
+    });
+
+    it('variabile uscita: solo expense e net', () => {
+      expect(flags([r({ isVariableAmount: true }), r({ type: 'INCOME' })])).toEqual({
+        incomeIsEstimate: false, expenseIsEstimate: true, netIsEstimate: true,
+      });
+    });
+
+    it('variabile disattivata: non conta come stima', () => {
+      expect(flags([r({ isVariableAmount: true, isActive: false })])).toEqual({
+        incomeIsEstimate: false, expenseIsEstimate: false, netIsEstimate: false,
+      });
+    });
   });
 });

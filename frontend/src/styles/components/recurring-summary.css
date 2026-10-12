@@ -60,6 +60,9 @@
   color: #78716c;
 }
 
+/* Nota stime: sotto la riga principale, più vicina */
+.recurring-summary-foot + .recurring-summary-foot { margin-top: 0.125rem; }
+
 @media (min-width: 640px) {
   .recurring-summary-grid {
     grid-template-columns: repeat(3, 1fr);
