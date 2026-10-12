@@ -100,6 +100,31 @@ describe('updateCategory', () => {
   });
 });
 
+describe('icona (emoji personalizzata)', () => {
+  it('create: emoji valida accettata, testo o più emoji → 400', async () => {
+    p.category.findFirst.mockResolvedValue(null);
+    const ok = mockRes();
+    await createCategory(req({ name: 'Yoga', type: 'EXPENSE', icon: '🧘🏽' }), ok);
+    expect(ok.status).toHaveBeenCalledWith(201);
+    for (const icon of ['ab', '😀😀', '']) {
+      const res = mockRes();
+      await createCategory(req({ name: 'Yoga2', type: 'EXPENSE', icon }), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Inserisci una sola emoji' });
+    }
+  });
+
+  it('update: icona non valida → 400, ma un\'icona storica invariata passa', async () => {
+    p.category.findFirst.mockResolvedValue({ id: 'c1', type: 'EXPENSE', parentId: null, isSystem: false, name: 'Vecchia', icon: 'x' });
+    const bad = mockRes();
+    await updateCategory(req({ icon: 'y' }, { id: 'c1' }), bad);
+    expect(bad.status).toHaveBeenCalledWith(400);
+    const same = mockRes();
+    await updateCategory(req({ icon: 'x' }, { id: 'c1' }), same);
+    expect(p.category.update).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('deleteCategory', () => {
   it('in uso e senza destinazione → 409 con gli utilizzi', async () => {
     p.category.findFirst.mockResolvedValue({ id: 'c1', isSystem: false });
