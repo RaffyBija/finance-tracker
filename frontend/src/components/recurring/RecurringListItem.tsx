@@ -103,7 +103,9 @@ export default function RecurringListItem({
             className={`list-item-amount ${
               recurring.type === 'INCOME' ? 'is-income' : 'is-expense'
             }`}
+            title={recurring.isVariableAmount ? 'Importo variabile: stima' : undefined}
           >
+            {recurring.isVariableAmount && '~'}
             {formatSignedCurrency(Number(recurring.amount), recurring.type)}
           </span>
           <div className="list-item-action-buttons" onClick={(e) => e.stopPropagation()}>

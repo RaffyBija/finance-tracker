@@ -11,6 +11,8 @@ interface DueRow {
   description: string;
   date: string;
   amount: number;
+  /** Importo stimato (ricorrente a importo variabile): mostrato con "~". */
+  estimate?: boolean;
   type: TransactionType;
   source: 'recurring' | 'planned';
   to: string;
@@ -31,6 +33,7 @@ export default function DueSoonWidget() {
       description: r.description,
       date: r.nextDueDate,
       amount: Number(r.amount),
+      estimate: r.isVariableAmount,
       type: r.type,
       source: 'recurring',
       to: '/recurring',
@@ -88,6 +91,7 @@ export default function DueSoonWidget() {
               <span
                 className={`due-soon-amount${row.type === 'INCOME' ? ' is-income' : ' is-expense'}`}
               >
+                {row.estimate && '~'}
                 {formatSignedCurrency(row.amount, row.type)}
               </span>
             </button>

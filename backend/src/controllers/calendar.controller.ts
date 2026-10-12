@@ -135,6 +135,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
       description: string;
       isPaid?: boolean;
       recurringId?: string;
+      isEstimate?: boolean; // ricorrente a importo variabile: amount è una stima
       split?: boolean;
       category: { id?: string; name: string; color?: string; icon?: string } | null;
     };
@@ -246,6 +247,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
           amount,
           description: rec.description,
           recurringId: rec.id,
+          ...(rec.isVariableAmount && { isEstimate: true }),
           category: rec.category
             ? { id: rec.category.id, name: rec.category.name, color: rec.category.color ?? undefined, icon: rec.category.icon ?? undefined }
             : null,

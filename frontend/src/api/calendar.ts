@@ -15,6 +15,8 @@ export interface CalendarEvent {
   description: string;
   isPaid?: boolean;
   recurringId?: string;
+  /** Ricorrente a importo variabile: l'importo è una stima. */
+  isEstimate?: boolean;
   category: CalendarCategory | null;
 }
 
