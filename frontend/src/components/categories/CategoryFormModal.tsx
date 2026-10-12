@@ -8,6 +8,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import { buildCategoryTree } from '../../utils/categoryTree';
 import { apiError } from '../../utils/apiError';
+import { isSingleEmoji } from '../../utils/emoji';
+import { ICONS } from '../../utils/categoryIcons';
 
 // Crea / modifica una categoria: nome, tipo (solo alla creazione), macro di
 // appartenenza (nessuna = è una macro), natura (solo macro di uscita), colore e
@@ -16,20 +18,6 @@ import { apiError } from '../../utils/apiError';
 const COLORS = [
   '#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981', '#14B8A6',
   '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#EC4899', '#F43F5E', '#78716C', '#44403C',
-];
-
-const ICONS = [
-  '💰', '💼', '⏱️', '📈', '🏷️', '↩️', '🎁',
-  '🏠', '🔑', '🧾', '🏢', '🛠️', '🛋️', '💡',
-  '🛒', '🥖', '🍽️', '☕', '🛵', '🍕',
-  '🚗', '⛽', '🚌', '🔧', '🛡️', '🅿️', '🚕', '✈️',
-  '🏥', '💊', '🩺', '❤️',
-  '👕', '💇', '🏋️', '🛍️',
-  '🎮', '📺', '🎟️', '🎨', '📚', '🎵',
-  '📱', '🌐', '💻',
-  '👪', '🧸', '🐶',
-  '🏦', '🏛️', '💳',
-  '🎓', '📦', '❓',
 ];
 
 interface CategoryFormModalProps {
@@ -54,6 +42,11 @@ export default function CategoryFormModal({
     name: '', type: defaultType, color: COLORS[0], icon: ICONS[0], parentId: null, nature: null,
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Emoji personalizzata: `customIcon` resta come swatch nella griglia anche se si
+  // sceglie poi una predefinita; `customText` è il contenuto dell'input.
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState('');
+  const [customIcon, setCustomIcon] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,6 +60,10 @@ export default function CategoryFormModal({
       nature: editingCategory?.nature ?? null,
     });
     setSubmitError(null);
+    const icon = editingCategory?.icon;
+    setCustomIcon(icon && !ICONS.includes(icon) ? icon : null);
+    setCustomText('');
+    setCustomOpen(false);
   }, [isOpen, editingCategory, defaultParentId, defaultType, categories]);
 
   // Macro possibili: stesso tipo, non di sistema, non la categoria stessa. Una
@@ -81,6 +78,9 @@ export default function CategoryFormModal({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
   const isMacro = !formData.parentId;
+  const customError = customOpen && customText.trim() && !isSingleEmoji(customText.trim())
+    ? 'Inserisci una sola emoji'
+    : null;
 
   const { errors, validate, clearError } = useFormValidation<FormState>({
     name: (value) => {
@@ -94,7 +94,7 @@ export default function CategoryFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    if (!validate(formData)) return;
+    if (!validate(formData) || customError) return;
     const payload = {
       name: formData.name,
       type: formData.type,
@@ -229,7 +229,7 @@ export default function CategoryFormModal({
         <div className="form-group">
           <span className="form-label">Icona</span>
           <div className="icon-swatch-grid">
-            {ICONS.map((icon) => (
+            {(customIcon ? [customIcon, ...ICONS] : ICONS).map((icon) => (
               <button
                 key={icon}
                 type="button"
@@ -241,6 +241,39 @@ export default function CategoryFormModal({
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm icon-custom-toggle"
+            aria-expanded={customOpen}
+            onClick={() => setCustomOpen(!customOpen)}
+          >
+            ＋ Personalizzata
+          </button>
+          {customOpen && (
+            <>
+              <input
+                type="text"
+                className="form-input icon-custom-input"
+                value={customText}
+                maxLength={16}
+                autoFocus
+                placeholder="😀"
+                aria-label="Emoji personalizzata"
+                aria-invalid={!!customError}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCustomText(value);
+                  const emoji = value.trim();
+                  if (isSingleEmoji(emoji)) {
+                    if (!ICONS.includes(emoji)) setCustomIcon(emoji);
+                    setFormData({ ...formData, icon: emoji });
+                  }
+                }}
+              />
+              <FieldError message={customError ?? undefined} />
+              <p className="form-help">Apri la tastiera emoji del dispositivo e inserisci una sola emoji: la vedi subito tra le icone, già selezionata.</p>
+            </>
+          )}
         </div>
 
         <div className="form-actions">
