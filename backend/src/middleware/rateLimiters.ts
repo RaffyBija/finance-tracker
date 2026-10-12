@@ -25,3 +25,18 @@ export const emailChangeLimiter = rateLimit({
   },
   message: { error: 'Troppe richieste di cambio email, riprova tra un\'ora.' },
 });
+
+// Cambio password: la route verifica la password attuale, quindi con un token rubato si potrebbe
+// indovinarla a ripetizione (limite globale: 200 / 15 min). Qui si contano SOLO i tentativi con
+// password attuale errata (401): le richieste riuscite e gli errori di validazione (400) non
+// consumano il limite. Chiave = utente.
+export const passwordCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => (req as AuthRequest).userId ?? 'anon',
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode !== 401,
+  message: { error: 'Troppi tentativi con la password attuale, riprova tra 15 minuti.' },
+});
