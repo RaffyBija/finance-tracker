@@ -15,6 +15,8 @@ import { AuthRequest } from "../types";
 // Valute supportate (codici ISO 4217). Tieni allineato col frontend (utils/currency).
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
 
+const EMAIL_SEND_ERROR = "Impossibile inviare l'email, riprova più tardi";
+
 // Registrazione utente
 export const register = async (req: Request, res: Response) => {
   try {
@@ -42,8 +44,14 @@ export const register = async (req: Request, res: Response) => {
     const verifyToken = crypto.randomBytes(32).toString("hex");
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
 
-    // Invia email di verifica
-    await sendVerificationEmail(email, verifyToken);
+    // Invia email di verifica PRIMA di creare l'utente: se l'invio fallisce non resta
+    // alcun account irraggiungibile e l'utente può semplicemente riprovare.
+    try {
+      await sendVerificationEmail(email, verifyToken);
+    } catch (e) {
+      console.error("Register: invio email fallito:", e instanceof Error ? e.message : e);
+      return res.status(502).json({ error: EMAIL_SEND_ERROR });
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -142,7 +150,12 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       },
     });
 
-    await sendPasswordResetEmail(email, resetToken);
+    // Errore di invio: solo log, la risposta resta identica a quella senza account (no enumerazione)
+    try {
+      await sendPasswordResetEmail(email, resetToken);
+    } catch (e) {
+      console.error("Request reset: invio email fallito:", e instanceof Error ? e.message : e);
+    }
 
     res.json({ message: "Se l'email esiste, riceverai un link per il reset" });
   } catch (error) {
@@ -365,6 +378,15 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       const changeToken = crypto.randomBytes(32).toString('hex');
       const changeExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
 
+      // Invia PRIMA di salvare: se l'invio fallisce il profilo resta invariato (nessun
+      // pendingEmail/token orfano) e l'utente può riprovare.
+      try {
+        await sendEmailChangeVerification(email.trim(), changeToken);
+      } catch (e) {
+        console.error('Update profile: invio email fallito:', e instanceof Error ? e.message : e);
+        return res.status(502).json({ error: EMAIL_SEND_ERROR });
+      }
+
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -377,8 +399,6 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      // Invia email di verifica alla NUOVA email
-      await sendEmailChangeVerification(email.trim(), changeToken);
       emailChangeRequested = true;
 
     } else if (name?.trim()) {
