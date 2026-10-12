@@ -129,17 +129,22 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
 // Request password reset
 export const requestPasswordReset = async (req: Request, res: Response) => {
+  const rawEmail = req.body?.email;
+  if (typeof rawEmail !== "string" || !rawEmail.trim()) {
+    return res.status(400).json({ error: "Email mancante" });
+  }
+  const email = rawEmail.trim();
+
+  // Si risponde SUBITO e il lavoro (lettura, token, invio Resend) segue dopo: così i tempi di
+  // risposta non dicono se l'account esiste (con account c'erano centinaia di ms in più per
+  // la chiamata a Resend) e la risposta resta identica con e senza account.
+  res.json({ message: "Se l'email esiste, riceverai un link per il reset" });
+
   try {
-    const { email } = req.body;
-
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      // Non rivelare se l'email esiste per sicurezza
-      return res.json({
-        message: "Se l'email esiste, riceverai un link per il reset",
-      });
-    }
+    // register e login salvano/cercano l'email così com'è (case-sensitive): la ricerca qui è
+    // insensibile alle maiuscole, così il reset funziona anche digitando l'indirizzo in modo diverso.
+    const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
+    if (!user) return;
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 ora
@@ -152,17 +157,14 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       },
     });
 
-    // Errore di invio: solo log, la risposta resta identica a quella senza account (no enumerazione)
+    // Errore di invio: solo log (la risposta è già partita)
     try {
-      await sendPasswordResetEmail(email, resetToken);
+      await sendPasswordResetEmail(user.email, resetToken); // all'indirizzo salvato, non a quello digitato
     } catch (e) {
       console.error("Request reset: invio email fallito:", e instanceof Error ? e.message : e);
     }
-
-    res.json({ message: "Se l'email esiste, riceverai un link per il reset" });
   } catch (error) {
     console.error("Request reset error:", error);
-    res.status(500).json({ error: "Errore del server" });
   }
 };
 

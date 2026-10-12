@@ -80,11 +80,11 @@ describe('register con invio fallito', () => {
 
 describe('requestPasswordReset con invio fallito', () => {
   it('risposta identica a quella senza account, nessun errore al client', async () => {
-    u.findUnique.mockResolvedValueOnce(null);
+    u.findFirst.mockResolvedValueOnce(null);
     const noAccount = mockRes();
     await requestPasswordReset({ body: { email: 'x@y.it' } } as any, noAccount);
 
-    u.findUnique.mockResolvedValueOnce({ id: 'u1' });
+    u.findFirst.mockResolvedValueOnce({ id: 'u1', email: 'a@b.it' });
     u.update.mockResolvedValue({});
     const withAccount = mockRes();
     await requestPasswordReset({ body: { email: 'a@b.it' } } as any, withAccount);
