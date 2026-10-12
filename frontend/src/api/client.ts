@@ -60,7 +60,10 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    // Il 401 di change-password significa "password attuale errata", non sessione scaduta:
+    // va mostrato all'utente, non deve fare il logout.
+    const isWrongCurrentPassword = String(error.config?.url ?? "").endsWith("/auth/change-password");
+    if (error.response?.status === 401 && !isWrongCurrentPassword) {
       // Solo se c'era una sessione: un 401 di login (credenziali errate) non è una scadenza.
       const hadSession = !!getToken();
       clearToken();
