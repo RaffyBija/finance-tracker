@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import AccountSelector from '../accounts/AccountSelector';
+import { InputDecimal } from '../layout/InputNumberDecimal';
 import { formatDayMonth } from '../../utils/date';
 import { DUE_GROUPS, RECENT_DAYS, groupInstallments, type DueEntry } from './dueEntries';
 
@@ -25,9 +26,15 @@ interface DueTodayModalProps {
 export default function DueTodayModal({ entries, onDismiss, manual = false, preselectAll = false }: DueTodayModalProps) {
   // Preselezionate solo le scadenze recenti: gli arretrati vecchi vanno spuntati a
   // mano, così un "Registra" distratto non registra movimenti forse mai avvenuti.
+  // Gli importi variabili (es. stipendio) mai in automatico: si spuntano e si
+  // conferma l'importo reale (tranne il click esplicito sulla card).
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(entries.filter((e) => preselectAll || e.daysOverdue <= RECENT_DAYS).map((e) => e.key)),
+    () => new Set(entries
+      .filter((e) => preselectAll || (e.daysOverdue <= RECENT_DAYS && !e.variableAmount))
+      .map((e) => e.key)),
   );
+  // Importo reale confermato per le ricorrenti a importo variabile (default: la stima).
+  const [amounts, setAmounts] = useState<Record<string, number>>({});
   // Data effettiva scelta dall'utente (solo se diversa da quella prevista).
   const [dates, setDates] = useState<Record<string, string>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -45,6 +52,7 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const dateOf = (e: DueEntry) => dates[e.key] ?? e.scheduledDate;
+  const amountOf = (e: DueEntry) => amounts[e.key] ?? e.amount;
   const accountOf = (e: DueEntry) =>
     e.needsAccount ? chosenAccounts[e.key] ?? defaultAccount?.id ?? accounts[0]?.id : undefined;
   // Voci già registrate in questo popup: escluse da lista e invio anche quando le
@@ -87,10 +95,14 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
       const overrides = Object.fromEntries(
         recurring.filter((e) => dates[e.key]).map((e) => [e.id, dates[e.key]]),
       );
+      const confirmed = Object.fromEntries(
+        recurring.filter((e) => e.variableAmount).map((e) => [e.id, amountOf(e)]),
+      );
       try {
         const result = await executeRecurring.mutateAsync({
           ids: recurring.map((e) => e.id),
           dates: Object.keys(overrides).length > 0 ? overrides : undefined,
+          amounts: Object.keys(confirmed).length > 0 ? confirmed : undefined,
         });
         // count reale: il backend salta una ricorrente senza scadenza calcolabile.
         done += result.count;
@@ -190,7 +202,8 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
                         </div>
                         <div className="due-item-right">
                           <span className={isIncome ? 'transaction-card-amount-income' : 'transaction-card-amount-expense'}>
-                            {formatSignedCurrency(e.amount, e.type)}
+                            {e.variableAmount && amounts[e.key] === undefined && '~'}
+                            {formatSignedCurrency(amountOf(e), e.type)}
                           </span>
                           <button
                             type="button"
@@ -215,6 +228,19 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
                             value={accountOf(e) ?? ''}
                             onChange={(id) => setChosenAccounts((prev) => ({ ...prev, [e.key]: id }))}
                             label={e.type === 'INCOME' ? 'Incassato su' : 'Pagato da'}
+                          />
+                        </div>
+                      )}
+
+                      {e.variableAmount && isSelected && (
+                        <div className="due-amount-row" onClick={(ev) => ev.stopPropagation()}>
+                          <InputDecimal
+                            formData={{ amount: amountOf(e) }}
+                            setFormData={({ amount }) =>
+                              setAmounts((prev) => ({ ...prev, [e.key]: Number(amount) || 0 }))}
+                            label={isIncome ? 'Importo ricevuto' : 'Importo pagato'}
+                            required
+                            invalid={!(amountOf(e) > 0)}
                           />
                         </div>
                       )}
@@ -269,7 +295,9 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
             type="button"
             onClick={handleRegister}
             // Senza conti (utente che non li usa) nessuna voce può richiederne uno.
-            disabled={chosen.length === 0 || submitting || (accounts.length > 0 && chosen.some((e) => e.needsAccount && !accountOf(e)))}
+            disabled={chosen.length === 0 || submitting
+              || (accounts.length > 0 && chosen.some((e) => e.needsAccount && !accountOf(e)))
+              || chosen.some((e) => e.variableAmount && !(amountOf(e) > 0))}
             className="btn btn-primary btn-md"
           >
             {submitting ? 'Registrazione...' : `Registra (${chosen.length})`}

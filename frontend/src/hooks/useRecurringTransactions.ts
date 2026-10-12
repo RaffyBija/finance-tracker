@@ -15,8 +15,8 @@ const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) 
 export function useExecuteRecurring() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ ids, dates }: { ids: string[]; dates?: Record<string, string> }) =>
-      recurringApi.execute(ids, dates),
+    mutationFn: ({ ids, dates, amounts }: { ids: string[]; dates?: Record<string, string>; amounts?: Record<string, number> }) =>
+      recurringApi.execute(ids, dates, amounts),
     onSuccess: () => recurringInvalidations(queryClient),
   });
 }
@@ -24,7 +24,7 @@ export function useExecuteRecurring() {
 export function useExecuteRecurringNow() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => recurringApi.executeNow(id),
+    mutationFn: ({ id, amount }: { id: string; amount?: number }) => recurringApi.executeNow(id, amount),
     onSuccess: () => recurringInvalidations(queryClient),
   });
 }

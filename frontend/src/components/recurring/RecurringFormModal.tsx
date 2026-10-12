@@ -65,6 +65,7 @@ export default function RecurringFormModal({
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     accountId: defaultAccount?.id ?? '',
+    isVariableAmount: false,
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const guard = useUnsavedGuard(formData, onClose);
@@ -83,6 +84,7 @@ export default function RecurringFormModal({
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     accountId: defaultAccount?.id ?? '',
+    isVariableAmount: false,
     ...carry,
   });
 
@@ -99,6 +101,7 @@ export default function RecurringFormModal({
       startDate: editingItem.startDate.split('T')[0],
       endDate: editingItem.endDate ? editingItem.endDate.split('T')[0] : '',
       accountId: editingItem.accountId ?? defaultAccount?.id ?? '',
+      isVariableAmount: !!editingItem.isVariableAmount,
     } : blankRecurring();
     setFormData(init);
     guard.capture(init);
@@ -279,6 +282,17 @@ export default function RecurringFormModal({
               describedBy={errors.amount ? 'rec-amount-err' : undefined}
             />
             <FieldError id="rec-amount-err" message={errors.amount} />
+            <label className="form-checkbox-row">
+              <input type="checkbox" checked={!!formData.isVariableAmount}
+                onChange={(e) => setFormData({ ...formData, isVariableAmount: e.target.checked })}
+              />
+              Importo variabile (stima)
+            </label>
+            {formData.isVariableAmount && (
+              <p className="form-help">
+                Es. lo stipendio: a ogni scadenza confermi l'importo reale e la stima si aggiorna da sola.
+              </p>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Frequenza</label>

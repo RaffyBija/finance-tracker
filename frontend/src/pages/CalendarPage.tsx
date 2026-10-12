@@ -330,6 +330,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
         </div>
       </div>
       <span className={`cal-event-amount${isIncome ? ' pos' : ' neg'}`}>
+        {event.isEstimate && '~'}
         {formatSignedCurrency(event.amount, event.transactionType)}
       </span>
     </div>

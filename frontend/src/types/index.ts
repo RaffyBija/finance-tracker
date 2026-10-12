@@ -460,6 +460,8 @@ export interface RecurringTransaction {
   endDate?: string;
   isActive: boolean;
   lastExecutedDate?: string | null;
+  /** Importo variabile (es. stipendio): amount è una stima, da confermare alla registrazione. */
+  isVariableAmount?: boolean;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -494,6 +496,7 @@ export interface CreateRecurringTransactionDTO {
   startDate: string;
   endDate?: string;
   accountId?: string;
+  isVariableAmount?: boolean;
 }
 
 // API Error

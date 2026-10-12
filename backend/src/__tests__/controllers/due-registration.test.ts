@@ -10,7 +10,7 @@ vi.mock('../../utils/prisma', () => {
   const client: any = {
     plannedTransaction: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), delete: vi.fn() },
     recurringTransaction: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    transaction: { create: vi.fn() },
+    transaction: { create: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
     account: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     $transaction: vi.fn(),
   };
@@ -177,5 +177,146 @@ describe('executeRecurringNow', () => {
 
   it('scadenza corrente già registrata: esecuzione anticipata, segna la prossima futura', async () => {
     expect(await run(new Date(2026, 9, 4))).toEqual(new Date(2026, 10, 4));
+  });
+});
+
+// Importo variabile (es. stipendio): mai registrato alla stima senza conferma,
+// e dopo la registrazione la stima segue la mediana degli ultimi importi.
+describe('ricorrente a importo variabile', () => {
+  const salary = {
+    id: 's1', userId: 'u1', amount: 1700, type: 'INCOME', description: 'Stipendio', categoryId: 'c1',
+    accountId: 'acc1', frequency: 'MONTHLY', dayOfMonth: 1, startDate: new Date('2020-01-01'),
+    endDate: null, isActive: true, lastExecutedDate: null, isVariableAmount: true,
+  };
+
+  it('execute senza importo confermato → 400, nessun movimento', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([salary]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'] } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+    expect(p.recurringTransaction.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('execute-now senza importo confermato → 400, nessun movimento', async () => {
+    p.recurringTransaction.findFirst.mockResolvedValue(salary);
+    const res = mockRes();
+    await executeRecurringNow({ userId: 'u1', params: { id: 's1' }, body: {} } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('importo non valido → 400', async () => {
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: -5 } } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+
+  // Movimenti di registrazioni distinte (createdAt lontani), dal più recente.
+  const history = (amounts: number[]) => amounts.map((amount, i) => ({
+    amount, date: new Date(2026, 9 - i, 1), createdAt: new Date(2026, 9 - i, 1, 9),
+  }));
+
+  it('registra l\'importo confermato e aggiorna la stima alla mediana degli ultimi 3', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([salary]);
+    p.transaction.findMany.mockResolvedValue(history([1760, 1650, 1720, 9999]));
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: 1760 } } } as any, res);
+
+    expect(Number(p.transaction.create.mock.calls[0][0].data.amount)).toBe(1760);
+    expect(p.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { fromRecurringId: 's1' },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: expect.any(Number),
+    }));
+    expect(p.transaction.findMany.mock.calls[0][0].take).toBeGreaterThan(3);
+    expect(p.recurringTransaction.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { amount: 1720 } });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('con 2 arretrati: 3 movimenti [stima, stima, confermato] e la stima segue il confermato', async () => {
+    const now = new Date();
+    p.recurringTransaction.findMany.mockResolvedValue([
+      { ...salary, lastExecutedDate: new Date(now.getFullYear(), now.getMonth() - 3, 1) },
+    ]);
+    // Come li rilegge il DB: arretrati alla stima + confermato creati nella stessa registrazione.
+    const run = new Date(2026, 9, 2, 10);
+    const at = (ms: number) => new Date(run.getTime() + ms);
+    p.transaction.findMany.mockResolvedValue([
+      { amount: 1900, date: new Date(2026, 9, 1), createdAt: at(6) },
+      { amount: 1700, date: new Date(2026, 8, 1), createdAt: at(3) },
+      { amount: 1700, date: new Date(2026, 7, 1), createdAt: at(0) },
+    ]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: 1900 } } } as any, res);
+
+    expect(p.transaction.create.mock.calls.map((c: any) => Number(c[0].data.amount))).toEqual([1700, 1700, 1900]);
+    const estimate = p.recurringTransaction.update.mock.calls[0][0].data.amount;
+    expect(estimate).not.toBe(1700);
+    expect(estimate).toBe(1900);
+  });
+
+  it('execute-now con importo valido: movimento all\'importo confermato e stima aggiornata', async () => {
+    p.recurringTransaction.findFirst.mockResolvedValue(salary);
+    p.account.findFirst.mockResolvedValueOnce({ id: 'acc1' }); // conto dell'utente, non archiviato
+    p.transaction.findMany.mockResolvedValue(history([1812.35, 1700.01]));
+    const res = mockRes();
+    await executeRecurringNow({ userId: 'u1', params: { id: 's1' }, body: { amount: 1812.345 } } as any, res);
+
+    expect(Number(p.transaction.create.mock.calls[0][0].data.amount)).toBe(1812.35); // arrotondato al centesimo
+    expect(p.recurringTransaction.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { amount: 1756.18 } });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('importo oltre il limite della colonna → 400', async () => {
+    p.recurringTransaction.findFirst.mockResolvedValue(salary);
+    const res = mockRes();
+    await executeRecurringNow({ userId: 'u1', params: { id: 's1' }, body: { amount: 1e8 } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('importo che arrotondato sfora Decimal(10,2) → 400, nessuna registrazione', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([salary]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: 99999999.995 } } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+    expect(p.recurringTransaction.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('un importo non valido blocca tutte le ricorrenti della richiesta', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([salary, { ...salary, id: 's2', isVariableAmount: false }]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1', 's2'], amounts: { s1: 1800, s2: 0 } } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(p.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('una ricorrente fissa non tocca la stima', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([{ ...salary, isVariableAmount: false }]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'] } } as any, res);
+    expect(Number(p.transaction.create.mock.calls[0][0].data.amount)).toBe(1700);
+    expect(p.recurringTransaction.update).not.toHaveBeenCalled();
+  });
+
+  it('amounts su una ricorrente fissa: registra l\'importo indicato, stima invariata', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([{ ...salary, isVariableAmount: false }]);
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: 1650 } } } as any, res);
+    expect(Number(p.transaction.create.mock.calls[0][0].data.amount)).toBe(1650);
+    expect(p.recurringTransaction.update).not.toHaveBeenCalled();
+  });
+
+  it('errore nell\'aggiornare la stima: niente 500, i movimenti restano registrati', async () => {
+    p.recurringTransaction.findMany.mockResolvedValue([salary]);
+    p.transaction.findMany.mockRejectedValueOnce(new Error('db down'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = mockRes();
+    await executeRecurring({ userId: 'u1', body: { ids: ['s1'], amounts: { s1: 1800 } } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    spy.mockRestore();
   });
 });

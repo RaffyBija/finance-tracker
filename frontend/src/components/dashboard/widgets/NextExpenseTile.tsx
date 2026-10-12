@@ -17,13 +17,13 @@ export default function NextExpenseTile() {
       ...(recurringDueData?.dueToday ?? []),
     ]
       .filter((r) => r.type === 'EXPENSE')
-      .map((r) => ({ name: r.description, date: r.nextDueDate, amount: Number(r.amount), to: '/recurring' }));
+      .map((r) => ({ name: r.description, date: r.nextDueDate, amount: Number(r.amount), estimate: !!r.isVariableAmount, to: '/recurring' }));
 
     plannedDueData
       .filter((p) => p.type === 'EXPENSE')
       .forEach((p) =>
         // getPlannedDue filtra per data ≤ oggi: mai null qui.
-        items.push({ name: p.description, date: p.plannedDate!, amount: Number(p.amount), to: '/planned' })
+        items.push({ name: p.description, date: p.plannedDate!, amount: Number(p.amount), estimate: false, to: '/planned' })
       );
 
     return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
@@ -55,7 +55,7 @@ export default function NextExpenseTile() {
       aria-label={`Prossima uscita: ${next.name}, ${formatCurrency(next.amount)} il ${formatDateShort(next.date)}`}
     >
       <span className="dashboard-tile-label">Prossima uscita</span>
-      <span className="dashboard-tile-figure is-expense">−{formatCurrency(next.amount)}</span>
+      <span className="dashboard-tile-figure is-expense">{next.estimate && '~'}−{formatCurrency(next.amount)}</span>
       <span className="dashboard-tile-meta">
         {next.name} · {formatDateShort(next.date)}
       </span>

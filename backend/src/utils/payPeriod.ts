@@ -73,6 +73,11 @@ const prevPayDayOnOrBefore = (onOrBefore: Date, day: number): Date => {
   return same <= onOrBefore ? same : clampedDate(onOrBefore.getFullYear(), onOrBefore.getMonth() - 1, day);
 };
 
+// Funzione PURA: un'occorrenza fino a lastExecutedDate (stesso giorno incluso) è già
+// registrata, magari in anticipo o con data effettiva diversa: non è più attesa.
+export const isPendingOccurrence = (d: Date, lastExecutedDate: Date | null): boolean =>
+  !lastExecutedDate || startOfDay(d) > startOfDay(lastExecutedDate);
+
 // Accorpa accrediti ravvicinati (tiene il primo del gruppo), ordinati ascendenti.
 export const clusterPaydays = (dates: Date[]): Date[] => {
   const sorted = dates.map(startOfDay).sort((a, b) => a.getTime() - b.getTime());
@@ -216,6 +221,8 @@ export async function loadPayPeriod(userId: string, now: Date = new Date(), maxP
     ]);
     salaryDates = txns.map((t) => t.date);
     plannedSalaryDates = planned.flatMap((p) => (p.plannedDate ? [p.plannedDate] : []));
+    // Un'occorrenza già registrata (anche in anticipo o con data effettiva diversa)
+    // non è più un accredito atteso: al suo posto conta la data reale in salaryDates.
     recurringSalaryDates = recurring.flatMap((r) =>
       listOccurrenceDates(
         {
@@ -227,7 +234,7 @@ export async function loadPayPeriod(userId: string, now: Date = new Date(), maxP
         },
         today,
         horizon,
-      ),
+      ).filter((d) => isPendingOccurrence(d, r.lastExecutedDate)),
     );
   }
 

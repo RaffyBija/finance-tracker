@@ -31,6 +31,9 @@ export interface DueEntry {
   /** Nessun conto fisso (rata di un piano a pagamento manuale, o pianificata
    *  senza conto): il conto si sceglie ora, al momento della registrazione. */
   needsAccount?: boolean;
+  /** Ricorrente a importo variabile: amount è una stima, l'importo reale va
+   *  confermato nel popup (mai preselezionata, mai registrata alla cieca). */
+  variableAmount?: boolean;
 }
 
 /** Giorni di ritardo entro cui una scadenza parte già selezionata nel popup. */
@@ -72,6 +75,7 @@ export function recurringToEntry(r: RecurringDueItem, today: string): DueEntry {
     type: r.type,
     scheduledDate,
     daysOverdue: daysBetween(scheduledDate, today),
+    ...(r.isVariableAmount ? { variableAmount: true } : {}),
   };
 }
 

@@ -120,7 +120,7 @@ describe('useExecuteRecurringNow', () => {
     const spy = createInvalidateSpy(qc);
     const { result } = renderHook(() => useExecuteRecurringNow(), { wrapper: createWrapper(qc) });
 
-    await act(async () => { await result.current.mutateAsync('r-1'); });
+    await act(async () => { await result.current.mutateAsync({ id: 'r-1' }); });
 
     expectCalendarInvalidated(spy);
   });

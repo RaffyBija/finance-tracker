@@ -5,6 +5,11 @@ import { analyticsCache } from '../utils/analyticsCache';
 import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 import { Prisma } from '@prisma/client';
+import { refreshVariableEstimates } from '../utils/variableAmount';
+
+// Importo confermato: positivo ed entro Decimal(10,2); salvato arrotondato al centesimo.
+const isPositiveAmount = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.round(v * 100) > 0 && Math.round(v * 100) < 1e10;
+const toCents = (v: number) => new Prisma.Decimal(Math.round(v * 100) / 100);
 
 // Voce del promemoria: la ricorrente arricchita con scadenza e ritardo.
 type DueItem = { daysOverdue: number } & Record<string, unknown>;
@@ -243,6 +248,7 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
       startDate,
       endDate,
       accountId,
+      isVariableAmount,
     }: CreateRecurringTransactionDTO & { accountId?: string } = req.body;
 
     if (!amount || amount <= 0 || !type || !description || !frequency || !startDate) {
@@ -292,6 +298,7 @@ export const createRecurringTransaction = async (req: AuthRequest, res: Response
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         userId,
+        isVariableAmount: isVariableAmount === true,
         ...(accountId && { accountId }),
       },
       include: {
@@ -313,7 +320,7 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { amount, description, categoryId, frequency, dayOfMonth, startDate, endDate, isActive, accountId } = req.body;
+    const { amount, description, categoryId, frequency, dayOfMonth, startDate, endDate, isActive, accountId, isVariableAmount } = req.body;
 
     const fixedId = Array.isArray(id) ? id[0] : id;
 
@@ -364,6 +371,7 @@ export const updateRecurringTransaction = async (req: AuthRequest, res: Response
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(isActive !== undefined && { isActive }),
+        ...(typeof isVariableAmount === 'boolean' && { isVariableAmount }),
         ...(accountId !== undefined && { accountId: accountId ?? null }),
       },
       include: {
@@ -465,7 +473,12 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
     // diversa da quella prevista (es. addebito arrivato in ritardo). La scadenza
     // eseguita (lastExecutedDate) resta quella prevista, così il calendario della
     // ricorrente non slitta.
-    const { ids, dates } = req.body as { ids: string[]; dates?: Record<string, string> };
+    // amounts (opzionale): { [id]: importo } — importo REALE della scadenza corrente.
+    // Obbligatorio per le ricorrenti a importo variabile: la stima non si registra
+    // mai senza conferma esplicita.
+    const { ids, dates, amounts } = (req.body || {}) as {
+      ids: string[]; dates?: Record<string, string>; amounts?: Record<string, number>;
+    };
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'IDs non validi' });
@@ -474,6 +487,10 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
       || Object.values(dates).some((d) => typeof d !== 'string' || isNaN(new Date(d).getTime())))) {
       return res.status(400).json({ error: 'Data non valida' });
     }
+    if (amounts !== undefined && (typeof amounts !== 'object' || amounts === null
+      || !Object.values(amounts).every(isPositiveAmount))) {
+      return res.status(400).json({ error: 'Importo non valido' });
+    }
 
     const recurring = await prisma.recurringTransaction.findMany({
       where: { id: { in: ids }, userId, isActive: true },
@@ -481,6 +498,13 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
 
     if (recurring.length !== ids.length) {
       return res.status(400).json({ error: 'Alcune transazioni ricorrenti non trovate' });
+    }
+
+    const unconfirmed = recurring.filter((r) => r.isVariableAmount && amounts?.[r.id] === undefined);
+    if (unconfirmed.length > 0) {
+      return res.status(400).json({
+        error: `Conferma l'importo di: ${unconfirmed.map((r) => r.description).join(', ')}`,
+      });
     }
 
     // Con almeno un conto, nessuna ricorrente senza conto (o su un conto
@@ -505,9 +529,13 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
       // Già eseguita (doppio click, secondo tab, retry): niente duplicato.
       if (r.lastExecutedDate && normalizeDate(r.lastExecutedDate) >= dueDate) continue;
 
+      // Le arretrate restano alla stima: l'importo confermato è quello della scadenza corrente.
       const occurrences = [
-        ...computeMissedDueDates(r, dueDate).map((d) => ({ due: d, date: d })),
-        { due: dueDate, date: dates?.[r.id] ? new Date(dates[r.id]) : dueDate },
+        ...computeMissedDueDates(r, dueDate).map((d) => ({ date: d, amount: r.amount })),
+        {
+          date: dates?.[r.id] ? new Date(dates[r.id]) : dueDate,
+          amount: amounts?.[r.id] !== undefined ? toCents(amounts[r.id]) : r.amount,
+        },
       ];
 
       // Tutto o niente per ricorrente; l'update condizionale su lastExecutedDate
@@ -522,7 +550,7 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
         for (const o of occurrences) {
           rows.push(await tx.transaction.create({
             data: {
-              amount: r.amount,
+              amount: o.amount,
               type: r.type,
               description: r.description,
               categoryId: r.categoryId,
@@ -549,6 +577,9 @@ export const executeRecurring = async (req: AuthRequest, res: Response) => {
     })));
     if (ccTouched) analyticsCache.onPlannedMutated(userId);
 
+    const executedIds = new Set(created.map((t) => t.fromRecurringId));
+    await refreshVariableEstimates(recurring.filter((r) => r.isVariableAmount && executedIds.has(r.id)).map((r) => r.id));
+
     analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ created, count: created.length });
   } catch (error) {
@@ -569,6 +600,15 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
 
     if (!recurring) {
       return res.status(404).json({ error: 'Transazione ricorrente non trovata' });
+    }
+
+    // Importo reale (opzionale per le fisse, obbligatorio per le variabili).
+    const { amount } = (req.body || {}) as { amount?: unknown };
+    if (amount !== undefined && !isPositiveAmount(amount)) {
+      return res.status(400).json({ error: 'Importo non valido' });
+    }
+    if (recurring.isVariableAmount && amount === undefined) {
+      return res.status(400).json({ error: `Conferma l'importo di: ${recurring.description}` });
     }
 
     const accountOk = recurring.accountId
@@ -600,7 +640,7 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
       if (claimed.count === 0) return null;
       return tx.transaction.create({
         data: {
-          amount: recurring.amount,
+          amount: amount !== undefined ? toCents(amount) : recurring.amount,
           type: recurring.type,
           description: recurring.description,
           categoryId: recurring.categoryId,
@@ -615,6 +655,8 @@ export const executeRecurringNow = async (req: AuthRequest, res: Response) => {
     if (!transaction) {
       return res.status(409).json({ error: 'Occorrenza già registrata' });
     }
+
+    if (recurring.isVariableAmount) await refreshVariableEstimates([recurringId]);
 
     analyticsCache.onRecurringExecuted(userId);
     res.status(201).json({ ...transaction, amount: Number(transaction.amount) });

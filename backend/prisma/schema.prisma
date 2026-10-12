@@ -221,6 +221,9 @@ model RecurringTransaction {
   endDate     DateTime?
   isActive         Boolean         @default(true)
   lastExecutedDate DateTime?
+  // Importo variabile (es. stipendio): amount è una STIMA, l'importo reale si
+  // conferma a ogni registrazione e la stima segue la mediana degli ultimi importi.
+  isVariableAmount Boolean         @default(false)
   userId           String
   accountId        String?
   createdAt        DateTime        @default(now())
