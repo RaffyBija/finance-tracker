@@ -107,8 +107,8 @@ export const authAPI = {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
-  }): Promise<{ message: string }> => {
-    const { data: res } = await api.put<{ message: string }>(
+  }): Promise<{ message: string; token?: string }> => {
+    const { data: res } = await api.put<{ message: string; token?: string }>(
       "/auth/change-password",
       data,
     );

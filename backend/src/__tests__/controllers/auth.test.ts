@@ -173,11 +173,16 @@ describe('changePassword', () => {
   });
 
   it('aggiorna con hash quando la attuale è corretta', async () => {
-    u.findUnique.mockResolvedValue({ id: 'u1', password: await bcrypt.hash('vecchiaPass1', 4) });
+    u.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.it', password: await bcrypt.hash('vecchiaPass1', 4) });
+    u.update.mockResolvedValue({ tokenVersion: 1 });
     const res = mockRes();
     await changePassword(req(body()), res);
     const pwd = u.update.mock.calls[0][0].data.password;
     expect(await bcrypt.compare('nuovaPass123', pwd)).toBe(true);
+    // risposta di successo (prima il test non la controllava e un errore finiva nel catch)
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json.mock.calls[0][0]).toMatchObject({ message: 'Password aggiornata con successo' });
+    expect(typeof res.json.mock.calls[0][0].token).toBe('string');
   });
 });
 

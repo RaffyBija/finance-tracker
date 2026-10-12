@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 import { authAPI } from '../api/client';
+import { setToken as persistToken } from '../utils/tokenStorage';
 import { useToast } from '../contexts/ToastContext';
 import { useFormValidation } from '../hooks/useFormValidation';
 import FieldError from '../components/shared/FieldError';
@@ -439,7 +440,10 @@ function SecuritySection() {
 
     setIsPending(true);
     try {
-      await authAPI.changePassword(formData);
+      const res = await authAPI.changePassword(formData);
+      // Il cambio password invalida tutte le sessioni: il server riemette un token per QUESTO
+      // dispositivo (stessa scadenza), da salvare dove stava prima (persistente o di sessione).
+      if (res.token) persistToken(res.token, !!localStorage.getItem('token'));
       toast.success('Password aggiornata con successo');
       setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       resetErrors();
