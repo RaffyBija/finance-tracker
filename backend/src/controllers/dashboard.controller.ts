@@ -544,6 +544,12 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
     }
     actualPoints.reverse(); // dal più vecchio al più recente
 
+    // Nome/colore del conto per ogni evento (chip "su quale conto" nel dettaglio impegni).
+    const accountInfo = new Map(
+      (await prisma.account.findMany({ where: { userId }, select: { id: true, name: true, color: true, type: true } }))
+        .map((a) => [a.id, a]),
+    );
+
     const result = {
       currentBalance,
       projectedIncome,
@@ -553,7 +559,10 @@ export const getProjectionSeries = async (req: AuthRequest, res: Response) => {
       plannedCount,
       suspendedCount,
       points: [...actualPoints, ...points],
-      events: events.map((e) => ({ date: dayKey(e.date), label: e.label, amount: e.amount, type: e.type, source: e.source })),
+      events: events.map((e) => ({
+        date: dayKey(e.date), label: e.label, amount: e.amount, type: e.type, source: e.source,
+        account: (e.accountId && accountInfo.get(e.accountId)) || null,
+      })),
       payPeriod: serializePayPeriod(payPeriod),
       rhythm: rhythmResult,
     };

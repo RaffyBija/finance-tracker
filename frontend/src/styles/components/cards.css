@@ -181,8 +181,10 @@
     @apply items-start sm:items-center;
   }
 
+  /* max-w-full: su mobile la riga è colonna con items-start (larghezza = testo) e un titolo
+     lungo sforava la card; col tetto il truncate del titolo ha una larghezza di riferimento. */
   .list-item-main {
-    @apply flex items-start gap-4 flex-1 min-w-0;
+    @apply flex items-start gap-4 flex-1 min-w-0 max-w-full;
   }
   .list-item-main.is-center {
     @apply items-start sm:items-center;
@@ -202,7 +204,7 @@
   }
 
   .list-item-title {
-    @apply font-semibold text-lg truncate;
+    @apply font-semibold text-lg break-words min-w-0;
   }
   .list-item-title.is-paid {
     @apply line-through text-neutral-400;
@@ -2153,6 +2155,9 @@
 }
 
 .projection-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 6px;
   font-size: 0.75rem;
   color: #a8a29e;
 }

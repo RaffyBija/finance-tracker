@@ -289,6 +289,7 @@ export interface ProjectionEvent {
   amount: number;
   type: TransactionType;
   source: 'recurring' | 'planned' | 'cc' | 'sospeso';
+  account?: Pick<Account, 'id' | 'name' | 'color' | 'type'> | null;
 }
 
 export interface ProjectionSeriesParams {

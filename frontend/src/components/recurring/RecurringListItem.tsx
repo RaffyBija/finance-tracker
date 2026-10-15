@@ -2,6 +2,7 @@ import { Trash2, Pencil, TrendingUp, TrendingDown, Power, Calendar, PlayCircle }
 import { formatDateShort } from '../../utils/date';
 import type { RecurringTransaction, Frequency, RecurringDueItem } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import AccountChip from '../shared/AccountChip';
 
 interface RecurringListItemProps {
   recurring: RecurringTransaction;
@@ -90,6 +91,7 @@ export default function RecurringListItem({
                 <Calendar className="icon-sm" />
                 {getFrequencyLabel(recurring.frequency, recurring.dayOfMonth)}
               </div>
+              <AccountChip account={recurring.account} />
             </div>
             <p className="list-item-date-hint">
               Dal {formatDateShort(recurring.startDate)}

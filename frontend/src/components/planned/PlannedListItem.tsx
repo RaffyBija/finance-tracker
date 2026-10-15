@@ -1,6 +1,7 @@
 import { Trash2, Pencil, TrendingUp, TrendingDown, CheckCircle2, StickyNote } from 'lucide-react';
 import type { PlannedTransaction } from '../../types';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
+import AccountChip from '../shared/AccountChip';
 
 interface PlannedListItemProps {
   planned: PlannedTransaction;
@@ -39,9 +40,10 @@ export default function PlannedListItem({
               </h3>
               {planned.isPaid && <span className="badge-paid">Pagato</span>}
             </div>
-            <p className="list-item-subtitle">
-              {planned.category?.name || 'Senza categoria'}
-            </p>
+            <div className="list-item-meta-row">
+              <span>{planned.category?.name || 'Senza categoria'}</span>
+              <AccountChip account={planned.account} />
+            </div>
             {planned.notes && (
               <div className="list-item-note">
                 <StickyNote className="icon-sm" />
