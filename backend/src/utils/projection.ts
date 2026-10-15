@@ -287,7 +287,7 @@ export async function collectProjectionEvents(params: {
     : accounts;
   for (const charge of projectCcCharges(ccAccountsForCharge, ccEvents, rangeStart, rangeEnd, now)) {
     projectedExpense += charge.amount;
-    events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc' });
+    events.push({ date: charge.date, label: 'Addebito carta di credito', amount: charge.amount, type: 'EXPENSE', source: 'cc', accountId: charge.cardId });
   }
 
   return {

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useProjectionSeries } from '../hooks/useDashboard';
 import { useAccounts } from '../hooks/useAccounts';
+import AccountChip from '../components/shared/AccountChip';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import ProjectionChart from '../components/dashboard/ProjectionChart';
 import { InputDecimal } from '../components/layout/InputNumberDecimal';
@@ -58,6 +59,8 @@ export default function ProjectionPage() {
   // della CC collegata confluisce comunque nella proiezione del suo conto BANK
   // (vedi scopedAccountIds/linkedAccountId lato backend).
   const bankAccounts = accounts.filter((a) => a.type === 'BANK');
+  // Con una sola carta l'"Addebito carta di credito" è già inequivocabile: il nome serve solo se ce n'è più d'una.
+  const multipleCards = accounts.filter((a) => a.type === 'CREDIT_CARD' && !a.archivedAt).length > 1;
 
   // Default: fino al prossimo stipendio (liquidità libera al giorno dell'accredito).
   const [mode, setMode] = useState<Mode>('payday');
@@ -597,12 +600,14 @@ export default function ProjectionPage() {
                 )}
                 {group.items.map((ev, i) => {
                   const Icon = SOURCE_ICON[ev.source];
+                  // Chip conto: nascosto se la vista è già filtrata su un conto (sarebbe ridondante).
+                  const chipAccount = selectedAccount || (ev.source === 'cc' && !multipleCards) ? null : ev.account;
                   return (
                     <div key={`${ev.date}-${i}`} className="projection-detail-item">
                       <span className="projection-detail-icon"><Icon size={15} /></span>
                       <div className="projection-detail-body">
                         <p className="projection-detail-label">{ev.label}</p>
-                        <p className="projection-detail-meta">{dayLabel(ev.date)} · {SOURCE_LABEL[ev.source]}</p>
+                        <p className="projection-detail-meta">{dayLabel(ev.date)} · {SOURCE_LABEL[ev.source]}{chipAccount && <AccountChip account={chipAccount} />}</p>
                       </div>
                       <span className={`projection-detail-amount ${ev.type === 'INCOME' ? 'is-income' : 'is-expense'}`}>
                         {ev.type === 'INCOME' ? '+' : '−'}{formatCurrency(ev.amount)}

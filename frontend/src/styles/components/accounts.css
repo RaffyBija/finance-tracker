@@ -857,3 +857,23 @@
 .dark .archived-account-name { color: #e7e5e4; }
 .dark .archived-account-meta { color: #78716c; }
 
+
+/* Chip conto (pallino + nome) nelle righe meta di Scadenzario e Proiezione */
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+.account-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.account-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { directionMeta, rataStatus } from './planMeta';
 import InstallmentProgressBar from './InstallmentProgressBar';
+import AccountChip from '../shared/AccountChip';
 import type { InstallmentPlan } from '../../types';
 
 interface Props {
@@ -43,6 +44,7 @@ export default function InstallmentPlanCard({ plan, onOpen }: Props) {
             <h3 className="plan-card-title">{plan.title}</h3>
             <span className="plan-card-sub">
               {meta.label} · {formatCurrency(Number(plan.totalAmount))}
+              {plan.account && <> · <AccountChip account={plan.account} /></>}
             </span>
           </div>
         </div>
