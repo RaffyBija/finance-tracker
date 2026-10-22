@@ -54,6 +54,7 @@ export default function CategoryPicker({
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
   const labelId = useId();
   const createMutation = useCreateCategory();
@@ -85,7 +86,14 @@ export default function CategoryPicker({
   }, [query, ofType, allowEmpty, allowCreate, type, open]);
 
   useEffect(() => { setActive(0); }, [query, open]);
-  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    // Il focus non deve scrollare da solo: poi il modal scorre per mostrare tutto il
+    // selettore (trigger + pannello), che in fondo al form altrimenti esce dallo schermo.
+    searchRef.current?.focus({ preventScroll: true });
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rootRef.current?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }, [open]);
 
   // Chiude cliccando fuori.
   useEffect(() => {
@@ -120,13 +128,15 @@ export default function CategoryPicker({
     }
     setOpen(false);
     setQuery('');
+    // Il campo di ricerca sparisce: senza questo il focus finirebbe sul body.
+    triggerRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(options.length - 1, a + 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
     else if (e.key === 'Enter') { e.preventDefault(); if (options[active]) choose(options[active]); }
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false); triggerRef.current?.focus(); }
   };
 
   const optionId = (i: number) => `${listId}-opt-${i}`;
@@ -143,6 +153,7 @@ export default function CategoryPicker({
         </span>
       )}
       <button
+        ref={triggerRef}
         type="button"
         className={`category-picker-trigger${open ? ' is-open' : ''}`}
         aria-haspopup="listbox"

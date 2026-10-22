@@ -150,7 +150,9 @@ export default function BaseModal({
     // aggiornano lo stato, poi invia al tick successivo. Non intercetta textarea
     // (a capo), select/button (nativo). I ConfirmModal non hanno input né form,
     // quindi l'Invio non li attiva: nessuna conferma accidentale.
+    // Un widget interno (es. CategoryPicker) può aver già gestito l'Invio: non inviare.
     if (e.key === 'Enter') {
+      if (e.defaultPrevented) return;
       const t = e.target as HTMLElement;
       if (t.tagName !== 'INPUT') return;
       e.preventDefault();
