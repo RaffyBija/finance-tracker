@@ -60,7 +60,7 @@ describe('markAsPaid', () => {
     expect(txData.date).toEqual(new Date('2026-09-12'));
     expect(p.plannedTransaction.updateMany).toHaveBeenCalledWith({
       where: { id: 'p1', isPaid: false },
-      data: { isPaid: true },
+      data: { isPaid: true, paidTransactionId: 'tx1' },
     });
     expect(reconcileCcChanges).toHaveBeenCalledWith('u1', [
       { accountId: 'cc1', date: new Date('2026-09-12'), signed: 30 },

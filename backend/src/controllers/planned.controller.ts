@@ -345,7 +345,7 @@ export const markAsPaid = async (req: AuthRequest, res: Response) => {
       });
       const marked = await tx.plannedTransaction.updateMany({
         where: { id, isPaid: false },
-        data: { isPaid: true },
+        data: { isPaid: true, paidTransactionId: created.id },
       });
       if (marked.count === 0) throw new AlreadyPaidError();
       const paid = await tx.plannedTransaction.findUniqueOrThrow({

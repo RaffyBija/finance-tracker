@@ -93,7 +93,12 @@ export default function RecurringListItem({
               </div>
               <AccountChip account={recurring.account} />
             </div>
-            <p className="list-item-date-hint">
+            <p
+              className="list-item-date-hint"
+              title={recurring.lastExecutedDate
+                ? `Ultima registrazione: ${formatDateShort(recurring.lastExecutedDate)}`
+                : 'Nessuna registrazione ancora'}
+            >
               Dal {formatDateShort(recurring.startDate)}
               {recurring.endDate && ` al ${formatDateShort(recurring.endDate)}`}
             </p>

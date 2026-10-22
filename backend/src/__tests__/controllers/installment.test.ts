@@ -186,7 +186,7 @@ describe('payInstallments — pagamento multiplo → 1 transazione', () => {
     // entrambe le rate marcate pagate
     expect(p.plannedTransaction.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['r1', 'r2'] }, isPaid: false },
-      data: { isPaid: true },
+      data: { isPaid: true, paidTransactionId: 'tx1' },
     });
     // piano completato
     expect(p.installmentPlan.update).toHaveBeenCalledWith({

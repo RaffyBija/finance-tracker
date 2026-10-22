@@ -6,6 +6,8 @@ import { AuthRequest, CreateTransactionDTO, TransactionItemDTO } from '../types'
 import { analyticsCache } from '../utils/analyticsCache';
 import { reconcileCcChanges, debtContribution } from '../utils/billingCycle';
 import { accountBelongsToUser, userHasAccounts, ACCOUNT_REQUIRED_ERROR } from '../utils/ownership';
+import { rollbackRecurringExecution } from './recurring.controller';
+import { rollbackPlannedPayment } from '../utils/plannedRollback';
 import { Prisma } from '@prisma/client';
 
 // Include standard per restituire una transazione completa di righe split.
@@ -516,9 +518,16 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    await prisma.transaction.delete({
-      where: { id },
+    // Eliminazione e riapertura delle scadenze collegate (ricorrente / pianificata /
+    // rate) insieme: mai una scadenza segnata come saldata senza il suo movimento.
+    const reopened = await prisma.$transaction(async (tx) => {
+      await tx.transaction.delete({ where: { id } });
+      const rec = await rollbackRecurringExecution(userId, transaction, tx);
+      const planned = await rollbackPlannedPayment(userId, transaction, tx);
+      return { rec, planned };
     });
+    if (reopened.rec) analyticsCache.onRecurringMutated(userId);
+    if (reopened.planned) analyticsCache.onPlannedMutated(userId);
 
     // Riconcilia il ciclo CC eventualmente toccato dalla rimozione
     if (transaction.accountId) {
