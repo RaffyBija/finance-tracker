@@ -605,18 +605,22 @@
     @apply flex flex-col gap-2;
   }
 
+  /* Due livelli: il selettore categoria a tutta larghezza (il suo pannello si apre
+     in riga, come negli altri form), sotto importo e rimozione. */
   .split-row {
-    @apply flex items-center gap-2;
+    @apply flex flex-wrap items-center gap-2 p-2 rounded-xl bg-neutral-50;
   }
 
   .split-row-category {
-    @apply flex-1 min-w-0;
+    @apply basis-full min-w-0;
+  }
+  .split-row-category .category-picker {
+    @apply mb-0;
   }
 
   /* L'InputDecimal porta un .form-group con margine: azzerato in riga. */
   .split-row-amount {
-    @apply shrink-0;
-    width: 7.5rem;
+    @apply flex-1 min-w-0;
   }
   .split-row-amount .form-group {
     @apply mb-0;
@@ -829,6 +833,7 @@
 .dark .split-add-btn { color: #5eead4; }
 .dark .split-toggle-btn:hover,
 .dark .split-add-btn:hover { color: #99f6e4; }
+.dark .split-row { background-color: #1c1917; }
 .dark .split-row-remove { color: #78716c; }
 .dark .split-row-remove:hover:not(:disabled) { background-color: rgba(127, 29, 29, 0.4); color: #fca5a5; }
 .dark .split-remainder.is-balanced { background-color: rgba(6, 78, 59, 0.45); color: #6ee7b7; }

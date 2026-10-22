@@ -9,7 +9,7 @@
 }
 
 /* ── CategoryPicker ── */
-.category-picker { position: relative; }
+.category-picker { position: relative; scroll-margin-bottom: 1rem; }
 .category-picker-label-hidden {
   position: absolute;
   width: 1px;

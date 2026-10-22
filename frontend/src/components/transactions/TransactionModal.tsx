@@ -10,7 +10,6 @@ import FieldError from '../shared/FieldError';
 import FormError from '../shared/FormError';
 import AccountSelector from '../accounts/AccountSelector';
 import CategoryPicker from '../categories/CategoryPicker';
-import CategorySelect from '../categories/CategorySelect';
 import { useAccounts, useDefaultAccount } from '../../hooks/useAccounts';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { currencySymbol } from '../../utils/currency';
@@ -437,14 +436,16 @@ const { errors, validate, clearError } = useFormValidation<CreateTransactionDTO>
             <div className="split-rows">
               {splitItems.map((row, i) => (
                 <div className="split-row" key={i}>
-                  <CategorySelect
-                    categories={categories}
-                    type={formData.type}
-                    value={row.categoryId ?? ''}
-                    onChange={(id) => updateSplitRow(i, { categoryId: id })}
-                    className="form-select split-row-category"
-                    ariaLabel={`Categoria riga ${i + 1}`}
-                  />
+                  <div className="split-row-category">
+                    <CategoryPicker
+                      categories={categories}
+                      type={formData.type}
+                      value={row.categoryId ?? ''}
+                      onChange={(id) => updateSplitRow(i, { categoryId: id })}
+                      label={`Categoria riga ${i + 1}`}
+                      hideLabel
+                    />
+                  </div>
                   <div className="split-row-amount">
                     <InputDecimal
                       setFormData={(updated: { amount: number }) => updateSplitRow(i, { amount: updated.amount })}
