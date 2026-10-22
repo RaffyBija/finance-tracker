@@ -175,7 +175,10 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
                 <h3 className="due-group-title">{label}</h3>
                 {items.map((e) => {
                   const isSelected = selected.has(e.key);
-                  const isEditing = editingKey === e.key;
+                  // In ritardo e scelta: la data si chiede subito (default = quella prevista,
+                  // chip "Oggi"). Quelle di oggi non chiedono nulla, la matita resta.
+                  const isEditing = editingKey === e.key
+                    || (isSelected && e.daysOverdue > 0 && !e.undated);
                   const isIncome = e.type === 'INCOME';
                   return (
                     <div key={e.key} className="due-entry">
@@ -210,7 +213,7 @@ export default function DueTodayModal({ entries, onDismiss, manual = false, pres
                             className={`due-item-date${dates[e.key] ? ' is-custom' : e.daysOverdue > 0 ? ' is-overdue' : ''}`}
                             onClick={(ev) => {
                               ev.stopPropagation();
-                              setEditingKey(isEditing ? null : e.key);
+                              setEditingKey(editingKey === e.key ? null : e.key);
                             }}
                             aria-expanded={isEditing}
                             aria-label={`Data di registrazione: ${formatDayMonth(dateOf(e))}. Modifica`}
