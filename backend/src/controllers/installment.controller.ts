@@ -425,7 +425,7 @@ export const payInstallments = async (req: AuthRequest, res: Response) => {
       // l'intera operazione (niente seconda transazione per rate già pagate).
       const marked = await tx.plannedTransaction.updateMany({
         where: { id: { in: plannedIds }, isPaid: false },
-        data: { isPaid: true },
+        data: { isPaid: true, paidTransactionId: created.id },
       });
       if (marked.count !== plannedIds.length) throw new AlreadyPaidError();
 

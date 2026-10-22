@@ -465,6 +465,41 @@ export const getDueRecurring = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Eliminata una transazione nata da una ricorrente: se era l'ultima registrazione
+// (per data), lastExecutedDate torna all'occorrenza della registrazione precedente
+// (o null) e la scadenza riappare. Non alza mai la data. Limite noto: una
+// registrazione anticipata (execute-now) con data minore di altre non riapre nulla.
+// Ritorna true se ha modificato la ricorrente. `db` permette di usarla in $transaction.
+export async function rollbackRecurringExecution(
+  userId: string,
+  deleted: { fromRecurringId: string | null; date: Date },
+  db: Prisma.TransactionClient = prisma,
+): Promise<boolean> {
+  if (!deleted.fromRecurringId) return false;
+  const r = await db.recurringTransaction.findFirst({
+    where: { id: deleted.fromRecurringId, userId },
+  });
+  if (!r?.lastExecutedDate) return false;
+
+  const latest = await db.transaction.findFirst({
+    where: { fromRecurringId: r.id, userId },
+    orderBy: { date: 'desc' },
+    select: { date: true },
+  });
+  if (latest && latest.date >= deleted.date) return false; // non era l'ultima
+
+  const prev = latest ? computeNextDueDate(r, latest.date) : null;
+  if (latest && !prev) return false; // occorrenza non ricostruibile (fuori da start/end)
+  if (prev && prev >= normalizeDate(r.lastExecutedDate)) return false;
+
+  // Claim condizionale come in execute: se nel frattempo è stata eseguita, non sovrascrive.
+  const claimed = await db.recurringTransaction.updateMany({
+    where: { id: r.id, lastExecutedDate: r.lastExecutedDate },
+    data: { lastExecutedDate: prev },
+  });
+  return claimed.count > 0;
+}
+
 // Crea le transazioni per le ricorrenti selezionate e aggiorna lastExecutedDate
 export const executeRecurring = async (req: AuthRequest, res: Response) => {
   try {
