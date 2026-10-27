@@ -3,7 +3,7 @@ import type { Budget } from '../../types';
 import { useBudgetSuggestions } from '../../hooks/useBudgets';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import type { BudgetAccountsState } from '../../hooks/useBudgetAccounts';
-import { daysLabel, effectiveAmount, isActiveBudget } from '../../utils/budget';
+import { budgetLeft, daysLabel, effectiveAmount, planBudgets, round2 } from '../../utils/budget';
 import BudgetAccountChips from './BudgetAccountChips';
 import { SkeletonCard } from '../shared/Skeleton';
 
@@ -29,13 +29,15 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
     accountIds: accounts.accountIdsParam,
   });
 
-  // Tetti dello stesso periodo del piano: solo budget attivi per categoria (il globale
-  // è un tetto complessivo, sommarlo raddoppierebbe).
-  const { capsTotal, capsCount } = useMemo(() => {
-    const same = budgets.filter(
-      (b) => isActiveBudget(b) && !!b.categoryId && !!data && b.period === data.budgetPeriod,
-    );
-    return { capsTotal: same.reduce((s, b) => s + effectiveAmount(b), 0), capsCount: same.length };
+  // Tetti dello stesso periodo del piano (senza globale né sovrapposizioni macro/sotto-categoria)
+  // e quanto ne resta ancora da spendere: serve per i "liberi dopo i budget".
+  const { capsTotal, capsCount, reserved } = useMemo(() => {
+    const same = data ? planBudgets(budgets, data.budgetPeriod) : [];
+    return {
+      capsTotal: same.reduce((s, b) => s + effectiveAmount(b), 0),
+      capsCount: same.length,
+      reserved: same.reduce((s, b) => s + budgetLeft(b), 0),
+    };
   }, [budgets, data]);
 
   if (isLoading) return <SkeletonCard />;
@@ -44,7 +46,8 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
   const remaining = data.remaining ?? data.spendable - data.variableSpent;
   const daysLeft = Math.max(1, data.daysLeft ?? data.window.days - data.window.elapsedDays);
   const perDay = data.perDay ?? Math.round(Math.max(0, remaining) / daysLeft);
-  const unallocated = data.spendable - capsTotal;
+  const free = round2(remaining - reserved);
+  const freePerDay = Math.round(Math.max(0, free) / daysLeft);
   const over = capsCount > 0 && capsTotal > data.spendable + 0.005;
   const fill = data.spendable > 0 ? Math.min(100, (capsTotal / data.spendable) * 100) : capsTotal > 0 ? 100 : 0;
   const accountNames = data.includedAccounts?.map((a) => a.name) ?? accounts.selectedNames;
@@ -93,6 +96,20 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
         </div>
       </div>
 
+      {capsCount > 0 && (
+        <div className="budget-plan-free">
+          <span className="budget-plan-label">Liberi dopo i budget</span>
+          <span className={`budget-plan-value ${free < 0 ? 'is-negative' : ''}`}>{formatCurrency(free)}</span>
+          <span className="budget-plan-note">
+            {free >= 0
+              ? `${formatCurrency(freePerDay)} al giorno per tutto ciò che non ha un budget, dopo ${formatCurrency(reserved)} di tetti ancora da spendere`
+              : remaining < 0
+                ? 'hai già speso più di quanto ti restava'
+                : `i tetti ancora da spendere (${formatCurrency(reserved)}) superano ciò che ti resta`}
+          </span>
+        </div>
+      )}
+
       <p className="budget-plan-balance">
         Saldo oggi sui conti inclusi: <strong>{formatCurrency(data.liquidity)}</strong>
         {data.ccDebt > 0 && <> · debito carte {formatCurrency(data.ccDebt)}</>}
@@ -131,6 +148,18 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
             <span>= Restano ora</span>
             <strong>{formatCurrency(remaining)}</strong>
           </div>
+          {capsCount > 0 && (
+            <>
+              <div className="budget-plan-alloc-row">
+                <span>− Tetti ancora da spendere ({capsCount})</span>
+                <strong>{formatCurrency(reserved)}</strong>
+              </div>
+              <div className="budget-plan-alloc-row">
+                <span>= Liberi dopo i budget</span>
+                <strong>{formatCurrency(free)}</strong>
+              </div>
+            </>
+          )}
         </div>
       </details>
 
@@ -145,7 +174,7 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
                 Hai budgetato più dello spendibile
               </span>
             ) : (
-              <span className="budget-plan-unallocated">Non allocato {formatCurrency(unallocated)}</span>
+              <span className="budget-plan-unallocated">Ancora da spendere {formatCurrency(reserved)}</span>
             )}
           </div>
           <div className="budget-plan-bar" aria-hidden="true">
