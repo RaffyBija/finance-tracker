@@ -1,23 +1,37 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// budget.controller importa il singleton prisma. Lo mockiamo: budget.findFirst/findMany
-// per il record, transaction.aggregate per lo "speso" (qui usiamo budget SENZA categoria,
-// così computeBudgetSpent passa per il solo ramo aggregate). Lo speso dipende dal mese
-// della finestra (chiave = mese del gte del filtro data), così possiamo pilotare avanzo e
-// sforamento periodo per periodo e verificare il folding del carry.
-const { budgetFindFirst, budgetFindMany, txAggregate } = vi.hoisted(() => ({
+// budget.controller legge lo speso da loadClassifiedExpenses (una lettura per richiesta,
+// poi aggregazione in memoria). Lo mockiamo con righe datate a metà mese: così possiamo
+// pilotare avanzo e sforamento periodo per periodo e verificare il folding del carry.
+const { budgetFindFirst, budgetFindMany, categoryFindMany, loadLines } = vi.hoisted(() => ({
   budgetFindFirst: vi.fn(),
   budgetFindMany: vi.fn(),
-  txAggregate: vi.fn(),
+  categoryFindMany: vi.fn(),
+  loadLines: vi.fn(),
 }));
 vi.mock('../../utils/prisma', () => ({
   default: {
     budget: { findFirst: budgetFindFirst, findMany: budgetFindMany },
-    transaction: { aggregate: txAggregate },
+    category: { findMany: categoryFindMany },
+    // Periodo di paga non configurato → PAY_PERIOD ricade sul mese.
+    user: { findUnique: async () => null },
   },
+}));
+vi.mock('../../utils/spendingRhythm', async (orig) => ({
+  ...(await orig<typeof import('../../utils/spendingRhythm')>()),
+  loadClassifiedExpenses: loadLines,
 }));
 
 import { getBudgetHistory, getBudgets } from '../../controllers/budget.controller';
+
+// Una riga variabile per mese (0-based, anno 2026) a metà mese.
+const linesFor = (byMonth: Record<number, number>) =>
+  Object.entries(byMonth).map(([m, amount]) => ({
+    date: new Date(2026, Number(m), 15, 12),
+    amount,
+    categoryId: null,
+    kind: 'variable',
+  }));
 
 // Speso per mese (0-based): aprile=80, maggio=150 (sforamento), giugno=50.
 const SPENT_BY_MONTH: Record<number, number> = { 3: 80, 4: 150, 5: 50 };
@@ -49,12 +63,10 @@ describe('Budget carryover (rollover)', () => {
     vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'));
     budgetFindFirst.mockReset();
     budgetFindMany.mockReset();
-    txAggregate.mockReset();
-    // Speso in funzione del mese del gte (inizio finestra intersecata con startDate).
-    txAggregate.mockImplementation(async ({ where }: any) => {
-      const month = new Date(where.date.gte).getMonth();
-      return { _sum: { amount: SPENT_BY_MONTH[month] ?? 0 } };
-    });
+    categoryFindMany.mockReset();
+    categoryFindMany.mockResolvedValue([]);
+    loadLines.mockReset();
+    loadLines.mockResolvedValue(linesFor(SPENT_BY_MONTH));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -107,7 +119,6 @@ describe('Budget carryover (rollover)', () => {
   });
 
   it('getBudgets espone carryIn e effectiveAmount sul periodo corrente', async () => {
-    // startDate aprile → il fold del carry copre solo apr e mag (no gen-mar a zero).
     budgetFindMany.mockResolvedValue([
       { ...baseBudget, rollover: 'SURPLUS', startDate: new Date('2026-04-01T00:00:00.000Z') },
     ]);
@@ -120,15 +131,13 @@ describe('Budget carryover (rollover)', () => {
     expect(card.effectiveAmount).toBe(100);
     expect(card.spent).toBe(50);
     expect(card.remaining).toBe(50);
+    // Una sola lettura delle righe per tutta la richiesta (niente N+1).
+    expect(loadLines).toHaveBeenCalledTimes(1);
   });
 
   it('FULL con debito > importo: envelope negativo → percentage 100 (non "verde")', async () => {
     // aprile sfora pesante (350 su 100), maggio 0, giugno 50.
-    txAggregate.mockImplementation(async ({ where }: any) => {
-      const m = new Date(where.date.gte).getMonth();
-      const map: Record<number, number> = { 3: 350, 4: 0, 5: 50 };
-      return { _sum: { amount: map[m] ?? 0 } };
-    });
+    loadLines.mockResolvedValue(linesFor({ 3: 350, 5: 50 }));
     budgetFindMany.mockResolvedValue([{ ...baseBudget, rollover: 'FULL' }]);
     const req: any = { userId: 'u1', query: {} };
     const res = makeRes();
@@ -157,7 +166,7 @@ describe('Budget carryover (rollover)', () => {
   // presente) il fold non deve collassare a 0.
   it('getBudgetHistory: carry corretto anche su finestre molto vecchie (ancora ≠ ora)', async () => {
     // Nessuna spesa: in SURPLUS l’avanzo pieno si accumula periodo dopo periodo.
-    txAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    loadLines.mockResolvedValue([]);
     budgetFindFirst.mockResolvedValue({
       ...baseBudget,
       rollover: 'SURPLUS',
@@ -168,7 +177,6 @@ describe('Budget carryover (rollover)', () => {
     await getBudgetHistory(req, res);
     const { history } = res.json.mock.calls[0][0];
     // gen 2025 = prima finestra (carry 0 → 100); feb = 100+100; mar = 100+200.
-    // Senza il fix (ancora a "ora") feb/mar sarebbero collassati a 100.
     expect(history[0].budgeted).toBe(100);
     expect(history[1].budgeted).toBe(200);
     expect(history[2].budgeted).toBe(300);
@@ -178,7 +186,7 @@ describe('Budget carryover (rollover)', () => {
   // intero (avanzo fantasma). Budget creato il 30 giugno → il 1° luglio niente carry.
   it('finestra di attivazione parziale non genera carry fantasma', async () => {
     vi.setSystemTime(new Date('2026-07-01T12:00:00.000Z'));
-    txAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    loadLines.mockResolvedValue([]);
     budgetFindMany.mockResolvedValue([
       { ...baseBudget, rollover: 'SURPLUS', startDate: new Date('2026-06-30T00:00:00.000Z') },
     ]);
@@ -189,5 +197,69 @@ describe('Budget carryover (rollover)', () => {
     // giugno coperto solo per 1 giorno → escluso dal fold → nessun riporto.
     expect(card.carryIn).toBe(0);
     expect(card.effectiveAmount).toBe(100);
+  });
+});
+
+describe('Speso = solo spesa variabile (B1)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'));
+    budgetFindMany.mockReset();
+    // Macro "casa" con figlia "affitto" (archiviata: la gerarchia resta).
+    categoryFindMany.mockResolvedValue([
+      { id: 'casa', parentId: null },
+      { id: 'affitto', parentId: 'casa' },
+      { id: 'cibo', parentId: null },
+    ]);
+    loadLines.mockResolvedValue([
+      // Affitto da ricorrente: fisso → fuori dallo speso, in fixedSpent.
+      { date: new Date(2026, 5, 5), amount: 600, categoryId: 'affitto', kind: 'fixed' },
+      // Riga split variabile sulla figlia + una sulla macro.
+      { date: new Date(2026, 5, 10), amount: 40, categoryId: 'affitto', kind: 'variable' },
+      { date: new Date(2026, 5, 11), amount: 25, categoryId: 'casa', kind: 'variable' },
+      // Rata pianificata sulla macro: fissa.
+      { date: new Date(2026, 5, 12), amount: 99, categoryId: 'casa', kind: 'planned' },
+      // Altra categoria e senza categoria: solo nel globale.
+      { date: new Date(2026, 5, 13), amount: 30, categoryId: 'cibo', kind: 'variable' },
+      { date: new Date(2026, 5, 14), amount: 5, categoryId: null, kind: 'variable' },
+    ]);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('budget su macro: macro + figlie, fisse in fixedSpent; globale = tutta la variabile', async () => {
+    budgetFindMany.mockResolvedValue([
+      { ...baseBudget, id: 'bc', categoryId: 'casa', amount: 300, rollover: 'NONE' },
+      { ...baseBudget, id: 'bg', categoryId: null, amount: 1000, rollover: 'NONE' },
+    ]);
+    const res = makeRes();
+    await getBudgets({ userId: 'u1', query: {} } as any, res);
+    const [casa, globale] = res.json.mock.calls[0][0];
+    expect(casa.spent).toBe(65);
+    expect(casa.fixedSpent).toBe(699);
+    expect(casa.percentage).toBeCloseTo(65 / 3);
+    expect(globale.spent).toBe(100);
+    expect(globale.fixedSpent).toBe(699);
+    expect(casa.status).toBe('active');
+    expect(casa.payPeriodFallback).toBe(false);
+  });
+
+  it('endDate include il giorno finale; status upcoming/expired; fallback PAY_PERIOD', async () => {
+    budgetFindMany.mockResolvedValue([
+      // Scade il 13 giugno (oggi 15): conta anche la spesa del 13.
+      { ...baseBudget, id: 'e', categoryId: null, rollover: 'NONE', endDate: new Date(2026, 5, 13) },
+      { ...baseBudget, id: 'u', categoryId: null, rollover: 'NONE', startDate: new Date('2026-07-01T00:00:00.000Z') },
+      // PAY_PERIOD senza periodo di paga configurato (nessun utente nel mock) → mese.
+      { ...baseBudget, id: 'p', categoryId: 'cibo', period: 'PAY_PERIOD', rollover: 'NONE' },
+    ]);
+    const res = makeRes();
+    await getBudgets({ userId: 'u1', query: {} } as any, res);
+    const [expired, upcoming, pay] = res.json.mock.calls[0][0];
+    expect(expired.status).toBe('expired');
+    expect(expired.spent).toBe(95); // 40 + 25 + 30 (fino al 13 incluso)
+    expect(upcoming.status).toBe('upcoming');
+    expect(upcoming.spent).toBe(0);
+    expect(upcoming.periodLabel).toBe('luglio 2026'); // prima finestra in cui sarà attivo
+    expect(pay.payPeriodFallback).toBe(true);
+    expect(pay.spent).toBe(30);
   });
 });

@@ -1,86 +1,29 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthRequest, CreateBudgetDTO } from '../types';
-import { BudgetPeriod, BudgetRollover, Prisma } from '@prisma/client';
+import { Budget, BudgetPeriod, Prisma } from '@prisma/client';
 import {
   BudgetWindow,
+  budgetWindowFor,
   currentBudgetWindow,
   recentBudgetWindows,
   budgetWindowLabel,
 } from '../utils/budgetPeriod';
-import { computeBudgetPlan, applySaving, type BudgetPlan } from '../utils/budgetPlan';
-import { categoryWithChildren } from '../utils/categoryOps';
-import { loadPayBoundaries, addDays } from '../utils/payPeriod';
+import { computeBudgetPlan, applySaving, scaleCaps, planPace, type BudgetPlan } from '../utils/budgetPlan';
+import {
+  type BudgetLike,
+  type BudgetSpendContext,
+  activeRange,
+  budgetCategorySet,
+  carryIn,
+  carryWindows,
+  endOfLocalDay,
+  loadBudgetSpendContext,
+  startOfLocalDay,
+  sumBudgetSpent,
+} from '../utils/budgetSpent';
+import { loadPayBoundaries, addDays, daysBetween } from '../utils/payPeriod';
 import { analyticsCache } from '../utils/analyticsCache';
-
-// Spesa di un budget DENTRO una finestra-periodo esplicita. La finestra effettiva è
-// l'intersezione della finestra-periodo con l'intervallo di attività del budget
-// [startDate, endDate]: così lo "speso" si azzera a ogni periodo e i periodi
-// precedenti all'attivazione (o successivi alla scadenza) restano vuoti.
-//
-// Tiene conto delle transazioni divise (split):
-// - budget globale (senza categoria) → somma di tutte le uscite (l'importo del padre
-//   coincide con la somma delle righe, quindi il totale è corretto);
-// - budget di categoria → uscite semplici con quella categoria + righe split con quella
-//   categoria (i cui padri sono uscite nel periodo). I padri split hanno categoryId null,
-//   quindi non vengono mai contati due volte.
-const computeBudgetSpent = async (
-  userId: string,
-  budget: { categoryId: string | null; startDate: Date; endDate: Date | null },
-  window: BudgetWindow,
-): Promise<number> => {
-  // Intersezione [finestra-periodo] ∩ [startDate, endDate]
-  const gte = window.periodStart > budget.startDate ? window.periodStart : budget.startDate;
-  const lte =
-    budget.endDate && budget.endDate < window.periodEnd ? budget.endDate : window.periodEnd;
-
-  // Finestra vuota (es. periodo interamente prima dell'attivazione o dopo la scadenza)
-  if (gte > lte) return 0;
-
-  const dateFilter = { gte, lte };
-  const baseWhere = { userId, type: 'EXPENSE' as const, transferId: null, date: dateFilter };
-
-  if (!budget.categoryId) {
-    // Budget globale: esclusa la categoria di sistema "Pagamento Carta" (l'addebito
-    // del ciclo): gli acquisti su carta sono già contati alla loro data, altrimenti
-    // la stessa spesa peserebbe due volte.
-    const agg = await prisma.transaction.aggregate({
-      where: { ...baseWhere, OR: [{ categoryId: null }, { category: { isSystem: false } }] },
-      _sum: { amount: true },
-    });
-    return Number(agg._sum.amount || 0);
-  }
-
-  // Budget su una macro-categoria: conta anche le sue sotto-categorie.
-  const categoryIds = await categoryWithChildren(budget.categoryId);
-  const [simple, splitItems] = await Promise.all([
-    prisma.transaction.aggregate({
-      where: { ...baseWhere, categoryId: { in: categoryIds } },
-      _sum: { amount: true },
-    }),
-    prisma.transactionItem.aggregate({
-      where: { categoryId: { in: categoryIds }, transaction: baseWhere },
-      _sum: { amount: true },
-    }),
-  ]);
-
-  return Number(simple._sum.amount || 0) + Number(splitItems._sum.amount || 0);
-};
-
-// Inizio/fine giornata locali. startDate/endDate sono salvati a mezzanotte dal date
-// picker; le finestre-periodo usano l'ora locale. Normalizziamo a risoluzione-giorno
-// per confronti robusti (un budget "attivo dal 1° giugno" copre l'intera finestra di
-// giugno anche se l'istante salvato è leggermente sfasato).
-const startOfLocalDay = (d: Date): Date => {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
-};
-const endOfLocalDay = (d: Date): Date => {
-  const r = new Date(d);
-  r.setHours(23, 59, 59, 999);
-  return r;
-};
 
 // Percentuale di utilizzo rispetto al budget EFFETTIVO (base + riporto). Quando
 // l'envelope è esaurito o negativo (debito riportato in modalità FULL), qualunque
@@ -91,9 +34,6 @@ const budgetPercentage = (spent: number, envelope: number): number => {
   if (envelope > 0) return (spent / envelope) * 100;
   return spent > 0 || envelope < 0 ? 100 : 0;
 };
-
-// Tetto di costo: il carry accumula al più sugli ultimi N periodi precedenti.
-const MAX_ROLLOVER_PERIODS = 12;
 
 // Confini del periodo di paga per le finestre PAY_PERIOD, caricati una volta per
 // richiesta e solo se serve. Copertura: riporto (12 periodi) + storico (24) e un
@@ -106,55 +46,65 @@ const payBoundariesFor = async (userId: string, periods: BudgetPeriod[]): Promis
   return loadPayBoundaries(userId, from, addDays(now, 80), now);
 };
 
-// Carry "entrante" nella finestra corrente: piega le finestre precedenti attive in
-// ordine cronologico. effective(k) = amount + carry(k); remaining = effective − spent;
-//   SURPLUS → carry = max(0, remaining)  (lo sforamento non si riporta)
-//   FULL    → carry = remaining          (avanzo e debito si riportano)
-//   NONE    → 0
-// Approssimazione documentata: il carry parte da 0 sulla finestra più vecchia
-// considerata (al più MAX_ROLLOVER_PERIODS indietro).
-const computeCarryIn = async (
-  userId: string,
-  budget: {
-    categoryId: string | null;
-    startDate: Date;
-    endDate: Date | null;
-    amount: Prisma.Decimal | number;
-    rollover: BudgetRollover;
-    period: BudgetPeriod;
-  },
-  current: BudgetWindow,
-  pay: PayBoundaries = null,
-): Promise<number> => {
-  if (budget.rollover === 'NONE') return 0;
-  const amount = Number(budget.amount);
-  // Ancoriamo le finestre a `current` (non a "ora"): così il carry è corretto anche
-  // quando getBudgetHistory chiede il fold per una finestra storica. `+1` perché la
-  // finestra corrente fa parte del set e viene poi scartata dal filtro.
-  // Consideriamo solo finestre PRECEDENTI in cui il budget era attivo per l'INTERO
-  // periodo: una finestra di attivazione/scadenza parziale accrediterebbe un envelope
-  // intero per un budget esistito pochi giorni (avanzo/debito fantasma).
-  const activeStart = startOfLocalDay(budget.startDate).getTime();
-  const activeEnd = budget.endDate ? endOfLocalDay(budget.endDate).getTime() : Infinity;
-  const windows = recentBudgetWindows(
-    budget.period,
-    MAX_ROLLOVER_PERIODS + 1,
-    current.periodEnd,
+type BudgetStatus = 'active' | 'upcoming' | 'expired';
+const budgetStatus = (b: BudgetLike, now: Date): BudgetStatus =>
+  startOfLocalDay(b.startDate) > now
+    ? 'upcoming'
+    : b.endDate && endOfLocalDay(b.endDate) < now
+      ? 'expired'
+      : 'active';
+
+// Finestra mostrata sulla card: quella corrente; per un budget futuro la prima in
+// cui sarà attivo, per uno scaduto l'ultima.
+const cardWindow = (b: Budget, status: BudgetStatus, now: Date, pay: PayBoundaries): BudgetWindow =>
+  currentBudgetWindow(
+    b.period,
+    status === 'upcoming' ? startOfLocalDay(b.startDate) : status === 'expired' ? startOfLocalDay(b.endDate!) : now,
     pay,
-  ).filter(
-    (w) =>
-      w.periodEnd < current.periodStart && // solo periodi precedenti a quello corrente
-      w.periodStart.getTime() >= activeStart && // budget attivo dall'inizio della finestra
-      w.periodEnd.getTime() <= activeEnd, // … e fino alla fine della finestra
   );
 
-  let carry = 0;
-  for (const w of windows) {
-    const spent = await computeBudgetSpent(userId, budget, w);
-    const remaining = amount + carry - spent;
-    carry = budget.rollover === 'FULL' ? remaining : Math.max(0, remaining);
-  }
-  return carry;
+// Budget + speso del periodo (solo variabile), impegni fissi informativi e riporto.
+const withSpent = <T extends Budget>(
+  ctx: BudgetSpendContext,
+  budget: T,
+  window: BudgetWindow,
+  status: BudgetStatus,
+  pay: PayBoundaries,
+) => {
+  const cats = budgetCategorySet(budget.categoryId, ctx.categories);
+  const { spent, fixedSpent } = sumBudgetSpent(ctx.lines, budget, window, cats);
+  const carry = carryIn(ctx, budget, window, pay);
+  const effectiveAmount = Number(budget.amount) + carry;
+  return {
+    ...budget,
+    spent,
+    fixedSpent,
+    carryIn: carry,
+    effectiveAmount,
+    remaining: effectiveAmount - spent,
+    percentage: budgetPercentage(spent, effectiveAmount),
+    periodStart: window.periodStart,
+    periodEnd: window.periodEnd,
+    periodLabel: budgetWindowLabel(window, budget.period),
+    status,
+    // PAY_PERIOD senza periodo di paga configurato: finestre = mese solare.
+    payPeriodFallback: budget.period === 'PAY_PERIOD' && !pay,
+  };
+};
+
+// Speso di più budget con una sola lettura delle righe (finestre + riporto).
+const budgetsWithSpent = async <T extends Budget>(userId: string, budgets: T[]) => {
+  const now = new Date();
+  const pay = await payBoundariesFor(userId, budgets.map((b) => b.period));
+  const items = budgets.map((b) => {
+    const status = budgetStatus(b, now);
+    return { b, status, window: cardWindow(b, status, now, pay) };
+  });
+  const ctx = await loadBudgetSpendContext(
+    userId,
+    items.flatMap((i) => [i.window, ...carryWindows(i.b, i.window, pay)]),
+  );
+  return items.map((i) => withSpent(ctx, i.b, i.window, i.status, pay));
 };
 
 // Ottieni tutti i budget
@@ -164,14 +114,15 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
     const { active } = req.query;
 
     const where: Prisma.BudgetWhereInput = { userId };
-    
+
     // Filtra solo budget attivi
     if (active === 'true') {
+      // endDate è a mezzanotte del giorno finale: il budget resta attivo per tutto quel giorno.
       const now = new Date();
       where.startDate = { lte: now };
       where.OR = [
         { endDate: null },
-        { endDate: { gte: now } },
+        { endDate: { gte: startOfLocalDay(now) } },
       ];
     }
 
@@ -185,30 +136,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Calcola spesa del periodo CORRENTE per ogni budget (la finestra dipende da `period`).
-    const pay = await payBoundariesFor(userId, budgets.map((b) => b.period));
-    const budgetsWithSpent = await Promise.all(
-      budgets.map(async (budget) => {
-        const window = currentBudgetWindow(budget.period, new Date(), pay);
-        const spent = await computeBudgetSpent(userId, budget, window);
-        const carryIn = await computeCarryIn(userId, budget, window, pay);
-        const effectiveAmount = Number(budget.amount) + carryIn;
-
-        return {
-          ...budget,
-          spent,
-          carryIn,
-          effectiveAmount,
-          remaining: effectiveAmount - spent,
-          percentage: budgetPercentage(spent, effectiveAmount),
-          periodStart: window.periodStart,
-          periodEnd: window.periodEnd,
-          periodLabel: budgetWindowLabel(window, budget.period),
-        };
-      })
-    );
-
-    res.json(budgetsWithSpent);
+    res.json(await budgetsWithSpent(userId, budgets));
   } catch (error) {
     console.error('Get budgets error:', error);
     res.status(500).json({ error: 'Errore del server' });
@@ -230,25 +158,7 @@ export const getBudget = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Budget non trovato' });
     }
 
-    // Calcola spesa del periodo corrente
-    const pay = await payBoundariesFor(userId, [budget.period]);
-    const window = currentBudgetWindow(budget.period, new Date(), pay);
-    const spent = await computeBudgetSpent(userId, budget, window);
-    const carryIn = await computeCarryIn(userId, budget, window, pay);
-    const effectiveAmount = Number(budget.amount) + carryIn;
-
-    const budgetWithSpent = {
-      ...budget,
-      spent,
-      carryIn,
-      effectiveAmount,
-      remaining: effectiveAmount - spent,
-      percentage: budgetPercentage(spent, effectiveAmount),
-      periodStart: window.periodStart,
-      periodEnd: window.periodEnd,
-      periodLabel: budgetWindowLabel(window, budget.period),
-    };
-
+    const [budgetWithSpent] = await budgetsWithSpent(userId, [budget]);
     res.json(budgetWithSpent);
   } catch (error) {
     console.error('Get budget error:', error);
@@ -280,35 +190,30 @@ export const getBudgetHistory = async (req: AuthRequest, res: Response) => {
     const windows = recentBudgetWindows(budget.period, periods, new Date(), pay);
 
     // Tieni solo le finestre che intersecano l'intervallo di attività del budget.
-    const validWindows = windows.filter(
-      (w) =>
-        w.periodEnd >= budget.startDate &&
-        (!budget.endDate || w.periodStart <= budget.endDate),
-    );
+    const validWindows = windows.filter((w) => activeRange(budget, w) !== null);
 
-    // Soglia (budgeted) per finestra = amount + carry. Il carry di OGNI finestra è
-    // calcolato con lo STESSO computeCarryIn usato dalla card (cap MAX_ROLLOVER_PERIODS),
-    // così la soglia del periodo corrente nello storico coincide con effectiveAmount della
-    // card a prescindere da quanti periodi vengono mostrati. Per rollover NONE il carry è 0
-    // → budgeted = amount (comportamento FASE 1). Costo: per ogni finestra mostrata un
-    // computeCarryIn (≤12 computeBudgetSpent); accettabile per il dettaglio on-demand.
-    const history = await Promise.all(
-      validWindows.map(async (w) => {
-        const spent = await computeBudgetSpent(userId, budget, w);
-        const carry = await computeCarryIn(userId, budget, w, pay);
-        const budgeted = amount + carry;
-        return {
-          periodStart: w.periodStart,
-          periodEnd: w.periodEnd,
-          label: budgetWindowLabel(w, budget.period),
-          budgeted,
-          spent,
-          remaining: budgeted - spent,
-          percentage: budgetPercentage(spent, budgeted),
-          exceeded: spent > budgeted,
-        };
-      }),
+    // Soglia (budgeted) per finestra = amount + carry, con lo STESSO fold della card
+    // (cap MAX_ROLLOVER_PERIODS): la soglia del periodo corrente coincide con
+    // effectiveAmount. Righe lette una volta sull'unione delle finestre.
+    const ctx = await loadBudgetSpendContext(
+      userId,
+      validWindows.flatMap((w) => [w, ...carryWindows(budget, w, pay)]),
     );
+    const cats = budgetCategorySet(budget.categoryId, ctx.categories);
+    const history = validWindows.map((w) => {
+      const { spent } = sumBudgetSpent(ctx.lines, budget, w, cats);
+      const budgeted = amount + carryIn(ctx, budget, w, pay);
+      return {
+        periodStart: w.periodStart,
+        periodEnd: w.periodEnd,
+        label: budgetWindowLabel(w, budget.period),
+        budgeted,
+        spent,
+        remaining: budgeted - spent,
+        percentage: budgetPercentage(spent, budgeted),
+        exceeded: spent > budgeted,
+      };
+    });
 
     // Statistiche aggregate
     const totalPeriods = history.length;
@@ -343,6 +248,20 @@ export const getBudgetHistory = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Il budget conta la spesa variabile di categorie di SPESA dell'utente: niente
+// entrate né categorie di sistema ("Pagamento Carta"). Restituisce l'errore o null.
+const invalidBudgetCategory = (
+  c: { type: string; isSystem: boolean } | null | undefined,
+): { status: number; error: string } | null => {
+  if (!c) return { status: 404, error: 'Categoria non trovata' };
+  if (c.type !== 'EXPENSE') return { status: 400, error: 'Il budget si può impostare solo su categorie di spesa' };
+  if (c.isSystem) return { status: 400, error: 'Non puoi impostare un budget su una categoria di sistema' };
+  return null;
+};
+
+// Data "solo giorno" come la salva il form (mezzanotte UTC del giorno locale).
+const dateOnly = (d: Date): Date => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+
 // Crea un budget
 export const createBudget = async (req: AuthRequest, res: Response) => {
   try {
@@ -350,7 +269,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
     const { name, amount, categoryId, period, startDate, endDate, rollover }: CreateBudgetDTO =
       req.body;
 
-    if (!name || !amount || amount <= 0 || !period || !startDate) {
+    if (!name || !amount || amount <= 0 || !period) {
       return res.status(400).json({ error: 'Dati non validi' });
     }
 
@@ -368,10 +287,15 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
       const category = await prisma.category.findFirst({
         where: { id: normalizedCategoryId, userId },
       });
-      if (!category) {
-        return res.status(404).json({ error: 'Categoria non trovata' });
-      }
+      const invalid = invalidBudgetCategory(category);
+      if (invalid) return res.status(invalid.status).json({ error: invalid.error });
     }
+
+    // Senza "attivo da": dall'inizio della finestra corrente del periodo, così il
+    // budget conta già la spesa fatta in questo periodo.
+    const start = startDate
+      ? new Date(startDate)
+      : dateOnly(currentBudgetWindow(period, new Date(), await payBoundariesFor(userId, [period])).periodStart);
 
     const budget = await prisma.budget.create({
       data: {
@@ -380,7 +304,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         categoryId: normalizedCategoryId,
         period,
         rollover: rollover ?? 'NONE',
-        startDate: new Date(startDate),
+        startDate: start,
         endDate: endDate ? new Date(endDate) : null,
         userId,
       },
@@ -427,13 +351,13 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
           ? categoryId
           : null;
 
-    if (normalizedCategoryId) {
+    // Valida la categoria solo se cambia: un budget legacy si può comunque rinominare.
+    if (normalizedCategoryId && normalizedCategoryId !== existingBudget.categoryId) {
       const category = await prisma.category.findFirst({
         where: { id: normalizedCategoryId, userId },
       });
-      if (!category) {
-        return res.status(404).json({ error: 'Categoria non trovata' });
-      }
+      const invalid = invalidBudgetCategory(category);
+      if (invalid) return res.status(invalid.status).json({ error: invalid.error });
     }
 
     const budget = await prisma.budget.update({
@@ -533,26 +457,40 @@ export const getBudgetSuggestions = async (req: AuthRequest, res: Response) => {
       analyticsCache.set(cacheKey, plan);
     }
 
+    // Risparmio, ritmo e tetti scalati dipendono dallo slider: calcolati qui, fuori cache.
     const { savingTarget, spendable } = applySaving(plan.disposable, plan.expectedIncome, savingRate);
-    res.json({ ...plan, savingRate, savingTarget, spendable });
+    res.json({
+      ...plan,
+      savingRate,
+      savingTarget,
+      spendable,
+      ...planPace(plan, spendable),
+      ...scaleCaps(plan.perCategory, spendable),
+    });
   } catch (error) {
     console.error('Get budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 };
 
-// POST /budgets/apply-suggestions  body: { items: [{ categoryId, amount }] }
-// Upsert per-categoria: aggiorna il budget attivo della categoria se esiste,
-// altrimenti ne crea uno nuovo (MONTHLY, rollover NONE, attivo da oggi).
+// POST /budgets/apply-suggestions
+//   body: { items: [{ categoryId, amount }], period: 'PAY_PERIOD'|'MONTHLY', offset?: 0|1 }
+// offset 0 → periodo in corso: aggiorna il budget attivo della categoria (o lo crea),
+//   ancorato all'inizio della finestra corrente (mai "adesso").
+// offset 1 → dal periodo successivo, senza toccare il budget in corso: chiude quello
+//   attivo alla vigilia e aggiorna il budget futuro se c'è, altrimenti ne crea uno.
+// Un'unica $transaction a batch, letture fatte prima (niente query per riga: P2028).
 export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { items, period: rawPeriod } = req.body as {
+    const { items, period: rawPeriod, offset: rawOffset } = (req.body || {}) as {
       items?: Array<{ categoryId?: unknown; amount?: unknown }>;
       period?: unknown;
+      offset?: unknown;
     };
     // Periodo dei budget proposti: quello delle proposte (periodo di paga o mese).
     const period: BudgetPeriod = rawPeriod === 'PAY_PERIOD' ? 'PAY_PERIOD' : 'MONTHLY';
+    const offset = rawOffset === 1 || rawOffset === '1' ? 1 : 0;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Nessun budget da applicare' });
@@ -561,7 +499,7 @@ export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) =>
     // Dedup per categoria (ultimo vince) + validazione
     const byCat = new Map<string, number>();
     for (const it of items) {
-      if (!it || typeof it.categoryId !== 'string' || typeof it.amount !== 'number' || it.amount <= 0) {
+      if (!it || typeof it.categoryId !== 'string' || typeof it.amount !== 'number' || !Number.isFinite(it.amount) || it.amount <= 0) {
         return res.status(400).json({ error: 'Dati non validi' });
       }
       byCat.set(it.categoryId, it.amount);
@@ -570,55 +508,121 @@ export const applyBudgetSuggestions = async (req: AuthRequest, res: Response) =>
     const categoryIds = Array.from(byCat.keys());
     const categories = await prisma.category.findMany({
       where: { id: { in: categoryIds }, userId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, type: true, isSystem: true },
     });
     if (categories.length !== categoryIds.length) {
       return res.status(404).json({ error: 'Categoria non trovata' });
     }
+    for (const c of categories) {
+      const invalid = invalidBudgetCategory(c);
+      if (invalid) return res.status(invalid.status).json({ error: invalid.error });
+    }
     const catName = new Map(categories.map((c) => [c.id, c.name]));
 
     const now = new Date();
-    const existing = await prisma.budget.findMany({
+    const pay = await payBoundariesFor(userId, [period]);
+    const current = currentBudgetWindow(period, now, pay);
+    const target = offset === 1 ? budgetWindowFor(addDays(current.periodEnd, 1), period, pay) : current;
+    const targetStart = dateOnly(target.periodStart);
+    const eve = dateOnly(addDays(target.periodStart, -1));
+
+    // Budget non scaduti delle categorie e delle loro sotto-categorie (overlap): una lettura.
+    const budgets = await prisma.budget.findMany({
       where: {
         userId,
-        categoryId: { in: categoryIds },
-        startDate: { lte: now },
-        OR: [{ endDate: null }, { endDate: { gte: now } }],
+        OR: [{ endDate: null }, { endDate: { gte: startOfLocalDay(now) } }],
+        category: { OR: [{ id: { in: categoryIds } }, { parentId: { in: categoryIds } }] },
       },
-      select: { id: true, categoryId: true, period: true },
+      select: {
+        id: true, name: true, amount: true, categoryId: true, period: true, rollover: true,
+        startDate: true, endDate: true, category: { select: { parentId: true } },
+      },
+      orderBy: { startDate: 'asc' },
     });
-    const existingByCat = new Map<string, string>();
-    for (const b of existing) {
-      if (b.categoryId) existingByCat.set(b.categoryId, b.id);
-    }
-    // Budget esistenti che cambiano periodo (es. da mensile a periodo di paga):
-    // restituiti al client, che deve poterlo mostrare.
-    const periodChanged = existing.filter((b) => b.period !== period).map((b) => b.categoryId);
 
-    const ops = categoryIds.map((categoryId) => {
+    const ops: Prisma.PrismaPromise<unknown>[] = [];
+    let created = 0;
+    let updated = 0;
+    const periodChanged: Array<{ categoryId: string; name: string; from: BudgetPeriod; to: BudgetPeriod }> = [];
+    const rolloverReset: Array<{ categoryId: string; name: string }> = [];
+    const overlaps: Array<{ categoryId: string; name: string; childBudgets: Array<{ id: string; name: string; amount: number }> }> = [];
+
+    for (const categoryId of categoryIds) {
       const amount = byCat.get(categoryId)!;
-      const existingId = existingByCat.get(categoryId);
-      if (existingId) {
-        // Il tetto proposto è calcolato per quel periodo: il budget lo adotta.
-        return prisma.budget.update({ where: { id: existingId }, data: { amount, period } });
-      }
-      return prisma.budget.create({
-        data: {
-          name: catName.get(categoryId)!,
-          amount,
-          categoryId,
-          period,
-          rollover: 'NONE',
-          startDate: now,
-          userId,
-        },
-      });
-    });
+      const name = catName.get(categoryId)!;
+      const own = budgets.filter((b) => b.categoryId === categoryId);
+      const active = own.find((b) => budgetStatus(b, now) === 'active');
+      const upcoming = own.find((b) => budgetStatus(b, now) === 'upcoming');
 
-    const result = await prisma.$transaction(ops);
+      // La proposta macro comprende già la spesa delle sotto-categorie con budget.
+      const children = budgets.filter((b) => b.category?.parentId === categoryId && budgetStatus(b, now) === 'active');
+      if (children.length > 0) {
+        overlaps.push({ categoryId, name, childBudgets: children.map((b) => ({ id: b.id, name: b.name, amount: Number(b.amount) })) });
+      }
+
+      // Cambio periodo: il riporto accumulato cambierebbe finestre → si azzera.
+      const base = offset === 1 ? (upcoming ?? active) : (active ?? upcoming);
+      let rollover = base?.rollover ?? 'NONE';
+      if (base && base.period !== period) {
+        periodChanged.push({ categoryId, name, from: base.period, to: period });
+        if (rollover !== 'NONE') {
+          rollover = 'NONE';
+          rolloverReset.push({ categoryId, name });
+        }
+      }
+
+      if (offset === 0) {
+        if (active) {
+          // Ancorato all'inizio della finestra, senza accorciare lo storico.
+          const startDate = active.startDate < targetStart ? active.startDate : targetStart;
+          ops.push(prisma.budget.update({ where: { id: active.id }, data: { amount, period, rollover, startDate } }));
+          updated++;
+        } else if (upcoming) {
+          // Solo un budget futuro: lo anticipo all'inizio della finestra invece di sovrapporne un secondo.
+          ops.push(prisma.budget.update({
+            where: { id: upcoming.id },
+            data: { amount, period, rollover, startDate: targetStart },
+          }));
+          updated++;
+        } else {
+          ops.push(prisma.budget.create({
+            data: { name, amount, categoryId, period, rollover: 'NONE', startDate: targetStart, userId },
+          }));
+          created++;
+        }
+        continue;
+      }
+
+      // offset 1: il budget in corso resta com'è fino alla vigilia del periodo successivo.
+      if (active && (!active.endDate || active.endDate > eve)) {
+        ops.push(prisma.budget.update({ where: { id: active.id }, data: { endDate: eve } }));
+      }
+      if (upcoming) {
+        ops.push(prisma.budget.update({
+          where: { id: upcoming.id },
+          data: { amount, period, rollover, startDate: targetStart },
+        }));
+        updated++;
+      } else {
+        ops.push(prisma.budget.create({
+          data: { name: active?.name ?? name, amount, categoryId, period, rollover, startDate: targetStart, userId },
+        }));
+        created++;
+      }
+    }
+
+    await prisma.$transaction(ops);
     analyticsCache.delPattern(`budget-suggestions:${userId}`);
 
-    res.status(200).json({ applied: result.length, ...(periodChanged.length > 0 && { periodChanged }) });
+    res.status(200).json({
+      applied: categoryIds.length,
+      created,
+      updated,
+      scheduled: offset === 1 ? categoryIds.length : 0,
+      periodChanged,
+      rolloverReset,
+      overlaps,
+    });
   } catch (error) {
     console.error('Apply budget suggestions error:', error);
     res.status(500).json({ error: 'Errore del server' });

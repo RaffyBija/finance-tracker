@@ -1,22 +1,31 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
 import BaseModal from '../layout/ModalBase';
 import { InputDecimal } from '../layout/InputNumberDecimal';
+import BudgetAccountChips from './BudgetAccountChips';
 import { useBudgetSuggestions, useApplySuggestions } from '../../hooks/useBudgets';
-import { useAccounts } from '../../hooks/useAccounts';
+import type { BudgetAccountsState } from '../../hooks/useBudgetAccounts';
+import { useCategories } from '../../hooks/useCategories';
 import { useFormatCurrency } from '../../hooks/useFormatCurrency';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../api/client';
 import { useToast } from '../../contexts/ToastContext';
 import { usePayPeriod } from '../../hooks/useAnalytics';
 import { apiError } from '../../utils/apiError';
+import { scaleCaps } from '../../utils/budget';
+import { invalidateKeysEverywhere } from '../../utils/syncChannel';
+import { withBudgetKeys } from '../../utils/queryKeys';
+import { formatDayMonth } from '../../utils/date';
+import type { BudgetPeriod } from '../../types';
 
 interface BudgetSuggestionsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  accounts: BudgetAccountsState;
 }
 
-type RowState = { selected: boolean; cap: number };
+// Override dell'utente sulle righe: ciò che non è toccato segue la proposta.
+type RowOverride = { selected?: boolean; cap?: number };
 
 // Soglia "fine periodo": se al termine del periodo corrente mancano ≤ di questi
 // giorni, proporre di default il periodo successivo (un budget per pochi giorni è inutile).
@@ -30,32 +39,26 @@ function daysRemainingInMonth(): number {
 
 type Mode = 'pay' | 'month';
 
+const PERIOD_NAME: Record<BudgetPeriod, string> = {
+  PAY_PERIOD: 'periodo di paga',
+  MONTHLY: 'mensile',
+  WEEKLY: 'settimanale',
+  YEARLY: 'annuale',
+};
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
 // Cruscotto del budget automatico: calcola lo spendibile del periodo (di paga o mese)
 // per competenza (disponibilità netta a inizio periodo + entrate − spese fisse e
-// programmate − risparmio) e propone un tetto per categoria dalla spesa variabile
-// media. L'utente sceglie quali budget creare/aggiornare e può personalizzare la %
-// di risparmio e ogni tetto prima di applicare.
-export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSuggestionsModalProps) {
+// programmate − risparmio) e propone un tetto per categoria dalla mediana della spesa
+// variabile storica. L'utente sceglie quali budget creare/aggiornare e può personalizzare
+// la % di risparmio e ogni tetto prima di applicare.
+export default function BudgetSuggestionsModal({ isOpen, onClose, accounts }: BudgetSuggestionsModalProps) {
   const { user, updateUser } = useAuth();
   const { formatCurrency } = useFormatCurrency();
   const toast = useToast();
-  const { data: accounts = [] } = useAccounts();
+  const { data: expenseCategories = [] } = useCategories('EXPENSE');
   const applyMutation = useApplySuggestions();
-
-  // Conti BANK selezionabili (item c). Default: SOLO il conto principale (isDefault),
-  // così con molti conti non si deve deselezionare tutto; gli altri si aggiungono a mano.
-  const bankAccounts = useMemo(() => accounts.filter((a) => a.type === 'BANK'), [accounts]);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[] | null>(null);
-  useEffect(() => {
-    if (selectedAccountIds === null && bankAccounts.length > 0) {
-      const primary = bankAccounts.find((a) => a.isDefault) ?? bankAccounts[0];
-      setSelectedAccountIds([primary.id]);
-    }
-  }, [bankAccounts, selectedAccountIds]);
-
-  const allSelected =
-    !!selectedAccountIds && selectedAccountIds.length === bankAccounts.length;
-  const selectAll = () => setSelectedAccountIds(bankAccounts.map((a) => a.id));
 
   // Periodo: di paga se impostato, altrimenti mese solare.
   const payConfigured = !!user?.salaryCategoryId || !!user?.payDay;
@@ -67,48 +70,34 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   const defaultOffset = mode === 'pay'
     ? (payPeriod && payPeriod.daysToPayday <= NEXT_PERIOD_THRESHOLD_DAYS ? 1 : 0)
     : (daysRemainingInMonth() <= NEXT_PERIOD_THRESHOLD_DAYS ? 1 : 0);
-  const offset = chosenOffset ?? defaultOffset;
+  const offset: 0 | 1 = (chosenOffset ?? defaultOffset) === 1 ? 1 : 0;
 
-  // Tutti i BANK selezionati ⇒ nessun filtro (cache stabile, identico all'overview).
-  // Un sottoinsieme stretto ⇒ passa la lista al backend.
-  const accountIdsParam = useMemo(() => {
-    if (!selectedAccountIds) return undefined;
-    if (selectedAccountIds.length === bankAccounts.length) return undefined;
-    return selectedAccountIds;
-  }, [selectedAccountIds, bankAccounts.length]);
-
-  const { data, isLoading, isError } = useBudgetSuggestions(undefined, isOpen, {
+  const { data, isLoading, isError } = useBudgetSuggestions(undefined, isOpen && accounts.selectedIds.length > 0, {
     period: mode,
     offset,
-    accountIds: accountIdsParam,
+    accountIds: accounts.accountIdsParam,
   });
 
   // % risparmio come intero 0..90 (slider). La base dei suggerimenti NON dipende da
-  // savingRate → lo spendibile si ricalcola lato client senza rifare la query.
+  // savingRate → spendibile e scalatura dei tetti si ricalcolano lato client senza
+  // rifare la query.
   const [savingPct, setSavingPct] = useState<number>(Math.round((user?.savingRate ?? 0) * 100));
-  const [rows, setRows] = useState<Record<string, RowState>>({});
+  const [overrides, setOverrides] = useState<Record<string, RowOverride>>({});
   const [savePref, setSavePref] = useState<boolean>(true);
 
-  useEffect(() => {
-    if (!data) return;
-    // Reinizializza solo le righe per-categoria (lo slider resta dove l'utente l'ha
-    // messo, anche cambiando periodo o conti).
-    const init: Record<string, RowState> = {};
-    for (const c of data.perCategory) init[c.categoryId] = { selected: true, cap: c.suggestedCap };
-    setRows(init);
-  }, [data]);
+  // Le modifiche alle righe valgono per UNA combinazione periodo/offset/conti: se cambia
+  // (o il modal si chiude) si riparte dalla proposta. Un semplice refetch NON le tocca.
+  const overridesKey = isOpen ? `${mode}|${offset}|${[...accounts.selectedIds].sort().join(',')}` : 'closed';
+  const [lastKey, setLastKey] = useState(overridesKey);
+  if (lastKey !== overridesKey) {
+    setLastKey(overridesKey);
+    setOverrides({});
+  }
 
-  const toggleAccount = (id: string) =>
-    setSelectedAccountIds((prev) => {
-      const cur = prev ?? bankAccounts.map((a) => a.id);
-      if (cur.includes(id)) {
-        // Almeno un conto dev'essere incluso: non deselezionare l'ultimo (eviterebbe
-        // anche l'ambiguità [] ⇄ "nessun filtro" a valle).
-        if (cur.length <= 1) return cur;
-        return cur.filter((x) => x !== id);
-      }
-      return [...cur, id];
-    });
+  const natureById = useMemo(
+    () => new Map(expenseCategories.map((c) => [c.id, c.nature ?? null])),
+    [expenseCategories],
+  );
 
   const rate = savingPct / 100;
   // Risparmio = quota delle ENTRATE del periodo, mai oltre il disponibile (in rosso
@@ -118,15 +107,36 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   const spendable = disposable - savingTarget;
   const periodName = data ? data.window.label : '';
 
-  const selectedItems = useMemo(
-    () => (data ? data.perCategory.filter((c) => rows[c.categoryId]?.selected) : []),
-    [data, rows],
-  );
-  const selectedTotal = selectedItems.reduce(
-    (s, c) => s + (rows[c.categoryId]?.cap ?? 0),
-    0,
-  );
-  const overspend = selectedTotal > spendable + 0.001;
+  // Tetti: se il backend espone rawCap li scaliamo qui con lo spendibile corrente
+  // (reagisce allo slider); con una risposta vecchia usiamo suggestedCap così com'è.
+  const caps = useMemo(() => {
+    if (!data) return { values: [] as number[], raw: [] as number[], scaled: false, factor: 1 };
+    const hasRaw = data.perCategory.length > 0 && data.perCategory.every((c) => c.rawCap !== undefined);
+    if (!hasRaw) {
+      return {
+        values: data.perCategory.map((c) => c.suggestedCap),
+        raw: data.perCategory.map((c) => c.suggestedCap),
+        scaled: !!data.capsScaled,
+        factor: data.scaleFactor ?? 1,
+      };
+    }
+    const raw = data.perCategory.map((c) => c.rawCap as number);
+    const res = scaleCaps(raw, disposable - savingTarget);
+    return { values: res.caps, raw, scaled: res.scaled, factor: res.factor };
+  }, [data, disposable, savingTarget]);
+
+  const rowOf = (categoryId: string, index: number) => {
+    const o = overrides[categoryId];
+    return { selected: o?.selected ?? true, cap: o?.cap ?? caps.values[index] ?? 0 };
+  };
+
+  const selectedItems = data
+    ? data.perCategory
+        .map((c, i) => ({ c, row: rowOf(c.categoryId, i) }))
+        .filter((x) => x.row.selected)
+    : [];
+  const selectedTotal = selectedItems.reduce((s, x) => s + x.row.cap, 0);
+  const overspend = selectedTotal > Math.max(0, spendable) + 0.001;
 
   // Avvisi contestuali: rendono lo "spendibile" onesto invece di una luce verde. Calcolati
   // lato client così reagiscono allo slider del risparmio senza rifare la query.
@@ -144,7 +154,8 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
         text: `Le entrate previste (${formatCurrency(data.expectedIncome)}) non coprono gli impegni fissi (${formatCurrency(data.fixedCommitments)}): stai attingendo alla liquidità per ${formatCurrency(data.fixedCommitments - data.expectedIncome)}.`,
       });
     }
-    if (savingTarget < 0.01 && spendable > 0) {
+    // Solo se il risparmio è davvero a 0% per scelta (non perché il disponibile è <= 0).
+    if (savingPct === 0 && disposable > 0.001 && spendable > 0) {
       warnings.push({
         level: 'warning',
         text: 'Con il risparmio a 0% lo spendibile azzera il margine di fine periodo. Alza la percentuale per trattenere una riserva.',
@@ -168,16 +179,31 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
         text: `La liquidità dei conti selezionati è negativa (${formatCurrency(data.liquidity)}): il margine reale è più stretto di quanto sembri.`,
       });
     }
+    if (caps.scaled && data.perCategory.length > 0) {
+      warnings.push({
+        level: 'warning',
+        text:
+          spendable <= 0
+            ? 'Spendibile esaurito: i tetti proposti sono a zero.'
+            : `Tetti ridotti del ${Math.round((1 - caps.factor) * 100)}% per stare nello spendibile. Accanto a ogni importo vedi il tetto di partenza.`,
+      });
+    }
+    if (data.lowConfidence && data.perCategory.length > 0) {
+      warnings.push({
+        level: 'info',
+        text: `Storico breve: i tetti si basano su ${plural(data.historyPeriods ?? 0, 'periodo', 'periodi')}, sono indicativi.`,
+      });
+    }
   }
 
-  const toggle = (id: string) =>
-    setRows((r) => ({ ...r, [id]: { ...r[id], selected: !r[id]?.selected } }));
+  const toggle = (id: string, current: boolean) =>
+    setOverrides((r) => ({ ...r, [id]: { ...r[id], selected: !current } }));
   const setCap = (id: string, cap: number) =>
-    setRows((r) => ({ ...r, [id]: { ...r[id], cap } }));
+    setOverrides((r) => ({ ...r, [id]: { ...r[id], cap } }));
 
   const handleApply = async () => {
     const items = selectedItems
-      .map((c) => ({ categoryId: c.categoryId, amount: rows[c.categoryId]?.cap ?? 0 }))
+      .map((x) => ({ categoryId: x.c.categoryId, amount: x.row.cap }))
       .filter((i) => i.amount > 0);
 
     if (items.length === 0) {
@@ -186,20 +212,52 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
     }
 
     try {
-      await applyMutation.mutateAsync({ items, period: data?.budgetPeriod ?? 'MONTHLY' });
+      const res = await applyMutation.mutateAsync({ items, period: data?.budgetPeriod ?? 'MONTHLY', offset });
 
       // Persisti la % risparmio nel profilo (se richiesto e cambiata): non bloccare
       // l'esito dell'apply se la preferenza non si salva.
       if (savePref && Math.abs(rate - (user?.savingRate ?? 0)) > 0.0001) {
         try {
-          const res = await authAPI.updateProfile({ savingRate: rate });
-          updateUser(res.user);
+          const profile = await authAPI.updateProfile({ savingRate: rate });
+          updateUser(profile.user);
+          invalidateKeysEverywhere(withBudgetKeys([]));
         } catch {
           /* ignora: i budget sono già stati applicati */
         }
       }
 
-      toast.success(`${items.length} budget applicati`);
+      const parts: string[] = [];
+      // Per il periodo successivo creati/aggiornati sono già "programmati": non contarli due volte.
+      if (res.scheduled) {
+        parts.push(plural(res.scheduled, 'programmato', 'programmati'));
+      } else {
+        if (res.created) parts.push(plural(res.created, 'creato', 'creati'));
+        if (res.updated) parts.push(plural(res.updated, 'aggiornato', 'aggiornati'));
+      }
+      toast.success(
+        parts.length > 0 ? `Budget: ${parts.join(', ')}` : `${res.applied ?? items.length} budget applicati`,
+      );
+
+      const notes: string[] = [];
+      if (res.periodChanged?.length) {
+        notes.push(
+          'Periodo cambiato: ' +
+            res.periodChanged.map((p) => `${p.name} (${PERIOD_NAME[p.from]} → ${PERIOD_NAME[p.to]})`).join(', '),
+        );
+      }
+      if (res.rolloverReset?.length) {
+        notes.push(`Riporto azzerato per ${res.rolloverReset.map((r) => r.name).join(', ')}`);
+      }
+      if (res.overlaps?.length) {
+        notes.push(
+          'Budget sovrapposti: ' +
+            res.overlaps
+              .map((o) => `${o.name} comprende già ${o.childBudgets.map((b) => b.name).join(', ')}`)
+              .join('; '),
+        );
+      }
+      if (notes.length > 0) toast.warning(notes.join('. '));
+
       onClose();
     } catch (error) {
       toast.error(apiError(error, "Errore nell'applicazione dei budget"));
@@ -207,6 +265,8 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
   };
 
   if (!isOpen) return null;
+
+  const includedNames = data?.includedAccounts?.map((a) => a.name) ?? accounts.selectedNames;
 
   return (
     <BaseModal isOpen={isOpen} title="Proponi budget" onClose={onClose}>
@@ -252,48 +312,22 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
             </button>
           </div>
           </div>
-          {data && <p className="form-help">Periodo: <strong>{data.window.label}</strong></p>}
+          {data && (
+            <p className="form-help">
+              Periodo: <strong>{data.window.label}</strong>.{' '}
+              {offset === 1
+                ? `Parte dal ${formatDayMonth(data.window.start)}, il budget attuale resta invariato fino a quella data.`
+                : `I budget partono dall'inizio del periodo in corso (${formatDayMonth(data.window.start)}).`}
+            </p>
+          )}
         </div>
 
-        {/* Selettore conti BANK inclusi nel cuscinetto e nei flussi (item c) */}
-        {bankAccounts.length > 1 && (
-          <div className="form-group">
-            <div className="budget-sugg-accounts-head">
-              <span className="form-label">Conti da includere</span>
-              {!allSelected && (
-                <button type="button" className="budget-sugg-selectall" onClick={selectAll}>
-                  Seleziona tutti
-                </button>
-              )}
-            </div>
-            <div className="budget-sugg-accounts">
-              {bankAccounts.map((a) => {
-                const checked = !selectedAccountIds || selectedAccountIds.includes(a.id);
-                return (
-                  <label
-                    key={a.id}
-                    className={`budget-sugg-account ${checked ? 'is-selected' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleAccount(a.id)}
-                    />
-                    {a.icon && (
-                      <span className="budget-sugg-account-icon" aria-hidden="true">
-                        {a.icon}
-                      </span>
-                    )}
-                    <span className="budget-sugg-account-name">{a.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <p className="form-help">
-              Escludi un conto (es. risparmi): spariscono dal calcolo il suo saldo e i suoi
-              flussi.
-            </p>
-          </div>
+        {/* Conti BANK inclusi nel cuscinetto e nei flussi (stessa selezione del box in pagina) */}
+        {accounts.bankAccounts.length > 1 && <BudgetAccountChips accounts={accounts} />}
+        {includedNames.length > 0 && (
+          <p className="budget-sugg-included">
+            Conti inclusi: <strong>{includedNames.join(', ')}</strong>
+          </p>
         )}
 
         {isLoading ? (
@@ -387,11 +421,17 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
             ) : (
               <>
                 <div className="budget-sugg-cats-head">
-                  <span>Budget proposti dalla tua spesa variabile media</span>
+                  <span>Tetti proposti per categoria</span>
                   <span className={overspend ? 'budget-sugg-total over' : 'budget-sugg-total'}>
-                    {formatCurrency(selectedTotal)} / {formatCurrency(spendable)}
+                    {formatCurrency(selectedTotal)} / {formatCurrency(Math.max(0, spendable))}
                   </span>
                 </div>
+                <p className="form-help">
+                  Ogni tetto parte dalla <strong>mediana</strong> della tua spesa variabile negli ultimi
+                  periodi{data.historyPeriods ? ` (${plural(data.historyPeriods, 'periodo', 'periodi')} con dati)` : ''}:
+                  circa −15% sulle categorie <strong>discrezionali</strong>, 100% sulle{' '}
+                  <strong>essenziali</strong>. Le spese fisse non hanno tetto, sono già negli impegni.
+                </p>
 
                 {overspend && (
                   <p className="budget-sugg-warning">
@@ -402,15 +442,18 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                 )}
 
                 <ul className="budget-sugg-list">
-                  {data.perCategory.map((c) => {
-                    const row = rows[c.categoryId];
+                  {data.perCategory.map((c, i) => {
+                    const row = rowOf(c.categoryId, i);
+                    const nature = natureById.get(c.categoryId);
+                    const samePeriod = c.currentPeriod === data.budgetPeriod;
+                    const showRaw = caps.scaled && Math.abs(caps.raw[i] - caps.values[i]) >= 0.005;
                     return (
                       <li key={c.categoryId} className="budget-sugg-row">
                         <label className="budget-sugg-check">
                           <input
                             type="checkbox"
-                            checked={!!row?.selected}
-                            onChange={() => toggle(c.categoryId)}
+                            checked={row.selected}
+                            onChange={() => toggle(c.categoryId, row.selected)}
                           />
                           <span className="budget-sugg-cat">
                             {c.icon && (
@@ -419,37 +462,51 @@ export default function BudgetSuggestionsModal({ isOpen, onClose }: BudgetSugges
                               </span>
                             )}
                             <span className="budget-sugg-name">{c.name}</span>
+                            {nature && (
+                              <span className="budget-sugg-nature">
+                                {nature === 'ESSENTIAL' ? 'essenziale' : 'discrezionale'}
+                              </span>
+                            )}
                           </span>
                         </label>
 
-                        <span className="budget-sugg-meta">
-                          <span className="budget-sugg-avg">media {formatCurrency(c.avgPerPeriod)} per periodo</span>
-                          <span
-                            className={
-                              c.currentBudgetId
-                                ? 'budget-sugg-badge'
-                                : 'budget-sugg-badge is-new'
-                            }
-                            title={
-                              c.currentBudgetId && c.currentPeriod !== data.budgetPeriod
-                                ? `Il budget attuale diventerà ${data.budgetPeriod === 'PAY_PERIOD' ? 'per periodo di paga' : 'mensile'}`
-                                : undefined
-                            }
-                          >
-                            {c.currentBudgetId
-                              ? c.currentPeriod !== data.budgetPeriod ? 'aggiorna e cambia periodo' : 'aggiorna'
-                              : 'nuovo'}
-                          </span>
-                        </span>
-
                         <div className="budget-sugg-cap">
                           <InputDecimal
-                            formData={{ amount: row?.cap ?? c.suggestedCap }}
+                            formData={{ amount: row.cap }}
                             setFormData={(d) => setCap(c.categoryId, d.amount)}
                             label={`Tetto per ${c.name}`}
                             hideLabel
                           />
                         </div>
+
+                        <div className="budget-sugg-detail">
+                          <span className="budget-sugg-avg">mediana {formatCurrency(c.avgPerPeriod)} per periodo</span>
+                          {showRaw && (
+                            <span className="budget-sugg-raw">
+                              da <s>{formatCurrency(caps.raw[i])}</s>
+                            </span>
+                          )}
+                          {c.currentBudgetId && c.currentAmount !== null ? (
+                            <span className={`budget-sugg-change ${samePeriod ? '' : 'is-period'}`}>
+                              ora {formatCurrency(c.currentAmount)}
+                              {c.currentPeriod ? ` (${PERIOD_NAME[c.currentPeriod]})` : ''} →{' '}
+                              {formatCurrency(row.cap)} ({PERIOD_NAME[data.budgetPeriod]})
+                            </span>
+                          ) : (
+                            <span className="budget-sugg-badge is-new">nuovo</span>
+                          )}
+                        </div>
+
+                        {c.childBudgets && c.childBudgets.length > 0 && (
+                          <p className="budget-sugg-overlap">
+                            <AlertTriangle size={14} aria-hidden="true" />
+                            <span>
+                              Comprende già budget su:{' '}
+                              {c.childBudgets.map((b) => `${b.name} (${formatCurrency(b.amount)})`).join(', ')}.
+                              Rischi di contare due volte la stessa spesa.
+                            </span>
+                          </p>
+                        )}
                       </li>
                     );
                   })}

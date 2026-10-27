@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { installmentsApi } from '../api/installments';
 import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type {
   CreateInstallmentPlanDTO,
   UpdateInstallmentPlanDTO,
@@ -10,9 +11,9 @@ import type {
 
 // CRUD del piano: tocca il piano stesso, le rate (pianificate → badge/scadenze),
 // dashboard, contatori pending e calendario.
-const INSTALLMENT_KEYS = ['installments', 'planned', 'dashboard', 'pending-planned', 'pending-installments', 'calendar'];
+const INSTALLMENT_KEYS = withBudgetKeys(['installments', 'planned', 'dashboard', 'pending-planned', 'pending-installments', 'calendar']);
 // Pagamento: crea una transazione reale → invalida anche transazioni, conti.
-const INSTALLMENT_PAID_KEYS = ['installments', 'planned', 'transactions', 'dashboard', 'pending-planned', 'pending-installments', 'calendar', 'accounts'];
+const INSTALLMENT_PAID_KEYS = withBudgetKeys(['installments', 'planned', 'transactions', 'dashboard', 'pending-planned', 'pending-installments', 'calendar', 'accounts']);
 
 export function useInstallmentPlans() {
   const { data: plans = [], isLoading, isError } = useQuery({

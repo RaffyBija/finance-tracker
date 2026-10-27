@@ -20,7 +20,7 @@ import { listOccurrenceDates } from './occurrences';
 
 const DAY_MS = 86_400_000;
 // Accrediti entro questa distanza sono lo stesso stipendio (es. acconto + saldo).
-const SAME_PAYDAY_DAYS = 7;
+export const SAME_PAYDAY_DAYS = 7;
 // Un periodo "plausibile" tra due accrediti: fuori da qui è un buco nello storico
 // (es. mesi senza stipendio) e non va usato come periodo di confronto.
 const MIN_PERIOD_DAYS = 20;

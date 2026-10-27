@@ -81,9 +81,9 @@ export interface CreateBudgetDTO {
   name: string;
   amount: number;
   categoryId?: string;
-  period: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  period: 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'PAY_PERIOD';
   rollover?: 'NONE' | 'SURPLUS' | 'FULL';
-  startDate: Date;
+  startDate?: Date; // assente → inizio della finestra corrente del periodo
   endDate?: Date;
 }
 

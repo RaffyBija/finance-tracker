@@ -4,6 +4,7 @@ import { Target } from 'lucide-react';
 import { useBudgets } from '../../../hooks/useBudgets';
 import { useFormatCurrency } from '../../../hooks/useFormatCurrency';
 import { SkeletonCard } from '../../shared/Skeleton';
+import { effectiveAmount, isActiveBudget } from '../../../utils/budget';
 
 const progressClass = (pct: number) => (pct >= 100 ? 'is-danger' : pct >= 80 ? 'is-warn' : 'is-ok');
 
@@ -14,7 +15,7 @@ export default function BudgetOverviewWidget() {
   const { formatCurrency } = useFormatCurrency();
 
   const sorted = useMemo(
-    () => [...budgets].sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0)).slice(0, 5),
+    () => budgets.filter(isActiveBudget).sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0)).slice(0, 5),
     [budgets]
   );
 
@@ -43,11 +44,12 @@ export default function BudgetOverviewWidget() {
                 className="budget-overview-row"
                 onClick={() => navigate('/budgets')}
                 aria-label={`Apri budget ${budget.name}`}
+                title={budget.periodLabel}
               >
                 <div className="budget-overview-row-top">
                   <span className="budget-overview-name">{budget.name}</span>
                   <span className="budget-overview-figures">
-                    {formatCurrency(budget.spent ?? 0)} / {formatCurrency(Number(budget.amount))}
+                    {formatCurrency(budget.spent ?? 0)} / {formatCurrency(effectiveAmount(budget))}
                   </span>
                 </div>
                 <div className="budget-overview-bar-track">

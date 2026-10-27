@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { plannedApi } from '../api/planned';
 import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreatePlannedTransactionDTO } from '../types';
 
-const PLANNED_KEYS         = ['planned', 'dashboard', 'pending-planned', 'calendar'];
-const PLANNED_PAID_KEYS    = ['planned', 'transactions', 'dashboard', 'pending-planned', 'calendar', 'accounts'];
+const PLANNED_KEYS         = withBudgetKeys(['planned', 'dashboard', 'pending-planned', 'calendar']);
+const PLANNED_PAID_KEYS    = withBudgetKeys(['planned', 'transactions', 'dashboard', 'pending-planned', 'calendar', 'accounts']);
 
 type FilterStatus = 'ALL' | 'UNPAID' | 'PAID';
 

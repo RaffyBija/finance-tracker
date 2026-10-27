@@ -2,9 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetApi } from '../api/budgets';
 import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreateBudgetDTO } from '../types';
 
-const BUDGET_KEYS = ['budgets', 'budget-history', 'budget-suggestions', 'dashboard'];
+const BUDGET_KEYS = withBudgetKeys(['dashboard']);
 
 export function useBudgets() {
   const { data: budgets = [], isLoading: budgetsLoading, isError: budgetsError } = useQuery({
@@ -89,8 +90,15 @@ export function useUpdateBudget() {
 export function useApplySuggestions() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ items, period }: { items: Array<{ categoryId: string; amount: number }>; period: 'PAY_PERIOD' | 'MONTHLY' }) =>
-      budgetApi.applySuggestions(items, period),
+    mutationFn: ({
+      items,
+      period,
+      offset = 0,
+    }: {
+      items: Array<{ categoryId: string; amount: number }>;
+      period: 'PAY_PERIOD' | 'MONTHLY';
+      offset?: 0 | 1;
+    }) => budgetApi.applySuggestions(items, period, offset),
     onSuccess: () => invalidateBudgets(queryClient),
   });
 }

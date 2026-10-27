@@ -148,6 +148,7 @@ export type FutureEvent = {
   source: ProjectionSource;
   accountId?: string | null;
   settlement?: boolean;
+  categoryId?: string | null; // per il de-dup dello stipendio nel piano budget
 };
 
 export async function collectProjectionEvents(params: {
@@ -221,7 +222,7 @@ export async function collectProjectionEvents(params: {
       }
       if (rec.type === 'INCOME') projectedIncome  += amount;
       else                       projectedExpense += amount;
-      events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring', accountId: rec.accountId });
+      events.push({ date, label: rec.description, amount, type: rec.type as 'INCOME' | 'EXPENSE', source: 'recurring', accountId: rec.accountId, categoryId: rec.categoryId });
     }
   }
 
@@ -246,7 +247,7 @@ export async function collectProjectionEvents(params: {
     else                     projectedExpense += amount;
     events.push({
       date: p.plannedDate!, label: p.description, amount, type: p.type as 'INCOME' | 'EXPENSE', source: 'planned',
-      accountId: p.accountId, settlement: !!p.ccAccountId,
+      accountId: p.accountId, settlement: !!p.ccAccountId, categoryId: p.categoryId,
     });
   }
 

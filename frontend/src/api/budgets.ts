@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Budget, BudgetHistory, BudgetSuggestions, CreateBudgetDTO } from '../types';
+import type { ApplySuggestionsResult, Budget, BudgetHistory, BudgetSuggestions, CreateBudgetDTO } from '../types';
 
 export const budgetApi = {
   getAll: async (params?: { active?: boolean }): Promise<Budget[]> => {
@@ -51,10 +51,12 @@ export const budgetApi = {
   applySuggestions: async (
     items: Array<{ categoryId: string; amount: number }>,
     period: 'PAY_PERIOD' | 'MONTHLY',
-  ): Promise<{ applied: number }> => {
-    const response = await apiClient.post<{ applied: number }>('/budgets/apply-suggestions', {
+    offset: 0 | 1 = 0,
+  ): Promise<ApplySuggestionsResult> => {
+    const response = await apiClient.post<ApplySuggestionsResult>('/budgets/apply-suggestions', {
       items,
       period,
+      offset,
     });
     return response.data;
   },
