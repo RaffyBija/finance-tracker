@@ -74,24 +74,65 @@ export default function BudgetPeriodPlan({ budgets, accounts, payConfigured }: B
       {editingAccounts && accounts.bankAccounts.length > 1 && <BudgetAccountChips accounts={accounts} />}
 
       <div className="budget-plan-stats">
-        <div className="budget-plan-stat">
-          <span className="budget-plan-label">Spendibile</span>
-          <span className="budget-plan-value">{formatCurrency(data.spendable)}</span>
-          <span className="budget-plan-note">nel periodo</span>
-        </div>
         <div className="budget-plan-stat is-primary">
           <span className="budget-plan-label">Restano ora</span>
           <span className={`budget-plan-value ${remaining < 0 ? 'is-negative' : ''}`}>
             {formatCurrency(remaining)}
           </span>
-          <span className="budget-plan-note">dopo le spese variabili</span>
+          <span className="budget-plan-note">da qui a fine periodo</span>
         </div>
         <div className="budget-plan-stat">
           <span className="budget-plan-label">Al giorno</span>
           <span className="budget-plan-value">{formatCurrency(perDay)}</span>
           <span className="budget-plan-note">per {daysLabel(daysLeft)}</span>
         </div>
+        <div className="budget-plan-stat">
+          <span className="budget-plan-label">Spendibile del periodo</span>
+          <span className="budget-plan-value">{formatCurrency(data.spendable)}</span>
+          <span className="budget-plan-note">dall&apos;inizio del periodo</span>
+        </div>
       </div>
+
+      <p className="budget-plan-balance">
+        Saldo oggi sui conti inclusi: <strong>{formatCurrency(data.liquidity)}</strong>
+        {data.ccDebt > 0 && <> · debito carte {formatCurrency(data.ccDebt)}</>}
+      </p>
+
+      <details className="budget-plan-breakdown">
+        <summary>Come si calcola</summary>
+        <div className="budget-plan-breakdown-rows">
+          <div className="budget-plan-alloc-row">
+            <span>Disponibile a inizio periodo</span>
+            <strong>{formatCurrency(data.netStart)}</strong>
+          </div>
+          <div className="budget-plan-alloc-row">
+            <span>+ Entrate del periodo</span>
+            <strong>{formatCurrency(data.expectedIncome)}</strong>
+          </div>
+          <div className="budget-plan-alloc-row">
+            <span>− Spese fisse e programmate</span>
+            <strong>{formatCurrency(data.fixedCommitments)}</strong>
+          </div>
+          {data.savingTarget > 0 && (
+            <div className="budget-plan-alloc-row">
+              <span>− Risparmio</span>
+              <strong>{formatCurrency(data.savingTarget)}</strong>
+            </div>
+          )}
+          <div className="budget-plan-alloc-row">
+            <span>= Spendibile del periodo</span>
+            <strong>{formatCurrency(data.spendable)}</strong>
+          </div>
+          <div className="budget-plan-alloc-row">
+            <span>− Già speso in variabili</span>
+            <strong>{formatCurrency(data.variableSpent)}</strong>
+          </div>
+          <div className="budget-plan-alloc-row">
+            <span>= Restano ora</span>
+            <strong>{formatCurrency(remaining)}</strong>
+          </div>
+        </div>
+      </details>
 
       {capsCount > 0 && (
         <div className="budget-plan-alloc">
