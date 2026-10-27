@@ -24,19 +24,18 @@ function writeStored(ids: string[]) {
 /**
  * Selezione dei conti BANK inclusi nel piano del periodo, condivisa tra il box della
  * pagina Budget e il modal delle proposte (stessa istanza passata come prop).
- * Persistita in localStorage; default = solo il conto principale.
+ * Persistita in localStorage; default = tutti i conti BANK.
  */
 export function useBudgetAccounts() {
   const { data: accounts = [] } = useAccounts();
   const bankAccounts = useMemo(() => accounts.filter((a) => a.type === 'BANK'), [accounts]);
   const [stored, setStored] = useState<string[] | null>(readStored);
 
-  // Scarta id non più esistenti (conti archiviati/eliminati); vuoto => principale.
+  // Scarta id non più esistenti (conti archiviati/eliminati); vuoto => tutti i conti
+  // (i budget contano la spesa di tutti i conti: il piano deve guardare lo stesso perimetro).
   const selectedIds = useMemo(() => {
     const valid = (stored ?? []).filter((id) => bankAccounts.some((a) => a.id === id));
-    if (valid.length > 0) return valid;
-    const primary = bankAccounts.find((a) => a.isDefault) ?? bankAccounts[0];
-    return primary ? [primary.id] : [];
+    return valid.length > 0 ? valid : bankAccounts.map((a) => a.id);
   }, [stored, bankAccounts]);
 
   const update = useCallback((ids: string[]) => {
