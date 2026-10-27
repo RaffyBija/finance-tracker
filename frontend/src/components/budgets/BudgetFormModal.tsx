@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { apiError } from '../../utils/apiError';
 import { usePayPeriod } from '../../hooks/useAnalytics';
 import { formatDayMonth } from '../../utils/date';
+import { budgetFormChanged } from '../../utils/budget';
 import { addDays, endOfMonth, endOfWeek, endOfYear, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
 
 // Finestra del periodo corrente per il budget, calcolata lato client solo per l'anteprima
@@ -132,6 +133,12 @@ export default function BudgetFormModal({
     e.preventDefault();
     setSubmitError(null);
     if (!validate(formData)) return;
+    // In modifica, se non è cambiato nulla non serve chiamare il server.
+    if (editingItem && !budgetFormChanged(formData, editingItem)) {
+      toast.info('Nessuna modifica apportata');
+      onClose();
+      return;
+    }
     // startDate vuota = non inviata: il backend ancora il budget all'inizio del periodo corrente.
     const payload: CreateBudgetDTO = { ...formData, startDate: formData.startDate || undefined };
     try {

@@ -69,6 +69,26 @@ export function scaleCaps(
   return { caps: raw.map((v) => Math.max(0, Math.floor(v * factor * 100) / 100)), factor, scaled: true };
 }
 
+/**
+ * Il form di modifica ha cambiato davvero qualcosa rispetto al budget salvato?
+ * "Attivo da" vuoto non conta: in modifica significa "lascia la data com'è".
+ */
+export function budgetFormChanged(
+  form: { name: string; amount: number; categoryId?: string; period: string; rollover?: string; startDate?: string; endDate?: string },
+  item: Budget,
+): boolean {
+  const day = (d?: string) => (d ? d.split('T')[0] : '');
+  return (
+    form.name.trim() !== item.name.trim() ||
+    Number(form.amount) !== Number(item.amount) ||
+    (form.categoryId || '') !== (item.categoryId || '') ||
+    form.period !== item.period ||
+    (form.rollover ?? 'NONE') !== (item.rollover ?? 'NONE') ||
+    (!!form.startDate && day(form.startDate) !== day(item.startDate)) ||
+    day(form.endDate) !== day(item.endDate)
+  );
+}
+
 /** Data locale YYYY-MM-DD (mai toISOString: in UTC scavalla il giorno). */
 export function toLocalDateString(d: Date = new Date()): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');

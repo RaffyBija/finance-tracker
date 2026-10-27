@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { scaleCaps, budgetPace, budgetStatus, toLocalDateString, planBudgets, budgetLeft } from '../../utils/budget';
+import { scaleCaps, budgetPace, budgetStatus, toLocalDateString, planBudgets, budgetLeft, budgetFormChanged } from '../../utils/budget';
 import type { Budget } from '../../types';
 
 const base = { id: '1', name: 'b', amount: 100, period: 'MONTHLY', rollover: 'NONE' } as Budget;
@@ -79,5 +79,30 @@ describe('planBudgets / budgetLeft', () => {
     expect(budgetLeft({ ...base, remaining: 40 } as Budget)).toBe(40);
     expect(budgetLeft({ ...base, remaining: -25 } as Budget)).toBe(0);
     expect(budgetLeft({ ...base, amount: 100, spent: 30 } as Budget)).toBe(70);
+  });
+});
+
+describe('budgetFormChanged', () => {
+  const saved = {
+    ...base, name: 'Spesa', amount: 230, categoryId: 'c1', period: 'PAY_PERIOD',
+    startDate: '2026-10-23T00:00:00.000Z', endDate: undefined,
+  } as Budget;
+  const same = { name: 'Spesa', amount: 230, categoryId: 'c1', period: 'PAY_PERIOD', rollover: 'NONE', startDate: '2026-10-23', endDate: '' };
+
+  it('nessuna modifica: form identico al salvato', () => {
+    expect(budgetFormChanged(same, saved)).toBe(false);
+  });
+  it('"Attivo da" svuotato non conta come modifica', () => {
+    expect(budgetFormChanged({ ...same, startDate: '' }, saved)).toBe(false);
+  });
+  it('rileva importo, riporto, periodo, data di inizio e di fine cambiati', () => {
+    expect(budgetFormChanged({ ...same, amount: 250 }, saved)).toBe(true);
+    expect(budgetFormChanged({ ...same, rollover: 'SURPLUS' }, saved)).toBe(true);
+    expect(budgetFormChanged({ ...same, period: 'MONTHLY' }, saved)).toBe(true);
+    expect(budgetFormChanged({ ...same, startDate: '2026-10-01' }, saved)).toBe(true);
+    expect(budgetFormChanged({ ...same, endDate: '2026-12-31' }, saved)).toBe(true);
+  });
+  it('ignora spazi attorno al nome', () => {
+    expect(budgetFormChanged({ ...same, name: ' Spesa ' }, saved)).toBe(false);
   });
 });
