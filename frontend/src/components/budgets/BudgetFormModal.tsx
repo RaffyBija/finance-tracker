@@ -115,12 +115,8 @@ export default function BudgetFormModal({
     if (value > 999999) return 'Importo troppo elevato';
     return null;
   },
-  // In creazione è opzionale (default: inizio del periodo corrente); in modifica non si
-  // può svuotare, altrimenti il backend manterrebbe comunque la data precedente.
-  startDate: (value) => {
-    if (editingItem && !value) return 'La data di inizio non può essere vuota';
-    return null;
-  },
+  // "Attivo da" è sempre opzionale: in creazione vuoto = inizio del periodo corrente, in
+  // modifica vuoto = si lascia invariata la data salvata (il backend ignora il campo assente).
   endDate: (value, form) => {
     if (value && form.startDate && value <= form.startDate) {
       return 'La data di fine deve essere successiva alla data di inizio';
@@ -256,7 +252,7 @@ export default function BudgetFormModal({
 
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label">{editingItem ? 'Attivo da' : 'Attivo da (opzionale)'}</label>
+            <label className="form-label">Attivo da (opzionale)</label>
             <input
               type="date"
               value={formData.startDate}
@@ -268,7 +264,7 @@ export default function BudgetFormModal({
             />
             <p className="form-help">
               {editingItem
-                ? 'Le spese contano da questa data.'
+                ? 'Le spese contano da questa data (se creato senza data: dall\'inizio del periodo). Vuoto: resta invariata.'
                 : "Vuoto: dall'inizio del periodo corrente."}
             </p>
             <FieldError message={errors.startDate} />
