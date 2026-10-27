@@ -507,6 +507,14 @@
     @apply text-xs text-neutral-400;
   }
 
+  /* "Liberi dopo i budget": ciò che resta per le spese senza budget */
+  .budget-plan-free {
+    @apply flex flex-col gap-0.5 pt-3 border-t border-neutral-200;
+  }
+
+  .budget-plan-free .budget-plan-value { @apply text-primary-600; }
+  .budget-plan-free .budget-plan-value.is-negative { @apply text-danger-600; }
+
   .budget-plan-balance {
     @apply text-xs text-neutral-500;
   }
@@ -2937,6 +2945,9 @@
 .dark .budget-plan-edit { color: #2dd4bf; }
 .dark .budget-plan-stat.is-primary .budget-plan-value { color: #2dd4bf; }
 .dark .budget-plan-stat .budget-plan-value.is-negative { color: #f87171; }
+.dark .budget-plan-free { border-top-color: #44403c; }
+.dark .budget-plan-free .budget-plan-value { color: #2dd4bf; }
+.dark .budget-plan-free .budget-plan-value.is-negative { color: #f87171; }
 .dark .budget-plan-balance { color: #a8a29e; }
 .dark .budget-plan-balance strong { color: #f5f5f4; }
 .dark .budget-plan-breakdown summary { color: #2dd4bf; }

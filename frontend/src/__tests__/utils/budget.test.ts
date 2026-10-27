@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { scaleCaps, budgetPace, budgetStatus, toLocalDateString } from '../../utils/budget';
+import { scaleCaps, budgetPace, budgetStatus, toLocalDateString, planBudgets, budgetLeft } from '../../utils/budget';
 import type { Budget } from '../../types';
 
 const base = { id: '1', name: 'b', amount: 100, period: 'MONTHLY', rollover: 'NONE' } as Budget;
@@ -50,5 +50,34 @@ describe('budgetStatus / toLocalDateString', () => {
   });
   it('data locale senza scavalcare il giorno', () => {
     expect(toLocalDateString(new Date(2026, 9, 5, 0, 30))).toBe('2026-10-05');
+  });
+});
+
+describe('planBudgets / budgetLeft', () => {
+  const mk = (id: string, categoryId: string | undefined, over: Partial<Budget> = {}) =>
+    ({ ...base, id, categoryId, status: 'active', period: 'PAY_PERIOD', ...over }) as Budget;
+
+  it('esclude globale, altri periodi e budget non attivi', () => {
+    const list = [
+      mk('a', 'c1'),
+      mk('glob', undefined),
+      mk('w', 'c2', { period: 'WEEKLY' }),
+      mk('f', 'c3', { status: 'upcoming' }),
+    ];
+    expect(planBudgets(list, 'PAY_PERIOD').map((b) => b.id)).toEqual(['a']);
+  });
+  it('se esiste il budget sulla macro, quello sulla sotto-categoria non si somma', () => {
+    const macro = mk('trasporti', 'm1');
+    const child = mk('carburante', 'c1', { category: { parentId: 'm1' } as Budget['category'] });
+    expect(planBudgets([macro, child], 'PAY_PERIOD').map((b) => b.id)).toEqual(['trasporti']);
+  });
+  it('un budget sulla sotto-categoria resta se la macro non ha budget', () => {
+    const child = mk('carburante', 'c1', { category: { parentId: 'm1' } as Budget['category'] });
+    expect(planBudgets([child], 'PAY_PERIOD')).toHaveLength(1);
+  });
+  it('budgetLeft non va mai sotto zero', () => {
+    expect(budgetLeft({ ...base, remaining: 40 } as Budget)).toBe(40);
+    expect(budgetLeft({ ...base, remaining: -25 } as Budget)).toBe(0);
+    expect(budgetLeft({ ...base, amount: 100, spent: 30 } as Budget)).toBe(70);
   });
 });

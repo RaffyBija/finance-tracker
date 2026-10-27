@@ -17,6 +17,23 @@ export const isActiveBudget = (b: Budget) => budgetStatus(b) === 'active';
 export const effectiveAmount = (b: Budget) => b.effectiveAmount ?? Number(b.amount);
 
 /**
+ * Quanto resta ancora da spendere su un budget. Mai negativo: uno sforamento è già uscito
+ * dalla disponibilità, non "libera" altri soldi.
+ */
+export const budgetLeft = (b: Budget) => Math.max(0, b.remaining ?? effectiveAmount(b) - (b.spent ?? 0));
+
+/**
+ * Budget di categoria attivi dello STESSO periodo del piano, senza sovrapposizioni: il budget
+ * globale resta fuori (è un tetto complessivo) e, se esiste un budget sulla macro, quello su
+ * una sua sotto-categoria non si somma (la macro ne contiene già la spesa).
+ */
+export function planBudgets(budgets: Budget[], period: Budget['period']): Budget[] {
+  const same = budgets.filter((b) => isActiveBudget(b) && !!b.categoryId && b.period === period);
+  const ids = new Set(same.map((b) => b.categoryId));
+  return same.filter((b) => !(b.category?.parentId && ids.has(b.category.parentId)));
+}
+
+/**
  * Ritmo del periodo: frazione di periodo trascorsa (0..1) e proiezione di fine periodo
  * al ritmo attuale. `projected` è null quando non è affidabile/utile (periodo non in
  * corso, nessuna spesa, troppo presto per estrapolare).
