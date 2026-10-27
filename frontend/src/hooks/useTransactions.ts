@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreateTransactionDTO, CreateTransferDTO, TransactionType } from '../types';
 
-const TRANSACTION_KEYS = ['transactions', 'dashboard', 'budgets', 'budget-history', 'calendar', 'accounts', 'planned', 'billing-cycles', 'recurring', 'pending-recurring', 'installments', 'pending-planned', 'pending-installments'];
+const TRANSACTION_KEYS = withBudgetKeys(['transactions', 'dashboard', 'calendar', 'accounts', 'planned', 'billing-cycles', 'recurring', 'pending-recurring', 'installments', 'pending-planned', 'pending-installments']);
 
 const PAGE_SIZE = 20;
 

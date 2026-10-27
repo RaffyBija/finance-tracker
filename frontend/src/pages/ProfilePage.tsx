@@ -12,11 +12,11 @@ import {
   ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '../utils/currency';
-import { useQueryClient } from '@tanstack/react-query';
 import { useCategories } from '../hooks/useCategories';
 import CategorySelect from '../components/categories/CategorySelect';
 import { usePayPeriod } from '../hooks/useAnalytics';
-import { broadcastInvalidation } from '../utils/syncChannel';
+import { invalidateKeysEverywhere } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { PayPeriodSource } from '../types';
 import { apiError } from '../utils/apiError';
 
@@ -193,6 +193,7 @@ function PreferencesSection() {
     try {
       const res = await authAPI.updateProfile({ currency });
       updateUser(res.user ?? res);
+      invalidateKeysEverywhere(withBudgetKeys([]));
       toast.success('Valuta aggiornata');
     } catch (error) {
       toast.error(apiError(error, 'Errore nel salvataggio'));
@@ -207,6 +208,8 @@ function PreferencesSection() {
     try {
       const res = await authAPI.updateProfile({ savingRate: rate });
       updateUser(res.user ?? res);
+      // Lo spendibile del box Budget dipende dalla % di risparmio.
+      invalidateKeysEverywhere(withBudgetKeys([]));
       toast.success('Percentuale di risparmio aggiornata');
     } catch (error) {
       toast.error(apiError(error, 'Errore nel salvataggio'));
@@ -327,7 +330,6 @@ const longDate = (iso: string) =>
 function PayPeriodSettings() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
-  const queryClient = useQueryClient();
   const { data: incomeCategories = [] } = useCategories('INCOME');
   const { data: payPeriod } = usePayPeriod();
   const [isPending, setIsPending] = useState(false);
@@ -338,8 +340,8 @@ function PayPeriodSettings() {
       const res = await authAPI.updateProfile(patch);
       updateUser(res.user ?? res);
       // Orizzonte "stipendio", stima e proiezione dipendono da queste impostazioni.
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      broadcastInvalidation(['dashboard']);
+      // ...e anche piano/tetti dei budget (finestre del periodo di paga).
+      invalidateKeysEverywhere(withBudgetKeys(['dashboard']));
       toast.success('Periodo di paga aggiornato');
     } catch (error) {
       toast.error(apiError(error, 'Errore nel salvataggio'));

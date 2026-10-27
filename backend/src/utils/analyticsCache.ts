@@ -145,6 +145,7 @@ export const analyticsCache = {
     cache.del(`forecast:${uid}`);
     delSpending(uid);
     delProjections(uid);
+    delBudgetSuggestions(uid); // nomi/macro/archiviazione cambiano i tetti proposti
   },
 
   // Impostazioni del periodo di paga cambiate (categoria stipendio / giorno):

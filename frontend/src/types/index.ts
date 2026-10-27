@@ -370,7 +370,16 @@ export interface Budget {
   periodStart?: string;
   periodEnd?: string;
   periodLabel?: string;
+  // Spesa NON variabile (ricorrenti, pianificate, rate) della stessa categoria nella
+  // finestra corrente: informativa, non entra in spent/remaining/percentage.
+  fixedSpent?: number;
+  // active / upcoming (parte dal prossimo periodo) / expired
+  status?: BudgetStatus;
+  // true se period=PAY_PERIOD ma il periodo di paga non è configurato (si usa il mese)
+  payPeriodFallback?: boolean;
 }
+
+export type BudgetStatus = 'active' | 'upcoming' | 'expired';
 
 export interface BudgetHistoryPeriod {
   periodStart: string;
@@ -402,7 +411,8 @@ export interface CreateBudgetDTO {
   categoryId?: string;
   period: BudgetPeriod;
   rollover: BudgetRollover;
-  startDate: string;
+  // Opzionale: se assente il backend parte dall'inizio della finestra corrente.
+  startDate?: string;
   endDate?: string;
 }
 
@@ -417,6 +427,24 @@ export interface BudgetSuggestionItem {
   currentBudgetId: string | null;
   currentAmount: number | null;
   currentPeriod: BudgetPeriod | null;
+  // Tetto non scalato e tetto proposto (eventualmente ridotto per stare nello spendibile)
+  rawCap?: number;
+  // Budget attivi sulle sotto-categorie di una macro (la proposta macro li comprende già)
+  childBudgets?: Array<{ id: string; name: string; amount: number }>;
+}
+
+export interface ApplySuggestionsResult {
+  applied: number;
+  created?: number;
+  updated?: number;
+  scheduled?: number;
+  periodChanged?: Array<{ categoryId: string; name: string; from: BudgetPeriod; to: BudgetPeriod }>;
+  rolloverReset?: Array<{ categoryId: string; name: string }>;
+  overlaps?: Array<{
+    categoryId: string;
+    name: string;
+    childBudgets: Array<{ id: string; name: string; amount: number }>;
+  }>;
 }
 
 export interface BudgetPlanFlows {
@@ -446,6 +474,18 @@ export interface BudgetSuggestions {
   savingTarget: number;
   spendable: number;
   perCategory: BudgetSuggestionItem[];
+  // Ritmo del periodo in corso (offset 0): quanto resta e quanto al giorno
+  remaining?: number;
+  daysLeft?: number;
+  perDay?: number;
+  // Tetti scalati per stare nello spendibile
+  capsTotal?: number;
+  capsScaled?: boolean;
+  scaleFactor?: number;
+  // Affidabilità dello storico (mediana su N finestre con dati)
+  historyPeriods?: number;
+  lowConfidence?: boolean;
+  includedAccounts?: Array<{ id: string; name: string }>;
 }
 
 export interface RecurringTransaction {

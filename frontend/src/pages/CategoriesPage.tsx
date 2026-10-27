@@ -7,6 +7,7 @@ import {
 import { useCategories, useArchiveCategory, useReorderCategories } from '../hooks/useCategories';
 import { useSpendingAnalysis } from '../hooks/useAnalytics';
 import { useBudgets } from '../hooks/useBudgets';
+import { isActiveBudget } from '../utils/budget';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { useToast } from '../contexts/ToastContext';
 import CategoryFormModal from '../components/categories/CategoryFormModal';
@@ -135,7 +136,7 @@ export default function CategoriesPage() {
 
   const budgetByCat = useMemo(() => {
     const m = new Map<string, { amount: number; spent: number }>();
-    for (const b of budgets) {
+    for (const b of budgets.filter(isActiveBudget)) {
       if (b.categoryId) m.set(b.categoryId, { amount: b.effectiveAmount ?? Number(b.amount), spent: b.spent ?? 0 });
     }
     return m;

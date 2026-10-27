@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreateCategoryDTO, TransactionType } from '../types';
 
-const CATEGORY_KEYS        = ['categories', 'dashboard'];
+const CATEGORY_KEYS        = withBudgetKeys(['categories', 'dashboard']);
 // Eliminare/unire sposta movimenti, scadenze e budget: tutto ciò che li mostra.
-const CATEGORY_DELETE_KEYS = ['categories', 'transactions', 'dashboard', 'budgets', 'recurring', 'planned', 'installments', 'calendar'];
+const CATEGORY_DELETE_KEYS = withBudgetKeys(['categories', 'transactions', 'dashboard', 'recurring', 'planned', 'installments', 'calendar']);
 
 // Categorie attive (le archiviate sono escluse, salvo includeArchived).
 export const useCategories = (filterType?: TransactionType | 'ALL', includeArchived = false) => {

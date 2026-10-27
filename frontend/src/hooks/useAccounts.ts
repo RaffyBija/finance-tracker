@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountsAPI } from '../api/accounts';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreateAccountDTO, UpdateAccountDTO } from '../types';
 
-const ACCOUNT_KEYS = ['accounts'];
-const ACCOUNT_DELETE_KEYS = ['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles', 'installments'];
+const ACCOUNT_KEYS = withBudgetKeys(['accounts']);
+const ACCOUNT_DELETE_KEYS = withBudgetKeys(['accounts', 'transactions', 'dashboard', 'planned', 'recurring', 'calendar', 'billing-cycles', 'installments']);
 
 const invalidateAccounts = (queryClient: ReturnType<typeof useQueryClient>, keys: string[]) => {
   keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
@@ -106,6 +107,7 @@ export const useCloseBillingCycle = () => {
       queryClient.invalidateQueries({ queryKey: ['pending-planned'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['billing-cycles'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-suggestions'] });
     },
   });
 };

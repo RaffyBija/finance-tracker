@@ -10,6 +10,34 @@ import FormError from '../shared/FormError';
 import CategoryPicker from '../categories/CategoryPicker';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiError } from '../../utils/apiError';
+import { usePayPeriod } from '../../hooks/useAnalytics';
+import { formatDayMonth } from '../../utils/date';
+import { addDays, endOfMonth, endOfWeek, endOfYear, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
+
+// Finestra del periodo corrente per il budget, calcolata lato client solo per l'anteprima
+// nel form (il calcolo vero è del backend). Periodo di paga: da payPeriod, altrimenti mese.
+function currentWindowLabel(
+  period: BudgetPeriod,
+  pay: { configured: boolean; start: string; nextPayday: string } | undefined,
+): string {
+  const now = new Date();
+  let start: Date;
+  let end: Date;
+  if (period === 'PAY_PERIOD' && pay?.configured) {
+    start = new Date(`${pay.start}T00:00:00`);
+    end = addDays(new Date(`${pay.nextPayday}T00:00:00`), -1);
+  } else if (period === 'WEEKLY') {
+    start = startOfWeek(now, { weekStartsOn: 1 });
+    end = endOfWeek(now, { weekStartsOn: 1 });
+  } else if (period === 'YEARLY') {
+    start = startOfYear(now);
+    end = endOfYear(now);
+  } else {
+    start = startOfMonth(now);
+    end = endOfMonth(now);
+  }
+  return `${formatDayMonth(start)} – ${formatDayMonth(end)}`;
+}
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -38,7 +66,7 @@ export default function BudgetFormModal({
     categoryId: '',
     period: 'MONTHLY',
     rollover: 'NONE',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: '',
     endDate: '',
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -62,13 +90,18 @@ export default function BudgetFormModal({
         categoryId: '',
         period: 'MONTHLY',
         rollover: 'NONE',
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: '',
         endDate: '',
       });
     }
   }, [editingItem, isOpen]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const { data: payPeriod } = usePayPeriod(isOpen && formData.period === 'PAY_PERIOD');
+  const windowLabel =
+    editingItem && editingItem.period === formData.period && editingItem.periodLabel
+      ? editingItem.periodLabel
+      : currentWindowLabel(formData.period, payPeriod);
 
   const { errors, validate, clearError } = useFormValidation<CreateBudgetDTO>({
   name: (value) => {
@@ -82,8 +115,10 @@ export default function BudgetFormModal({
     if (value > 999999) return 'Importo troppo elevato';
     return null;
   },
+  // In creazione è opzionale (default: inizio del periodo corrente); in modifica non si
+  // può svuotare, altrimenti il backend manterrebbe comunque la data precedente.
   startDate: (value) => {
-    if (!value) return 'La data di inizio è obbligatoria';
+    if (editingItem && !value) return 'La data di inizio non può essere vuota';
     return null;
   },
   endDate: (value, form) => {
@@ -101,12 +136,14 @@ export default function BudgetFormModal({
     e.preventDefault();
     setSubmitError(null);
     if (!validate(formData)) return;
+    // startDate vuota = non inviata: il backend ancora il budget all'inizio del periodo corrente.
+    const payload: CreateBudgetDTO = { ...formData, startDate: formData.startDate || undefined };
     try {
       if (editingItem) {
-        await updateMutation.mutateAsync({ id: editingItem.id, data: formData });
+        await updateMutation.mutateAsync({ id: editingItem.id, data: payload });
         toast.success('Budget aggiornato con successo');
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
         toast.success('Budget creato con successo');
       }
       onClose();
@@ -169,6 +206,11 @@ export default function BudgetFormModal({
           </div>
         </div>
 
+        <p className="form-help">
+          Un budget è un tetto sulla <strong>spesa variabile</strong>. Ricorrenti, pianificate e rate sono
+          impegni fissi: non vengono conteggiate qui.
+        </p>
+
         <div className="form-group">
           <label className="form-label form-label-required">Periodo</label>
           <select
@@ -187,6 +229,7 @@ export default function BudgetFormModal({
                 ? 'Si azzera a ogni stipendio: il periodo va da un accredito al successivo.'
                 : 'Periodo di paga non impostato (Impostazioni → Preferenze): finché non lo imposti il budget segue il mese solare.'
               : 'Il budget si azzera automaticamente a ogni periodo. Lo storico di ogni periodo resta consultabile dal dettaglio.'}
+            {' '}Questo periodo: <strong>{windowLabel}</strong>.
           </p>
         </div>
 
@@ -213,7 +256,7 @@ export default function BudgetFormModal({
 
         <div className="modal-form-row">
           <div className="form-group">
-            <label className="form-label form-label-required">Attivo da</label>
+            <label className="form-label">{editingItem ? 'Attivo da' : 'Attivo da (opzionale)'}</label>
             <input
               type="date"
               value={formData.startDate}
@@ -223,6 +266,11 @@ export default function BudgetFormModal({
               }}
               className="form-input"
             />
+            <p className="form-help">
+              {editingItem
+                ? 'Le spese contano da questa data.'
+                : "Vuoto: dall'inizio del periodo corrente."}
+            </p>
             <FieldError message={errors.startDate} />
           </div>
           <div className="form-group">

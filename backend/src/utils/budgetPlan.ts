@@ -1,8 +1,8 @@
 import prisma from './prisma';
 import { getAccountsWithBalances, getLiquidBalance } from './balance';
 import { collectProjectionEvents } from './projection';
-import { loadPayPeriod, loadPayBoundaries, addDays, startOfDay, daysBetween } from './payPeriod';
-import { loadClassifiedExpenses, loadSpendingRhythm, isoDay } from './spendingRhythm';
+import { loadPayPeriod, loadPayBoundaries, addDays, startOfDay, daysBetween, SAME_PAYDAY_DAYS } from './payPeriod';
+import { loadClassifiedExpenses, loadSpendingRhythm, isoDay, median } from './spendingRhythm';
 import { budgetWindowFor, recentBudgetWindows, budgetWindowLabel, type BudgetWindow } from './budgetPeriod';
 
 // ── Piano del budget (proposte intelligenti) ─────────────────────────────────
@@ -24,8 +24,9 @@ import { budgetWindowFor, recentBudgetWindows, budgetWindowLabel, type BudgetWin
 //     fino all'inizio + spesa variabile stimata col ritmo quotidiano.
 //   • Risparmio = quota delle ENTRATE del periodo (come descrive l'impostazione),
 //     mai oltre il disponibile.
-//   • Tetti per categoria = media della spesa VARIABILE degli ultimi periodi con dati
+//   • Tetti per categoria = mediana della spesa VARIABILE degli ultimi periodi con dati
 //     (fisse e rate sono già negli impegni: niente tetti su di esse), meno un taglio.
+//     Il controller li scala poi allo spendibile (scaleCaps).
 
 export const SUGG_HIST_PERIODS = 3;
 export const STANDARD_CUT = 0.15;
@@ -64,16 +65,64 @@ export function applySaving(disposable: number, income: number, rate: number) {
   return { savingTarget, spendable: round2(disposable - savingTarget) };
 }
 
+// Stipendio già accreditato (PURA): un INCOME atteso della categoria stipendio entro
+// SAME_PAYDAY_DAYS da un accredito reale è lo stesso stipendio (es. ricorrente non
+// eseguita a mano): contarlo raddoppierebbe le entrate.
+export function isAlreadyPaidSalary(
+  date: Date,
+  categoryId: string | null | undefined,
+  salaryCategoryId: string | null,
+  realSalaryDates: Date[],
+): boolean {
+  if (!salaryCategoryId || categoryId !== salaryCategoryId) return false;
+  return realSalaryDates.some((d) => Math.abs(daysBetween(d, date)) <= SAME_PAYDAY_DAYS);
+}
+
+// Ritmo del periodo (PURA): quanto resta dello spendibile e quanto al giorno.
+// In corso: remaining = spendibile − variabile già spesa, giorni da oggi (incluso)
+// alla fine; periodo successivo: tutto lo spendibile sull'intero periodo.
+export function planPace(
+  plan: Pick<BudgetPlan, 'offset' | 'variableSpent' | 'window'>,
+  spendable: number,
+) {
+  const current = plan.offset === 0;
+  const remaining = round2(current ? spendable - plan.variableSpent : spendable);
+  const daysLeft = current ? Math.max(1, plan.window.days - plan.window.elapsedDays + 1) : plan.window.days;
+  return { remaining, daysLeft, perDay: round2(Math.max(0, remaining) / Math.max(1, daysLeft)) };
+}
+
 export interface CategorySuggestion {
   categoryId: string;
   name: string;
   icon: string | null;
   color: string | null;
-  avgPerPeriod: number;
-  suggestedCap: number;
+  avgPerPeriod: number; // MEDIANA per periodo (nome storico)
+  suggestedCap: number; // nel piano: non scalato; nella risposta: scalato allo spendibile
   currentBudgetId: string | null;
   currentAmount: number | null;
   currentPeriod: string | null;
+  // Budget attivi sulle sotto-categorie: la proposta macro li comprende già.
+  childBudgets: Array<{ id: string; name: string; amount: number }>;
+}
+
+// Scala i tetti allo spendibile (PURA): se la loro somma lo supera, riduzione
+// proporzionale (per difetto al centesimo, così Σ non sfora). rawCap = non scalato.
+export function scaleCaps(perCategory: CategorySuggestion[], spendable: number) {
+  const rawTotal = perCategory.reduce((s, c) => s + c.suggestedCap, 0);
+  const limit = Math.max(0, spendable);
+  const capsScaled = rawTotal > limit;
+  const factor = capsScaled ? limit / rawTotal : 1;
+  const caps = perCategory.map((c) => ({
+    ...c,
+    rawCap: c.suggestedCap,
+    suggestedCap: capsScaled ? Math.floor(c.suggestedCap * factor * 100) / 100 : c.suggestedCap,
+  }));
+  return {
+    perCategory: caps,
+    capsTotal: round2(caps.reduce((s, c) => s + c.suggestedCap, 0)),
+    capsScaled,
+    scaleFactor: Math.round(factor * 10000) / 10000,
+  };
 }
 
 export interface BudgetPlan {
@@ -93,6 +142,9 @@ export interface BudgetPlan {
   actual: PlanFlows | null;
   gap: PlanFlows | null;
   perCategory: CategorySuggestion[];
+  historyPeriods: number;     // periodi con dati usati per i tetti
+  lowConfidence: boolean;     // historyPeriods < 2
+  includedAccounts: Array<{ id: string; name: string }>; // conti BANK nel perimetro
 }
 
 export async function computeBudgetPlan(
@@ -140,6 +192,20 @@ export async function computeBudgetPlan(
     + pendingCharges.reduce((s, p) => s + Number(p.amount), 0);
   const netNow = liquidity - ccDebt;
 
+  // Accrediti reali dello stipendio dall'inizio del periodo in corso (con margine):
+  // servono a scartare le attese dello stesso stipendio già incassato.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { salaryCategoryId: true } });
+  const salaryCategoryId = user?.salaryCategoryId ?? null;
+  const realSalaryDates = salaryCategoryId
+    ? (await prisma.transaction.findMany({
+        where: {
+          userId, type: 'INCOME', categoryId: salaryCategoryId, transferId: null,
+          date: { gte: addDays(current.periodStart, -SAME_PAYDAY_DAYS), lte: now },
+        },
+        select: { date: true },
+      })).map((t) => t.date)
+    : [];
+
   // Flussi noti (per competenza) in un intervallo: ricorrenti non eseguite e
   // pianificate non pagate; le spese su carta contano come acquisti, gli addebiti
   // dei cicli no. Sospesi esclusi (senza data).
@@ -153,6 +219,7 @@ export async function computeBudgetPlan(
     for (const e of c.events) {
       if (e.source !== 'recurring' && e.source !== 'planned') continue;
       if (e.settlement || !inScope(e.accountId)) continue;
+      if (e.type === 'INCOME' && isAlreadyPaidSalary(e.date, e.categoryId, salaryCategoryId, realSalaryDates)) continue;
       if (e.type === 'INCOME') income += e.amount;
       else fixed += e.amount;
     }
@@ -199,7 +266,7 @@ export async function computeBudgetPlan(
   // ── Tetti per categoria dalla spesa variabile dei periodi precedenti ──
   const histWindows = recentBudgetWindows(budgetPeriod, SUGG_HIST_PERIODS + 1, now, boundaries)
     .filter((w) => w.periodEnd < current.periodStart);
-  const perCategory = await suggestCaps(userId, histWindows);
+  const { perCategory, historyPeriods } = await suggestCaps(userId, histWindows);
 
   return {
     mode: usePay ? 'pay' : 'month',
@@ -224,14 +291,24 @@ export async function computeBudgetPlan(
     actual: actual && { income: round2(actual.income), fixed: round2(actual.fixed), variable: round2(actual.variable) },
     gap: gap && { income: round2(gap.income), fixed: round2(gap.fixed), variable: round2(gap.variable) },
     perCategory,
+    historyPeriods,
+    lowConfidence: historyPeriods < 2,
+    includedAccounts: bankIds.size === 0 ? [] : await prisma.account.findMany({
+      where: { userId, id: { in: [...bankIds] }, archivedAt: null },
+      select: { id: true, name: true },
+      orderBy: { createdAt: 'asc' },
+    }),
   };
 }
 
-// Media della spesa variabile per categoria sui periodi CON dati (un periodo senza
-// movimenti, o iniziato prima dei primi dati, non abbassa la media). Tutti i conti, come lo speso
-// dei budget.
-async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<CategorySuggestion[]> {
-  if (windows.length === 0) return [];
+// Mediana della spesa variabile per categoria sui periodi CON dati (un periodo senza
+// movimenti, o iniziato prima dei primi dati, non entra; un periodo con dati ma
+// senza spesa nella categoria conta 0). Tutti i conti, come lo speso dei budget.
+async function suggestCaps(
+  userId: string,
+  windows: BudgetWindow[],
+): Promise<{ perCategory: CategorySuggestion[]; historyPeriods: number }> {
+  if (windows.length === 0) return { perCategory: [], historyPeriods: 0 };
   const from = windows[0].periodStart;
   const to = windows[windows.length - 1].periodEnd;
   const now = new Date();
@@ -244,11 +321,11 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
         userId, categoryId: { not: null }, startDate: { lte: now },
         OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
-      select: { id: true, categoryId: true, amount: true, period: true },
+      select: { id: true, name: true, categoryId: true, amount: true, period: true },
     }),
     prisma.category.findMany({
       where: { userId },
-      select: { id: true, name: true, icon: true, color: true, parentId: true, nature: true },
+      select: { id: true, name: true, icon: true, color: true, parentId: true, nature: true, archivedAt: true },
     }),
   ]);
   // Periodi usabili: iniziati dopo il primo movimento registrato (un periodo in cui
@@ -256,10 +333,10 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
   const dataStart = firstTxn ? startOfDay(firstTxn.date) : null;
   const withData = windows.filter((w) =>
     !!dataStart && w.periodStart >= dataStart && activity.some((t) => t.date >= w.periodStart && t.date <= w.periodEnd));
-  if (withData.length === 0) return [];
-  const inData = (d: Date) => withData.some((w) => d >= w.periodStart && d <= w.periodEnd);
+  if (withData.length === 0) return { perCategory: [], historyPeriods: 0 };
+  const windowOf = (d: Date) => withData.findIndex((w) => d >= w.periodStart && d <= w.periodEnd);
 
-  type Acc = { name: string; icon: string | null; color: string | null; total: number };
+  type Acc = { name: string; icon: string | null; color: string | null; totals: number[] };
   // Tetti per MACRO-categoria: pochi budget sensati (es. "Ristoranti e bar")
   // invece di uno per ogni sotto-categoria. Una categoria senza macro è la macro.
   const catById = new Map(categories.map((c) => [c.id, c]));
@@ -269,18 +346,21 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
   };
   const byCat = new Map<string, Acc>();
   for (const l of lines) {
-    if (l.kind !== 'variable' || !l.categoryId || !inData(l.date)) continue;
+    if (l.kind !== 'variable' || !l.categoryId) continue;
+    const w = windowOf(l.date);
+    if (w < 0) continue;
     const macro = macroOf(l.categoryId);
-    if (!macro) continue;
-    const e = byCat.get(macro.id) ?? { name: macro.name, icon: macro.icon, color: macro.color, total: 0 };
-    e.total += l.amount;
+    // Niente tetti su macro archiviate.
+    if (!macro || macro.archivedAt) continue;
+    const e = byCat.get(macro.id) ?? { name: macro.name, icon: macro.icon, color: macro.color, totals: withData.map(() => 0) };
+    e.totals[w] += l.amount;
     byCat.set(macro.id, e);
   }
   const budgetByCat = new Map(activeBudgets.map((b) => [b.categoryId!, b]));
 
   const out: CategorySuggestion[] = [];
   byCat.forEach((e, categoryId) => {
-    const avg = e.total / withData.length;
+    const avg = median(e.totals);
     if (avg < 0.01) return;
     const existing = budgetByCat.get(categoryId) ?? null;
     out.push({
@@ -294,7 +374,10 @@ async function suggestCaps(userId: string, windows: BudgetWindow[]): Promise<Cat
       currentBudgetId: existing?.id ?? null,
       currentAmount: existing ? Number(existing.amount) : null,
       currentPeriod: existing?.period ?? null,
+      childBudgets: activeBudgets
+        .filter((b) => catById.get(b.categoryId!)?.parentId === categoryId)
+        .map((b) => ({ id: b.id, name: b.name, amount: Number(b.amount) })),
     });
   });
-  return out.sort((a, b) => b.avgPerPeriod - a.avgPerPeriod);
+  return { perCategory: out.sort((a, b) => b.avgPerPeriod - a.avgPerPeriod), historyPeriods: withData.length };
 }

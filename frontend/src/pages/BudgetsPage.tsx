@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { useBudgets, useDeleteBudget } from '../hooks/useBudgets';
 import { useFormModal } from '../hooks/useFormModal';
+import { useBudgetAccounts } from '../hooks/useBudgetAccounts';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/shared/PageHeader';
 import { SkeletonPageHeader, SkeletonCardGrid } from '../components/shared/Skeleton';
 import BudgetList from '../components/budgets/BudgetList';
-import BudgetSummary from '../components/budgets/BudgetSummary';
+import BudgetPeriodPlan from '../components/budgets/BudgetPeriodPlan';
 import BudgetFormModal from '../components/budgets/BudgetFormModal';
 import BudgetDetailModal from '../components/budgets/BudgetDetailModal';
 import BudgetSuggestionsModal from '../components/budgets/BudgetSuggestionsModal';
@@ -22,6 +24,9 @@ export const Budgets = () => {
   const [suggestOpen, setSuggestOpen] = useState(false);
 
   const toast = useToast();
+  const { user } = useAuth();
+  const accounts = useBudgetAccounts();
+  const payConfigured = !!user?.salaryCategoryId || !!user?.payDay;
 
   const handleEditFromDetail = (budget: Budget) => {
     setDetailItem(null);
@@ -55,7 +60,7 @@ export const Budgets = () => {
         <>
           <PageHeader
             title="Budget"
-            info="I budget seguono la spesa discrezionale e si azzerano a ogni periodo. Gli impegni fissi (rate, abbonamenti) non rientrano qui."
+            info="Un budget è un tetto sulla spesa variabile e si azzera a ogni periodo. Ricorrenti, pianificate e rate sono impegni fissi: non rientrano nei budget ma nel piano del periodo."
           />
           <button
             type="button"
@@ -65,7 +70,7 @@ export const Budgets = () => {
             <Sparkles className="icon-md" />
             <span>Proponi budget</span>
           </button>
-          <BudgetSummary budgets={budgets} />
+          <BudgetPeriodPlan budgets={budgets} accounts={accounts} payConfigured={payConfigured} />
           <BudgetList
             budgets={budgets}
             onOpenModal={openModal}
@@ -92,6 +97,7 @@ export const Budgets = () => {
 
       <BudgetSuggestionsModal
         isOpen={suggestOpen}
+        accounts={accounts}
         onClose={() => setSuggestOpen(false)}
       />
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBudgets } from '../../../hooks/useBudgets';
+import { isActiveBudget } from '../../../utils/budget';
 
 const RISK_THRESHOLD = 80;
 
@@ -8,7 +9,9 @@ const RISK_THRESHOLD = 80;
 // in evidenza. Stato calmo (verde) quando è tutto sotto controllo.
 export default function BudgetRiskTile() {
   const navigate = useNavigate();
-  const { budgets, isError } = useBudgets();
+  const { budgets: allBudgets, isError } = useBudgets();
+  // Solo i budget del periodo in corso: quelli futuri/scaduti non sono "a rischio".
+  const budgets = useMemo(() => allBudgets.filter(isActiveBudget), [allBudgets]);
 
   const { atRisk, worst } = useMemo(() => {
     const risky = budgets

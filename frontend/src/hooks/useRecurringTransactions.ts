@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { recurringApi } from '../api/recurring';
 import { categoryAPI } from '../api/client';
 import { broadcastInvalidation } from '../utils/syncChannel';
+import { withBudgetKeys } from '../utils/queryKeys';
 import type { CreateRecurringTransactionDTO } from '../types';
 
-const RECURRING_EXECUTE_KEYS = ['transactions', 'dashboard', 'recurring', 'pending-recurring', 'calendar', 'accounts'];
-const RECURRING_CRUD_KEYS    = ['recurring', 'dashboard', 'pending-recurring', 'calendar'];
+const RECURRING_EXECUTE_KEYS = withBudgetKeys(['transactions', 'dashboard', 'recurring', 'pending-recurring', 'calendar', 'accounts']);
+const RECURRING_CRUD_KEYS    = withBudgetKeys(['recurring', 'dashboard', 'pending-recurring', 'calendar']);
 
 const recurringInvalidations = (queryClient: ReturnType<typeof useQueryClient>) => {
   RECURRING_EXECUTE_KEYS.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));

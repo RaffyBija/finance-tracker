@@ -338,6 +338,10 @@
     @apply flex items-center gap-1.5 flex-shrink-0;
   }
 
+  .budget-card-icon-warn {
+    @apply text-warning-500;
+  }
+
   .budget-card-clickable {
     @apply cursor-pointer transition-shadow duration-200;
   }
@@ -385,7 +389,29 @@
   .budget-card-carry.is-negative { @apply text-danger-600; }
 
   .budget-card-progress-bar {
-    @apply w-full bg-neutral-200 rounded-full h-2;
+    @apply relative w-full bg-neutral-200 rounded-full h-2;
+  }
+
+  /* Tacca "oggi": quota di periodo trascorsa. Posizione (left) inline: valore dinamico. */
+  .budget-card-tick {
+    @apply absolute w-0.5 rounded-full bg-neutral-700;
+    top: -3px;
+    bottom: -3px;
+    transform: translateX(-50%);
+  }
+
+  /* Proiezione di fine periodo al ritmo attuale */
+  .budget-card-pace {
+    @apply text-xs text-neutral-500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-card-pace.is-over { @apply text-warning-700; }
+
+  /* Note informative (impegni fissi non conteggiati, periodo di paga non configurato) */
+  .budget-card-note {
+    @apply text-xs text-neutral-500;
+    font-variant-numeric: tabular-nums;
   }
 
   .budget-card-progress-fill {
@@ -429,37 +455,110 @@
   }
 
   /* ============================
-     BUDGET OVERVIEW (fascia riepilogo pagina Budget)
+     PIANO DEL PERIODO (box in cima alla pagina Budget)
      ============================ */
-  .budget-summary {
-    @apply grid grid-cols-2 gap-px mb-6 rounded-xl border border-neutral-200 bg-neutral-200 overflow-hidden;
+  .budget-plan {
+    @apply card p-5 mb-6 flex flex-col gap-4;
   }
 
-  .budget-summary-stat {
-    @apply flex flex-col gap-1 p-4 bg-white;
+  .budget-plan-head {
+    @apply flex items-start justify-between gap-3;
   }
 
-  .budget-summary-label {
+  .budget-plan-heading {
+    @apply min-w-0;
+  }
+
+  .budget-plan-title {
+    @apply text-sm font-semibold text-neutral-900;
+  }
+
+  .budget-plan-period {
+    @apply text-sm text-neutral-500;
+  }
+
+  .budget-plan-edit {
+    @apply flex-shrink-0 text-xs font-medium text-primary-600 underline-offset-2 hover:underline;
+  }
+
+  .budget-plan-stats {
+    @apply grid grid-cols-3 gap-3;
+  }
+
+  .budget-plan-stat {
+    @apply flex flex-col gap-0.5 min-w-0;
+  }
+
+  .budget-plan-label {
     @apply text-xs font-medium text-neutral-500;
   }
 
-  .budget-summary-value {
-    @apply text-xl font-bold text-neutral-900;
+  .budget-plan-value {
+    @apply text-lg font-bold text-neutral-900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* "Restano ora" è il numero d'orientamento: accento teal */
+  .budget-plan-stat.is-primary .budget-plan-value { @apply text-primary-600; }
+  .budget-plan-stat .budget-plan-value.is-negative { @apply text-danger-600; }
+
+  .budget-plan-note {
+    @apply text-xs text-neutral-400;
+  }
+
+  .budget-plan-alloc {
+    @apply flex flex-col gap-2 pt-4 border-t border-neutral-200;
+  }
+
+  .budget-plan-alloc-row {
+    @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-neutral-600;
     font-variant-numeric: tabular-nums;
   }
 
-  .budget-summary-value.is-positive { @apply text-neutral-900; }
-  .budget-summary-value.is-negative { @apply text-danger-600; }
+  .budget-plan-alloc-row strong {
+    @apply font-semibold text-neutral-900;
+  }
 
-  /* Lo spendibile è il numero d'orientamento: accento teal, coerente col modal proposte */
-  .budget-summary-spendable .budget-summary-value {
-    @apply text-primary-600;
+  .budget-plan-unallocated {
+    @apply text-neutral-500;
+  }
+
+  .budget-plan-bar {
+    @apply w-full h-1.5 rounded-full bg-neutral-200 overflow-hidden;
+  }
+
+  .budget-plan-bar-fill {
+    @apply h-1.5 rounded-full bg-primary-500;
+  }
+
+  .budget-plan-bar-fill.is-over { @apply bg-warning-500; }
+
+  .budget-plan-over-note {
+    @apply text-xs text-warning-700;
   }
 
   @media (min-width: 640px) {
-    .budget-summary {
-      @apply grid-cols-4;
-    }
+    .budget-plan-value { @apply text-xl; }
+  }
+
+  /* ============================
+     SEZIONI LISTA BUDGET (attivi / dal prossimo periodo / scaduti)
+     ============================ */
+  .budget-sections {
+    @apply flex flex-col gap-6;
+  }
+
+  .budget-section-title {
+    @apply mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500;
+  }
+
+  .budget-section-collapsed > summary {
+    @apply cursor-pointer;
+  }
+
+  .budget-section-collapsed:not([open]) > summary {
+    @apply mb-0;
   }
 
   /* ============================
@@ -622,7 +721,8 @@
 
   .budget-sugg-row {
     @apply grid items-center gap-3 py-2 border-b border-neutral-200;
-    grid-template-columns: minmax(0, 1fr) auto 6.5rem;
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
+    row-gap: 0.25rem;
   }
 
   .budget-sugg-check {
@@ -641,10 +741,6 @@
     @apply text-sm text-neutral-800 truncate;
   }
 
-  .budget-sugg-meta {
-    @apply flex items-center justify-end gap-2;
-  }
-
   .budget-sugg-avg {
     @apply text-xs text-neutral-500;
     font-variant-numeric: tabular-nums;
@@ -657,6 +753,35 @@
 
   .budget-sugg-badge.is-new {
     @apply bg-primary-50 text-primary-700;
+  }
+
+  /* Seconda riga della proposta: storico, tetto di partenza, anteprima prima/dopo */
+  .budget-sugg-detail {
+    @apply flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs text-neutral-500;
+    grid-column: 1 / -1;
+    padding-left: 1.55rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .budget-sugg-raw { @apply text-neutral-400; }
+
+  .budget-sugg-change { @apply text-neutral-600; }
+  .budget-sugg-change.is-period { @apply text-warning-700; }
+
+  .budget-sugg-nature {
+    @apply flex-shrink-0 text-[0.65rem] uppercase tracking-wide text-neutral-400;
+  }
+
+  .budget-sugg-overlap {
+    @apply flex items-start gap-2 text-xs text-warning-700;
+    grid-column: 1 / -1;
+    padding-left: 1.55rem;
+  }
+
+  .budget-sugg-overlap svg { @apply flex-shrink-0 mt-0.5; }
+
+  .budget-sugg-included {
+    @apply text-sm text-neutral-600;
   }
 
   .budget-sugg-cap .form-group {
@@ -2784,14 +2909,29 @@
   gap: 0.5rem;
 }
 
-/* Budget overview (fascia riepilogo) */
-.dark .budget-summary { background-color: #44403c; border-color: #44403c; }
-.dark .budget-summary-stat { background-color: #292524; }
-.dark .budget-summary-label { color: #a8a29e; }
-.dark .budget-summary-value { color: #f5f5f4; }
-.dark .budget-summary-value.is-positive { color: #f5f5f4; }
-.dark .budget-summary-value.is-negative { color: #f87171; }
-.dark .budget-summary-spendable .budget-summary-value { color: #2dd4bf; }
+/* Piano del periodo */
+.dark .budget-plan { background-color: #292524; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.dark .budget-plan-title,
+.dark .budget-plan-value,
+.dark .budget-plan-alloc-row strong { color: #f5f5f4; }
+.dark .budget-plan-period,
+.dark .budget-plan-label,
+.dark .budget-plan-unallocated { color: #a8a29e; }
+.dark .budget-plan-note { color: #78716c; }
+.dark .budget-plan-edit { color: #2dd4bf; }
+.dark .budget-plan-stat.is-primary .budget-plan-value { color: #2dd4bf; }
+.dark .budget-plan-stat .budget-plan-value.is-negative { color: #f87171; }
+.dark .budget-plan-alloc { border-top-color: #44403c; }
+.dark .budget-plan-alloc-row { color: #a8a29e; }
+.dark .budget-plan-bar { background-color: #44403c; }
+.dark .budget-plan-bar-fill { background-color: #14b8a6; }
+.dark .budget-plan-bar-fill.is-over { background-color: #f59e0b; }
+.dark .budget-plan-over-note { color: #fbbf24; }
+.dark .budget-section-title { color: #a8a29e; }
+.dark .budget-card-tick { background-color: #d6d3d1; }
+.dark .budget-card-pace,
+.dark .budget-card-note { color: #a8a29e; }
+.dark .budget-card-pace.is-over { color: #fbbf24; }
 
 /* Budget automatico (suggerimenti) */
 .dark .budget-sugg-empty { color: #a8a29e; }
@@ -2819,6 +2959,13 @@
 .dark .budget-sugg-row { border-bottom-color: #44403c; }
 .dark .budget-sugg-name { color: #e7e5e4; }
 .dark .budget-sugg-avg { color: #a8a29e; }
+.dark .budget-sugg-detail { color: #a8a29e; }
+.dark .budget-sugg-raw,
+.dark .budget-sugg-nature { color: #78716c; }
+.dark .budget-sugg-change { color: #d6d3d1; }
+.dark .budget-sugg-change.is-period,
+.dark .budget-sugg-overlap { color: #fbbf24; }
+.dark .budget-sugg-included { color: #a8a29e; }
 .dark .budget-sugg-badge { background-color: #44403c; color: #d6d3d1; }
 .dark .budget-sugg-badge.is-new { background-color: #0d2d2a; color: #5eead4; }
 .dark .budget-sugg-savepref { color: #a8a29e; }
